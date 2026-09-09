@@ -39,14 +39,19 @@
 - [x] `date.dart`（月份边界、月初月末、按天分组）
 - [x] 门禁：移植 money/id/date 全部旧用例 + 指纹 golden 向量 → `flutter test` 27/27、`flutter analyze` 0 issue
 
-## F3 数据层
+## F3 数据层 ✅ 已完成（2026-09-09）
 
-- [ ] drift tables：books / accounts / categories / transactions（DDL 对齐 schema v1）
-- [ ] 唯一索引 `idx_tx_fingerprint`（部分索引，deleted_at IS NULL）
-- [ ] migration v0→v1
-- [ ] repositories：book / account / category / transaction
-- [ ] `importTransaction()` 指纹幂等入账
-- [ ] 门禁：移植 db + repositories 用例（软删、指纹唯一、迁移、账本隔离）
+- [x] drift tables：books / accounts / categories / transactions / schema_meta（DDL 对齐 schema v1，已对拍 `sqlite_master`）
+- [x] 7 条索引原样落地（含 `DESC` 与 `idx_tx_fingerprint` 部分唯一索引，见 `core/db/schema_v1.dart`）
+- [x] schemaVersion=1（drift 托管 `PRAGMA user_version`）+ onCreate 建表建索引
+- [x] repositories：book / account / category / transaction（含 `active_book_id` 持久化）
+- [x] `importTransaction()` 指纹幂等入账（先查后插，`ImportResult` sealed 类）
+- [x] 门禁：移植 db + repositories 用例（软删、指纹唯一、迁移幂等、账本隔离、月份边界）→ `flutter test` **56/56**、`flutter analyze` **No issues found**
+- [x] `dart run build_runner build` 生成 `lib/core/db/database.g.dart`（已入库）
+
+> **坑**：drift 的 `@TableIndex` 不支持 `DESC` / 部分索引 `WHERE` → 索引一律在 `onCreate` 走原始 SQL。
+> **坑**：`Transactions` 表数据类名必须改成 `TxRow`（`@DataClassName`），否则与 drift 自带 `Transaction` 撞名。
+> **坑**：`drift` 与 `matcher` 都导出顶层 `isNull` → 测试里 `import 'package:drift/drift.dart' hide isNull`。
 
 ## F4 UI 基础（M1 等价）
 
