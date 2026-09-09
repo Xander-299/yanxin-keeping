@@ -135,6 +135,19 @@ unset CODEBUDDY_SESSION_ID CLAUDE_SESSION_ID   # safe-delete shim 会拦 Dart/Gr
 
 **踩坑**：本机沙箱里 `curl -o <文件>` 一律 exit 23（响应体落盘被拦）→ 大文件下载改用 Python `urllib` + 代理流式写盘。
 
+### Android 构建链路踩坑实录（F1 门禁，全部已解）
+
+| 现象 | 根因 | 解法 |
+|---|---|---|
+| Gradle 依赖下载中途永久停滞（零字节 10min+） | JVM 直连 `dl.google.com` / `repo.maven.apache.org` 不走 env 代理 | `settings.gradle.kts` 加 **aliyun 镜像**（google/central/gradle-plugin），`~/.gradle/gradle.properties` 加 `systemProp.http(s).proxyHost/Port=127.0.0.1:7890` + `nonProxyHosts` 排除 aliyun |
+| `Could not find io.flutter:arm64_v8a_debug:1.0.0-<hash>` | `dependencyResolutionManagement` 用 `PREFER_SETTINGS` 会忽略 Flutter 插件自带的引擎仓库 | 在 settings 仓库列表手动补 `https://storage.googleapis.com/download.flutter.io` |
+| AGP 自动装 SDK 卡死（`Install Android SDK Platform 36/35` 零字节） | sdkmanager 经代理仅 ~12KB/s | **python 直下 zip**（62MB/6.5s）+ `unzip` 手动装进 `platforms/android-36`、`platforms/android-35`（jni 模块要 35，app 要 36；zip 内 `source.properties` 必须保留） |
+| `transforms\*.lock 拒绝访问` | 沙箱允许写 `<USER_HOME>\.gradle` 但**拒绝删除**（与 npm EPERM 同类） | `GRADLE_USER_HOME` 指进工作区 `D:\Tencent\yanxin-flutter\.gradle-home`（已 gitignore） |
+| Gradle 发行包下载慢 | services.gradle.org 走代理 | `gradle-wrapper.properties` 改 **腾讯镜像** `mirrors.cloud.tencent.com/gradle/`（230MB 秒下） |
+| 杀掉构建后重建永久挂起 | 残留 Gradle daemon 持锁 | `taskkill /F /IM java.exe` 清 daemon 后重建 |
+
+> 注意：AGP 在构建中自动装 SDK 组件也会触发上述 sdkmanager 卡死，任何「Preparing Install ...」长时间无进展都优先手动装包。
+
 ---
 
 ## 6. 任务分解（每步有测试门禁，一步一签）
@@ -198,7 +211,7 @@ unset CODEBUDDY_SESSION_ID CLAUDE_SESSION_ID   # safe-delete shim 会拦 Dart/Gr
 
 | # | 事项 | 结论 |
 |---|---|---|
-| 1 | 仓库名与远端 | `git@github.com:Tea-Codeman/yanxin-bookeeping.git`（**注意：用户原文即 `bookeeping`（双 o），与旧仓库 `yanxin-bookkeeping` 拼写不同；如需改名，GitHub 端 rename 一行命令**）。本地目录 `D:\Tencent\yanxin-flutter`，dart 包名 `yanxin`，applicationId `com.teacodeman.yanxin` |
+| 1 | 仓库名与远端 | ✅ **`git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`**（用户 2026-09-09 二次确认）。本地目录 `D:\Tencent\yanxin-flutter`，dart 包名 `yanxin`，applicationId `com.teacodeman.yanxin` |
 | 2 | 数据库 | ✅ **drift**（`drift` + `drift_flutter` + `drift_dev`/`build_runner`） |
 | 3 | 旧仓库处置 | ✅ 保留只读归档，README 顶部加「已迁移至 yanxin-flutter」说明 |
 | 4 | 旧 App 数据迁移 | ✅ 不做迁移工具，手工重建账本 |

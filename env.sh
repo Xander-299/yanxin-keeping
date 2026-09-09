@@ -30,6 +30,12 @@ export HTTPS_PROXY=http://127.0.0.1:7890
 # safe-delete shim 会拦 Dart/Gradle 的临时文件删除 → 必须 unset 会话 ID
 unset CODEBUDDY_SESSION_ID CLAUDE_SESSION_ID
 
+# --- Gradle 缓存必须放工作区内 ---
+# 沙箱允许在 <USER_HOME>\.gradle 写入但**拒绝删除**（transforms\*.lock 拒绝访问），
+# 与当年 npm 缓存 EPERM 同类。GRADLE_USER_HOME 指进工作区即根治。
+export GRADLE_USER_HOME="D:\\Tencent\\yanxin-flutter\\.gradle-home"
+mkdir -p "$GRADLE_USER_HOME"
+
 # --- flutter test：代理会劫持测试进程的 WebSocket → 先去代理再跑 ---
 fx-test() {
   env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \

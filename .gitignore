@@ -57,6 +57,9 @@ app.*.map.json
 *.keystore
 /android/key.properties
 
+# Gradle 缓存（沙箱不允许删 <USER_HOME>\.gradle，故挪到工作区内）
+/.gradle-home/
+
 # 真实账单样本（含隐私，只留本机）
 test/fixtures/*-real.*
 
