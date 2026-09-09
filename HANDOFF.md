@@ -1,14 +1,14 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1 ✅ / F2 ✅ / F3 ✅ / F4 待开工）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1 ✅ / F2 ✅ / F3 ✅ / F4 代码 ✅ 真机验收待做）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-09 23:20 · 更新人：AI 助手（F3 数据层完成 + 门禁 56/56 + 已推远端 + 更新交接）
+> 最后更新：2026-09-09 23:55 · 更新人：AI 助手（F4 UI 代码完成 + 门禁 68/68 + 更新交接）
 
 ---
 
 # 项目/任务
 
 把已归档的 uni-app 记账 App（旧仓库 `D:\Tencent\yanxin`）重写为 Flutter 应用，新仓库 `D:\Tencent\yanxin-flutter`。
-**F1（空壳+依赖+构建门禁）、F2（core/utils）、F3（drift 数据层）均已通过并推送远端，下一步 F4 UI（M1 等价）。**
+**F1/F2/F3 已推远端；F4（M1 等价 UI）代码与测试门禁已完成，剩真机验收 8 项。下一步 = 真机验收。**
 
 # 核心目标
 
@@ -45,7 +45,7 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → **F3 数据层（drift）**
 | 工程 | `flutter create --platforms=android --org com.teacodeman --project-name yanxin`；applicationId `com.teacodeman.yanxin`；version `0.1.0+1` |
 | 真机 | Redmi K50 无线 adb 可见；无 AVD |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| 门禁 | `flutter analyze` **No issues found**；`flutter test` **56/56 全绿**；`flutter build apk --debug` **成功** |
+| 门禁 | `flutter analyze` **No issues found**；`flutter test` **68/68 全绿**；`flutter build apk --debug` **成功** |
 | APK | `build\app\outputs\flutter-apk\app-debug.apk`，**169,381,011 字节**，另有 `.sha1` |
 | doctor 残留告警 | Windows Version ☠ / Connected device ☠ 是沙箱黑名单拦 `wmic.EXE`/`reg.EXE`，**不要修** |
 
@@ -163,24 +163,28 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → **F3 数据层（drift）**
 
 # 新 Agent 接手指南
 
-1. **下一步：F4 UI 基础（M1 等价）**，`lib/features/{ledger,record,category,book}`：
-   - 首页：hero（月切换 ‹ ›，`canNext` 不超前当前月）+ 流水列表 → 用 `TransactionRepository.listByMonth`
-   - 记一笔：金额键盘 + 分类选择 + 备注 + 时间
-   - 分类管理 / 账本管理（含 `active_book_id` 切换，repo 方法已就位）
-   - 入口：`main.dart`(ProviderScope) + `app.dart`(go_router)；数据库用 `openAppDatabase()`（drift_flutter）
-   - 门禁：SPEC §7「M1 等价验收 8 项」真机 + `flutter analyze` / `flutter test` 全绿
-2. **不要重复**：不要重装 Flutter/JDK/SDK；不要升 drift/sqlite3/build_runner；不要用 `pub add`；不要修 doctor 的 Windows / Connected device ☠；不要复制 gradle 缓存；不要回头做旧栈 T2.8
-3. **信息不足先问用户**：目前无阻塞项；若 F4 中需要 drift 流式查询（`watchByMonth`）等数据层新能力，先补 repo 再写 UI，别在 widget 里直接写 SQL
+1. **下一步：F4 真机验收（M1 等价 8 项，SPEC §7）**：
+   - 装包：Redmi K50 无线 adb → `flutter install` 或 `adb install -r build/app/outputs/flutter-apk/app-debug.apk`
+   - 逐项过：冷启动 / 记支出 / 记收入 / 编辑同步 / 软删列表消失且 deleted_at 非空 / 新建账本切换隔离 / 新建自定义分类可用 / 杀进程重启数据在
+   - 用户偏好：真机测完反馈 UI/UX 回归（记录进 BUG.md 再修）
+2. **F4 代码结构**（都已落库）：
+   - `lib/core/providers/` — database / book_providers / category_providers（DI + 当前账本状态）
+   - `lib/features/ledger/` — 首页（LedgerController + MonthHero + TxGroupList）
+   - `lib/features/record/` — 记一笔（AmountKeyboard + CategoryPicker + amount_input 纯函数）
+   - `lib/features/book/`、`lib/features/category/` — 管理页；`lib/features/shared/name_dialog.dart`
+   - 路由：`/` `/record`（extra=流水 id）`/books` `/categories`
+3. **不要重复**：不要重装 Flutter/JDK/SDK；不要升 drift/sqlite3/build_runner；不要用 `pub add`；不要修 doctor 的 Windows / Connected device ☠；不要复制 gradle 缓存；不要回头做旧栈 T2.8
+4. **信息不足先问用户**：目前无阻塞项；F5 前不要提前装 excel/csv/gbk_codec 依赖（等 F5 开工再装）
 
 ---
 
 # 极简版
 
 - 颜芯记账 uni-app → Flutter，新仓库 `D:\Tencent\yanxin-flutter`（远端 `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`，**已推送 `7a498d8`**）。旧仓库 `D:\Tencent\yanxin` 只读归档。
-- **F1 ✅**：`flutter build apk --debug` 成功（169MB）。**F2 ✅**：core/utils 四模块。**F3 ✅**：drift 数据层 + 4 个 repository，`flutter test` **56/56**、`flutter analyze` 0 issue。
+- **F1 ✅**：`flutter build apk --debug` 成功（169MB）。**F2 ✅** core/utils；**F3 ✅** drift 数据层 + 4 repo；**F4 ✅（代码）** M1 等价 UI + 68/68 测试。剩 F4 真机验收 8 项。
 - 环境：Flutter 3.47.2 / JDK **17**（勿用 25）/ Android SDK `D:\Download\Java\Android`。**开终端先 `source env.sh`**。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0，新增 crypto 3.0.7。
 - 三条最致命的坑：① **gradle 缓存只能用全新空目录**（复制必挂，伪装成网络慢）；② **`dart:convert` 无 sha1** 需 `crypto` 包；③ **`flutter test` 必须去代理**、构建必须走镜像。
 - 另：Dart 泛型上界不能是 record 类型；`env "PROGRAMFILES(X86)=..."` 前缀注入；杀构建后先 `taskkill /F /IM java.exe`；批量删除会被 shim 拦。
 - F3 三条 drift 坑：**索引必须走原始 SQL**（不支持 DESC/部分索引）、**`Transactions` 数据类名改 `TxRow`**、**drift 与 matcher 的 `isNull` 冲突要 hide**。
-- 下一步：**F4 UI 基础**（首页流水列表 + hero 月切换 + 记一笔 + 分类/账本管理，M1 等价 8 项验收）。
+- 下一步：**F4 真机验收**（M1 等价 8 项），过后进 F5 账单导入。

@@ -1,0 +1,103 @@
+/// 首页流水状态：当前账本 + 当前月份 + 该月流水。
+///
+/// 对应旧栈 `stores/transaction.js`。切换账本时 build() 会自动重跑（watch 了
+/// activeBookIdProvider）；翻月/删流水后走 [refresh]。
+library;
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/db/database.dart';
+import '../../../core/providers/book_providers.dart';
+import '../../../core/providers/database.dart';
+import 'month_summary.dart';
+
+/// 首页状态快照。
+class LedgerState {
+  const LedgerState({
+    required this.bookId,
+    required this.year,
+    required this.month,
+    required this.items,
+  });
+
+  /// 当前账本 id。
+  final String bookId;
+
+  final int year;
+
+  /// 1-12。
+  final int month;
+
+  /// 该月流水（发生时间倒序）。
+  final List<TxRow> items;
+
+  /// 月度汇总。
+  MonthSummary get summary => summarize(items);
+}
+
+/// 是否能往后翻一个月（不能超过当前真实月份）。
+bool canGoNext(int year, int month) {
+  final now = DateTime.now();
+  return year * 12 + month < now.year * 12 + now.month;
+}
+
+final ledgerProvider =
+    AsyncNotifierProvider<LedgerController, LedgerState>(LedgerController.new);
+
+class LedgerController extends AsyncNotifier<LedgerState> {
+  @override
+  Future<LedgerState> build() async {
+    final bookId = await ref.watch(activeBookIdProvider.future);
+    if (bookId == null) {
+      throw StateError('当前账本未就绪');
+    }
+    final now = DateTime.now();
+    return _load(bookId, now.year, now.month);
+  }
+
+  Future<LedgerState> _load(String bookId, int year, int month) async {
+    final items = await ref
+        .read(transactionRepositoryProvider)
+        .listByMonth(bookId, year, month);
+    return LedgerState(
+      bookId: bookId,
+      year: year,
+      month: month,
+      items: items,
+    );
+  }
+
+  Future<void> _reload(String bookId, int year, int month) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _load(bookId, year, month));
+  }
+
+  /// 翻月：delta = -1 上一月，+1 下一月（调用方先判 [canGoNext]）。
+  Future<void> shiftMonth(int delta) async {
+    final current = state.value;
+    if (current == null) return;
+    var y = current.year;
+    var m = current.month + delta;
+    if (m < 1) {
+      m = 12;
+      y--;
+    } else if (m > 12) {
+      m = 1;
+      y++;
+    }
+    await _reload(current.bookId, y, m);
+  }
+
+  /// 重新加载当前账本当前月。
+  Future<void> refresh() async {
+    final current = state.value;
+    if (current == null) return;
+    await _reload(current.bookId, current.year, current.month);
+  }
+
+  /// 软删除一笔并从列表移除（不物理删，DB 里 deleted_at 非空）。
+  Future<void> removeTx(String id) async {
+    await ref.read(transactionRepositoryProvider).softDelete(id);
+    await refresh();
+  }
+}
