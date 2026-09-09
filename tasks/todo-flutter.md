@@ -23,19 +23,21 @@
 - [x] `flutter analyze` → **No issues found!**
 - [x] `flutter test` → **All tests passed!**（踩坑：沙箱吞 PROGRAMFILES(X86) + 代理劫持 WebSocket，解法固化在 `env.sh` 的 `fx-test`/`fx-qa`）
 - [x] git init + 提交 `ba45fba` + 远端 origin 已配（远端仓库待用户网页创建）
-- [ ] 门禁：`flutter build apk --debug` 成功
-- [ ] F5 再装：excel / csv / gbk_codec / file_picker
+- [x] 门禁：`flutter build apk --debug` 成功（2026-09-09，第 8 次构建，`build/app/outputs/flutter-apk/app-debug.apk` 169MB）
+- [x] 已推送 `origin/master`（`git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`）
+- [x] F5 再装：excel / csv / gbk_codec / file_picker
 
 > **坑**：`flutter pub add` 本机卡死 20min+ → 改「Python 查 pub API → 手写 pubspec → `pub get`」。
 > **坑**：sqlite3 3.x 带 C 构建钩子，无 VS 的 Windows 跑不了 `flutter test` → 锁 2.9.4。
+> **坑**：把 `<USER_HOME>\.gradle\caches` 复制到工作区会让 Gradle **启动即挂死**（`--status` 都无响应）→ 必须让 Gradle 用**全新空目录**自行下载（腾讯/阿里云镜像很快）。
 
-## F2 core/utils
+## F2 core/utils ✅ 已完成（2026-09-09）
 
-- [ ] `money.dart`（整数分，格式化/解析）
-- [ ] `id.dart`（UUID v4）
-- [ ] `fingerprint.dart`（入账指纹算法，与旧版一致）
-- [ ] `date.dart`（月份边界、月初月末）
-- [ ] 门禁：移植 money/id/fingerprint/date 全部用例
+- [x] `money.dart`（整数分，格式化/解析）
+- [x] `id.dart`（UUID v4）
+- [x] `fingerprint.dart`（入账指纹算法，与旧版逐字节一致）
+- [x] `date.dart`（月份边界、月初月末、按天分组）
+- [x] 门禁：移植 money/id/date 全部旧用例 + 指纹 golden 向量 → `flutter test` 27/27、`flutter analyze` 0 issue
 
 ## F3 数据层
 
@@ -66,5 +68,5 @@
 ## F6 验收收尾
 
 - [ ] M2 等价验收 8 项（真机）
-- [ ] README / CHANGELOG / HANDOFF 建立
-- [ ] 旧仓库 README 顶部加「已迁移至 yanxin-flutter」说明
+- [ ] README / CHANGELOG 建立
+- [x] 旧仓库 README 顶部加「已迁移至 yanxin-flutter」说明
