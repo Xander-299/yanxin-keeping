@@ -2,6 +2,10 @@
 ///
 /// 对应旧栈 `pages/record/edit.vue`：支出/收入切换 + 金额键盘 + 分类 + 备注。
 /// 编辑模式由路由 extra 传入流水 id。
+///
+/// 性能约定：分类列表 watch 已缓存的 `categoriesProvider`（首页加载时就绪），
+/// push 首帧即渲染完整页面——**不允许**再加 initState 异步门闩（spinner→二次
+/// build 会在转场动画中途换内容，肉眼可见卡顿）；编辑模式的流水详情异步填充。
 library;
 
 import 'dart:async';
@@ -11,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
+import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
@@ -35,42 +40,29 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   String _type = 'expense';
   String _amount = '';
   String? _categoryId;
-  bool _loading = true;
   bool _saving = false;
-  List<Category> _categories = <Category>[];
 
   bool get _isEdit => widget.txId != null;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    // 仅编辑模式需要补流水详情；分类数据走缓存 provider，不挡首帧
+    if (_isEdit) {
+      unawaited(_loadTx());
+    }
   }
 
-  Future<void> _load() async {
-    final bookId = await ref.read(activeBookIdProvider.future);
-    if (bookId == null) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    final categories = await ref
-        .read(categoryRepositoryProvider)
-        .listByBook(bookId);
-    if (widget.txId != null) {
-      final tx = await ref
-          .read(transactionRepositoryProvider)
-          .getById(widget.txId!);
-      if (tx != null) {
-        _type = tx.type;
-        _amount = centsToYuan(tx.amountCents);
-        _noteController.text = tx.note;
-        _categoryId = tx.categoryId;
-      }
-    }
-    if (!mounted) return;
+  Future<void> _loadTx() async {
+    final tx = await ref
+        .read(transactionRepositoryProvider)
+        .getById(widget.txId!);
+    if (!mounted || tx == null) return;
     setState(() {
-      _categories = categories;
-      _loading = false;
+      _type = tx.type;
+      _amount = centsToYuan(tx.amountCents);
+      _noteController.text = tx.note;
+      _categoryId = tx.categoryId;
     });
   }
 
@@ -80,21 +72,15 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     super.dispose();
   }
 
-  List<Category> get _visibleCategories =>
-      _categories.where((Category c) => c.kind == _type).toList();
-
-  Category? get _selectedCategory {
-    for (final c in _categories) {
+  Category? _selectedCategory(List<Category> categories) {
+    for (final c in categories) {
       if (c.id == _categoryId) return c;
     }
     return null;
   }
 
-  Future<void> _pickCategory() async {
-    final picked = await showCategoryPicker(
-      context,
-      categories: _visibleCategories,
-    );
+  Future<void> _pickCategory(List<Category> visible) async {
+    final picked = await showCategoryPicker(context, categories: visible);
     if (picked != null) {
       setState(() => _categoryId = picked.id);
     }
@@ -161,11 +147,15 @@ class _RecordPageState extends ConsumerState<RecordPage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    // 首页加载时就已解析并缓存，push 首帧直接有数据；若真未就绪（冷启动直进
+    // 编辑模式的极端情况），这一帧退化为轻量占位，provider 完成后自动重渲染
+    final categories =
+        ref.watch(categoriesProvider).value ?? const <Category>[];
+    final visible = categories
+        .where((Category c) => c.kind == _type)
+        .toList(growable: false);
+    final selected = _selectedCategory(categories);
+
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? '编辑流水' : '记一笔')),
       body: SafeArea(
@@ -183,7 +173,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                   setState(() {
                     _type = next.first;
                     // 切类型后原分类不再适用，清空让用户重选
-                    final stillValid = _categories.any(
+                    final stillValid = categories.any(
                       (Category c) => c.id == _categoryId && c.kind == _type,
                     );
                     if (!stillValid) _categoryId = null;
@@ -200,9 +190,9 @@ class _RecordPageState extends ConsumerState<RecordPage> {
               const SizedBox(height: 16),
               _FieldTile(
                 label: '分类',
-                value: _selectedCategory?.name,
+                value: selected?.name,
                 placeholder: '请选择分类',
-                onTap: _pickCategory,
+                onTap: () => _pickCategory(visible),
               ),
               TextField(
                 controller: _noteController,
