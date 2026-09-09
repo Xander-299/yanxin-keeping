@@ -1,6 +1,7 @@
-/// 首页：结余主卡（月份切换）+ 按天分组的流水列表 + 记一笔入口。
+/// 首页：账本 header + hero 月支出卡 + 预算占位卡 + 本月账单列表。
 ///
-/// 对应旧栈 `pages/index/index.vue`。
+/// 视觉对齐 app_template/home_ui.jpg；对应旧栈 `pages/index/index.vue`。
+/// 页面本身无 Scaffold（壳路由 AppShell 提供抽屉与底栏）。
 library;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 
 import '../application/ledger_controller.dart';
+import 'widgets/budget_card_placeholder.dart';
 import 'widgets/month_hero.dart';
 import 'widgets/tx_group_list.dart';
 
@@ -27,66 +29,57 @@ class HomePage extends ConsumerWidget {
 
     final nameOf = _categoryNameResolver(categoriesAsync.value);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(bookAsync.value?.name ?? '颜芯记账'),
-        actions: <Widget>[
-          IconButton(
-            tooltip: '账本管理',
-            icon: const Icon(Icons.import_contacts_outlined),
-            onPressed: () => context.push<bool?>('/books').then((bool? changed) {
-              if (changed ?? false) ref.invalidate(ledgerProvider);
-            }),
-          ),
-          IconButton(
-            tooltip: '分类管理',
-            icon: const Icon(Icons.category_outlined),
-            onPressed: () => context.push('/categories'),
-          ),
-        ],
-      ),
-      body: ledger.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, StackTrace _) => Center(child: Text('加载失败：$e')),
-        data: (LedgerState state) {
-          return Column(
-            children: <Widget>[
-              MonthHero(
-                year: state.year,
-                month: state.month,
-                summary: state.summary,
-                canNext: canGoNext(state.year, state.month),
-                onPrevMonth: () =>
-                    ref.read(ledgerProvider.notifier).shiftMonth(-1),
-                onNextMonth: () =>
-                    ref.read(ledgerProvider.notifier).shiftMonth(1),
-              ),
-              Expanded(
-                child: state.items.isEmpty
-                    ? _EmptyMonth(year: state.year, month: state.month)
-                    : TxGroupList(
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: <Widget>[
+          _Header(bookName: bookAsync.value?.name ?? '…'),
+          Expanded(
+            child: ledger.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (Object e, StackTrace _) =>
+                  Center(child: Text('加载失败：$e')),
+              data: (LedgerState state) => CustomScrollView(
+                slivers: <Widget>[
+                  SliverToBoxAdapter(
+                    child: MonthHero(
+                      year: state.year,
+                      month: state.month,
+                      summary: state.summary,
+                      canNext: canGoNext(state.year, state.month),
+                      onPrevMonth: () =>
+                          ref.read(ledgerProvider.notifier).shiftMonth(-1),
+                      onNextMonth: () =>
+                          ref.read(ledgerProvider.notifier).shiftMonth(1),
+                    ),
+                  ),
+                  const SliverToBoxAdapter(child: BudgetCardPlaceholder()),
+                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  const SliverToBoxAdapter(child: _SectionHeader()),
+                  if (state.items.isEmpty)
+                    SliverToBoxAdapter(
+                      child: _EmptyMonth(
+                        year: state.year,
+                        month: state.month,
+                      ),
+                    )
+                  else
+                    SliverToBoxAdapter(
+                      child: TxGroupList(
                         items: state.items,
                         categoryNameOf: nameOf,
-                        onEdit: (TxRow tx) => context
-                            .push<bool?>('/record', extra: tx.id)
-                            .then((bool? changed) {
-                              if (changed ?? false) {
-                                ref.read(ledgerProvider.notifier).refresh();
-                              }
-                            }),
+                        shrinkWrap: true,
+                        onEdit: (TxRow tx) =>
+                            context.push('/record', extra: tx.id),
                         onDelete: (TxRow tx) => _confirmDelete(context, ref, tx),
                       ),
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
               ),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: '记一笔',
-        onPressed: () => context.push<bool?>('/record').then((bool? changed) {
-          if (changed ?? false) ref.read(ledgerProvider.notifier).refresh();
-        }),
-        child: const Icon(Icons.add),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -129,6 +122,140 @@ class HomePage extends ConsumerWidget {
   }
 }
 
+/// 顶部栏：左侧账本名（点开抽屉）+ 右侧三个占位图标。
+class _Header extends StatelessWidget {
+  const _Header({required this.bookName});
+
+  final String bookName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: InkResponse(
+              onTap: Scaffold.maybeOf(context)?.openDrawer,
+              radius: 28,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Flexible(
+                    child: Text(
+                      bookName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, size: 24),
+                ],
+              ),
+            ),
+          ),
+          const _HeaderIcon(
+            icon: Icons.search_rounded,
+            tooltip: '搜索（建设中）',
+          ),
+          const _HeaderIcon(
+            icon: Icons.receipt_long_rounded,
+            tooltip: '报表（建设中）',
+          ),
+          const _HeaderIcon(
+            icon: Icons.pie_chart_outline_rounded,
+            tooltip: '统计（建设中）',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// header 占位图标：点击提示建设中。
+class _HeaderIcon extends StatelessWidget {
+  const _HeaderIcon({required this.icon, required this.tooltip});
+
+  final IconData icon;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: () {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('功能建设中，敬请期待'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+      },
+      icon: Icon(icon, size: 22),
+    );
+  }
+}
+
+/// 「本月账单」区头 + 全部账单占位入口。
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
+      child: Row(
+        children: <Widget>[
+          const Text(
+            '本月账单',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  const SnackBar(
+                    content: Text('全部账单 · 建设中'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+            },
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  '全部账单',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyMonth extends StatelessWidget {
   const _EmptyMonth({required this.year, required this.month});
 
@@ -137,21 +264,27 @@ class _EmptyMonth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const CircleAvatar(radius: 28, child: Text('记')),
-          const SizedBox(height: 16),
-          Text('$year年$month月还没有记账'),
-          const SizedBox(height: 8),
-          Text(
-            '点右下角的 ＋ 记下第一笔吧',
-            style: TextStyle(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 48, 0, 48),
+      child: Center(
+        child: Column(
+          children: <Widget>[
+            Icon(
+              Icons.receipt_long_rounded,
+              size: 56,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Text('$year年$month月还没有记账'),
+            const SizedBox(height: 8),
+            Text(
+              '点底部的 ＋ 记下第一笔吧',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

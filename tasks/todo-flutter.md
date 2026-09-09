@@ -53,7 +53,7 @@
 > **坑**：`Transactions` 表数据类名必须改成 `TxRow`（`@DataClassName`），否则与 drift 自带 `Transaction` 撞名。
 > **坑**：`drift` 与 `matcher` 都导出顶层 `isNull` → 测试里 `import 'package:drift/drift.dart' hide isNull`。
 
-## F4 UI 基础（M1 等价）✅ 代码完成（2026-09-09，真机验收待做）
+## F4 UI 基础（M1 等价）✅ 完成（2026-09-09 代码 + 真机验收通过）
 
 - [x] 首页：hero（月切换 ‹ ›，canNext 不超前当前月）+ 按天分组流水列表 + 空态 + FAB
 - [x] 记一笔：支出/收入 tab + 金额键盘 + 分类选择（宫格弹层）+ 备注
@@ -62,13 +62,26 @@
 - [x] 账本管理：列表 + 新建 + 切换（active_book_id 落库，BUG-016 语义）
 - [x] 分类管理：支出/收入分组 + 新建自定义分类 + 删除自定义分类（预置不可删）
 - [x] 门禁：`flutter analyze` No issues found；`flutter test` **68/68**（含 6 条 widget 测试走完整 UI 路径）
-- [ ] M1 等价验收 8 项（真机）← 下一步
+- [x] M1 等价验收 8 项（真机，2026-09-10 用户确认通过）
 
 > **坑 1**：Riverpod 3 未公开导出 `Override` 类型 → ProviderScope.overrides 别写类型注解。
 > **坑 2**：`AsyncValue.valueOrNull` 在 Riverpod 3 已移除 → 用 `.value`。
 > **坑 3**：go_router 实例必须是 App State 成员，不能是顶层 final——否则多个测试共享导航状态，前一个测试 push 过的页面会污染后一个测试。
 > **坑 4**：showDialog 里的 TextField + controller 必须放 StatefulWidget，无状态 build 里 new controller 会丢输入。
 > **坑 5**：测试里写库（create）是真实异步，pumpAndSettle 可能在写库完成前返回 → 用 pumpUntil(finder) 轮询。
+
+## F4.5 首页改版 + 底部导航 ✅ 代码完成（2026-09-10，真机验收待做）
+
+- [x] 全局深色主题（近黑底 #0C0C0C + 琥珀橙 #FFAF38，对齐 app_template/home_ui.jpg）
+- [x] 底部导航 4 tab（首页/日历/资产/我的）+ 中央橙色「记一笔」；StatefulShellRoute.indexedStack
+- [x] 日历 / 资产 = 占位页；「我的」= 占位骨架 + 分类管理入口
+- [x] 首页：header（左=账本名开抽屉，右=搜索/报表/统计占位图标）+ 琥珀 hero 月支出卡（保留 ‹ › 翻月）+ 预算占位卡（纯静态）+「本月账单」列表
+- [x] 账本抽屉：全部账本（当前高亮）+ 右下角「管理账本」
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **69/69**
+- [ ] 真机验收（首页视觉 + 抽屉切账本 + 底栏四 tab + 占位反馈）
+
+> **坑 6**：go_router `context.push` 的 Future 在 StatefulShellRoute 壳下**不兑现 .then 回调**
+> → 保存后的列表刷新必须由记一笔页在 pop 前自己 `refresh()`，不能靠调用方 `.then`。
 
 ## F5 账单导入（M2 等价）
 

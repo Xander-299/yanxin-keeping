@@ -56,6 +56,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // 回到首页：hero 结余 -12.00、支出 12.00，列表出现 -12.00
+    // （保存后的 refresh 走真实异步读库，用 pumpUntil 等待）
+    await pumpUntil(tester, find.text('-12.00'));
     expect(find.text('-12.00'), findsNWidgets(2)); // hero 结余 + 列表金额
     expect(find.text('12.00'), findsOneWidget); // hero 支出
   });
@@ -87,6 +89,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, '删除'));
     await tester.pumpAndSettle();
+    await pumpUntil(tester, find.textContaining('还没有记账'));
 
     expect(find.textContaining('还没有记账'), findsOneWidget);
   });
@@ -120,7 +123,10 @@ void main() {
   testWidgets('分类管理：新建自定义分类并出现在列表', (WidgetTester tester) async {
     await pumpApp(tester);
 
-    await tester.tap(find.byIcon(Icons.category_outlined));
+    // 入口在「我的」tab
+    await tester.tap(find.text('我的'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('分类管理'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('新建分类'));
     await tester.pumpAndSettle();
@@ -138,16 +144,55 @@ void main() {
 
     await pumpApp(tester, database: db);
 
-    // 新建账本 B（创建即切换）
-    await tester.tap(find.byIcon(Icons.import_contacts_outlined));
+    // 首页 header 点开抽屉 → 管理账本
+    await tester.tap(find.text('默认账本'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('管理账本'));
+    await tester.pumpAndSettle();
+
+    // 新建账本 B（创建即切换）
     await tester.tap(find.byTooltip('新建账本'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), 'B账本');
     await tester.tap(find.text('确定'));
+    // 创建后自动切换并 pop 回首页；先等对话框关掉（避免命中输入框文本），
+    // 再等 header 变成 B账本
+    for (var i = 0; i < 20 && find.byType(TextField).evaluate().isNotEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     await pumpUntil(tester, find.text('B账本'));
-
-    // 回到首页，标题已是新账本
     expect(find.text('B账本'), findsOneWidget);
+  });
+
+  testWidgets('抽屉切换账本，首页流水随切刷新', (WidgetTester tester) async {
+    final db = openTestDatabase();
+    final bookRepo = BookRepository(db);
+    final bookA = await bookRepo.ensureDefaultBook();
+    final bookB = await bookRepo.create(name: 'B账本');
+
+    // 在 B 账本记一笔支出 5.00
+    final cat = (await CategoryRepository(db).listByBook(bookB.id, kind: 'expense')).first;
+    final accountId = (await AccountRepository(db).listByBook(bookB.id)).first.id;
+    await TransactionRepository(db).create(
+      bookId: bookB.id,
+      accountId: accountId,
+      categoryId: cat.id,
+      type: 'expense',
+      amountCents: 500,
+      occurredAt: DateTime.now().millisecondsSinceEpoch,
+    );
+    addTearDown(db.close);
+
+    await pumpApp(tester, database: db);
+    expect(find.textContaining('还没有记账'), findsOneWidget); // A 账本为空
+
+    // 打开抽屉切到 B
+    await tester.tap(find.text('默认账本'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('B账本'));
+    await pumpUntil(tester, find.text('-5.00'));
+
+    expect(find.text('-5.00'), findsNWidgets(2)); // hero 结余 + 列表金额
+    expect(bookA.id, isNotNull);
   });
 }

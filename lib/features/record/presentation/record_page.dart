@@ -4,6 +4,8 @@
 /// 编辑模式由路由 extra 传入流水 id。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,6 +13,7 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/core/utils/money.dart';
+import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 
 import '../application/amount_input.dart';
 import 'widgets/amount_keyboard.dart';
@@ -138,6 +141,11 @@ class _RecordPageState extends ConsumerState<RecordPage> {
           occurredAt: DateTime.now().millisecondsSinceEpoch,
           note: _noteController.text.trim(),
         );
+      }
+      // 刷新首页（go_router push 的 Future 在壳路由下不兑现 .then，
+      // 刷新必须在 pop 前由本页自己触发）
+      if (ref.context.mounted) {
+        unawaited(ref.read(ledgerProvider.notifier).refresh());
       }
       if (mounted) Navigator.of(context).pop(true);
     } finally {

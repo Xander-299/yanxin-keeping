@@ -1,11 +1,16 @@
-/// 首页结余主卡：月份切换 ‹ › + 结余 + 支出/收入。
+/// 首页结余主卡：琥珀渐变 + 本月支出大数字 + 收入/结余 + 月份切换 ‹ ›。
+///
+/// 视觉对齐 app_template/home_ui.jpg 的 hero 卡（浅琥珀底、深色字）。
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../application/month_summary.dart';
 
-/// 结余主卡（渐变 + 圆角，对齐旧栈 index.vue 的 hero）。
+/// hero 卡深色文字基色（琥珀底上的深棕）。
+const Color kHeroInk = Color(0xFF241503);
+
+/// 结余主卡。
 class MonthHero extends StatelessWidget {
   const MonthHero({
     super.key,
@@ -32,105 +37,60 @@ class MonthHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: <Color>[primary, primary.withValues(alpha: 0.72)],
+          colors: <Color>[Color(0xFFFFE8C2), Color(0xFFFFC978)],
         ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: primary.withValues(alpha: 0.28),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          _MonthSwitcher(
-            year: year,
-            month: month,
-            canNext: canNext,
-            onPrevMonth: onPrevMonth,
-            onNextMonth: onNextMonth,
+          Row(
+            children: <Widget>[
+              Text(
+                '$month月 · 支出',
+                style: TextStyle(
+                  color: kHeroInk.withValues(alpha: 0.65),
+                  fontSize: 13,
+                ),
+              ),
+              const Spacer(),
+              _RoundButton(label: '‹', onTap: onPrevMonth),
+              const SizedBox(width: 8),
+              _RoundButton(
+                label: '›',
+                enabled: canNext,
+                onTap: canNext ? onNextMonth : null,
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          const Text(
-            '结余',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
-            summary.balanceYuan,
+            summary.expenseYuan,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
+              color: kHeroInk,
+              fontSize: 38,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 14),
-          const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 12),
           Row(
             children: <Widget>[
-              _HeroCell(label: '支出', value: summary.expenseYuan),
-              const SizedBox(
-                height: 28,
-                child: VerticalDivider(color: Colors.white24, width: 32),
-              ),
               _HeroCell(label: '收入', value: summary.incomeYuan),
+              const SizedBox(width: 28),
+              _HeroCell(label: '结余', value: summary.balanceYuan),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _MonthSwitcher extends StatelessWidget {
-  const _MonthSwitcher({
-    required this.year,
-    required this.month,
-    required this.canNext,
-    required this.onPrevMonth,
-    required this.onNextMonth,
-  });
-
-  final int year;
-  final int month;
-  final bool canNext;
-  final VoidCallback onPrevMonth;
-  final VoidCallback? onNextMonth;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: <Widget>[
-        _RoundButton(label: '‹', onTap: onPrevMonth),
-        const SizedBox(width: 12),
-        Text(
-          '$year年$month月',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 12),
-        _RoundButton(
-          label: '›',
-          enabled: canNext,
-          onTap: canNext ? onNextMonth : null,
-        ),
-      ],
     );
   }
 }
@@ -150,21 +110,22 @@ class _RoundButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkResponse(
       onTap: onTap,
-      radius: 22,
+      radius: 20,
       child: Container(
         width: 30,
         height: 30,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: enabled ? 0.18 : 0.08),
+          color: Colors.black.withValues(alpha: enabled ? 0.08 : 0.04),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: enabled ? 1 : 0.35),
-            fontSize: 20,
+            color: kHeroInk.withValues(alpha: enabled ? 0.9 : 0.35),
+            fontSize: 18,
             height: 1,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -180,25 +141,27 @@ class _HeroCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: <Widget>[
+        Text(
+          label,
+          style: TextStyle(
+            color: kHeroInk.withValues(alpha: 0.65),
+            fontSize: 12,
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          value,
+          style: const TextStyle(
+            color: kHeroInk,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
