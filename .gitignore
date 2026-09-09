@@ -60,6 +60,12 @@ app.*.map.json
 # Gradle 缓存（沙箱不允许删 <USER_HOME>\.gradle，故挪到工作区内）
 /.gradle-home/
 
+# 构建产物（android/ 根级 build 目录）
+/android/build/
+
+# 待删临时目录（旧缓存搬运残留，可安全清理）
+/.trash*/
+
 # 真实账单样本（含隐私，只留本机）
 test/fixtures/*-real.*
 

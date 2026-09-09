@@ -27,9 +27,10 @@ dependencyResolutionManagement {
     //    否则报 Could not find io.flutter:arm64_v8a_debug:1.0.0-<engine-hash>
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
+        // 国内镜像（境外 storage.googleapis.com 经代理仅 ~130KB/s）
         maven("https://maven.aliyun.com/repository/google")
         maven("https://maven.aliyun.com/repository/central")
-        maven("https://storage.googleapis.com/download.flutter.io")
+        maven("https://storage.flutter-io.cn/download.flutter.io")
         google()
         mavenCentral()
     }
