@@ -83,15 +83,18 @@
 > **坑 6**：go_router `context.push` 的 Future 在 StatefulShellRoute 壳下**不兑现 .then 回调**
 > → 保存后的列表刷新必须由记一笔页在 pop 前自己 `refresh()`，不能靠调用方 `.then`。
 
-## F5 账单导入（M2 等价）
+## F5 账单导入（M2 等价）✅ 代码完成（2026-09-10，真机验收待做）
 
-- [ ] `gbk_codec` 验证（**第一步**，失败立刻换 charset_converter）
-- [ ] CSV 解析 + 微信/支付宝 profiles 别名
-- [ ] xlsx 解析（excel 包）+ Excel 序列号时间列换算
-- [ ] categorize 关键词规则
-- [ ] importer：单事务 + 指纹去重
-- [ ] 导入页 UI（选文件 → 预览 → 可取消单条 → 确认导入）
-- [ ] 门禁：移植 bill-import 用例 + **真实件对拍，与旧版逐行一致**
+- [x] `gbk_codec` 验证：纯 Dart 回环校验替代 U+FFFD 检测（gbk_bytesDecode 无 FFFD）；sdk 上界走 dependency_overrides
+- [x] CSV 解析（逐字符状态机）+ 微信/支付宝 profiles（列名回退数组、方向映射、状态白/黑名单）
+- [x] xlsx 解析：**不用 excel 包**（数值过 double 会丢 31 位单号精度）→ archive 解压 + 移植旧栈手写正则解析器；Excel 序列号本地时区换算
+- [x] categorize 关键词规则（39 条有序表，模式小写化等价 /i）
+- [x] importer：drift 单事务 + 指纹 IN 分批预查（参数绑定，escapeLiteral 不再需要）+ 文件内去重 + dryRun 哨兵回滚
+- [x] 导入页 UI（我的页入口 → 选文件 → 预览可单条取消 → 确认导入 → 报告对话框 → 首页 refresh）
+- [x] 门禁：移植 bill-import 6 组用例 + **真实件对拍逐行一致**（微信 xlsx 335 笔/导入 327、支付宝 GBK 32 笔/导入 28、31 位单号不丢精度）；`flutter test` **143/143**、analyze 0 issue
+- [ ] 真机验收（M2 等价 8 项）
+
+
 
 ## F6 验收收尾
 

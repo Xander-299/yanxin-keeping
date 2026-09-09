@@ -1,14 +1,14 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F4 ✅ 验收过 / F4.5 首页改版代码 ✅ 真机待验）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F4/F4.5 ✅ 验收过 / F5 账单导入代码 ✅ 真机待验）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-10 01:50 · 更新人：AI 助手（F4 真机验收通过 + F4.5 首页改版/底部导航完成 + 门禁 69/69）
+> 最后更新：2026-09-10 04:30 · 更新人：AI 助手（F4.5 真机验收通过 + F5 账单导入完成 + 门禁 143/143）
 
 ---
 
 # 项目/任务
 
 把已归档的 uni-app 记账 App（旧仓库 `D:\Tencent\yanxin`）重写为 Flutter 应用，新仓库 `D:\Tencent\yanxin-flutter`。
-**F1–F4 已完成且真机验收通过。F4.5（按参考图 home_ui.jpg 改版：深色主题 + 底部导航 + 首页重构 + 账本抽屉）代码完成、门禁 69/69，待真机验收。预算卡/搜索/报表/统计/全部账单为纯占位。**
+**F1–F4.5 已完成且真机验收通过。F5（账单导入：decode/csv/profiles/xlsx/categorize/importer + 导入页）代码完成，真实件对拍与旧版逐行一致，门禁 143/143，待真机验收 M2 等价 8 项。**
 
 # 核心目标
 
@@ -45,7 +45,7 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → **F3 数据层（drift）**
 | 工程 | `flutter create --platforms=android --org com.teacodeman --project-name yanxin`；applicationId `com.teacodeman.yanxin`；version `0.1.0+1` |
 | 真机 | Redmi K50 无线 adb 可见；无 AVD |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| 门禁 | `flutter analyze` **No issues found**；`flutter test` **69/69 全绿**；`flutter build apk --debug` **成功** |
+| 门禁 | `flutter analyze` **No issues found**；`flutter test` **143/143 全绿**；`flutter build apk --debug` **成功** |
 | APK | `build\app\outputs\flutter-apk\app-debug.apk`，**169,381,011 字节**，另有 `.sha1` |
 | doctor 残留告警 | Windows Version ☠ / Connected device ☠ 是沙箱黑名单拦 `wmic.EXE`/`reg.EXE`，**不要修** |
 
@@ -163,16 +163,17 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → **F3 数据层（drift）**
 
 # 新 Agent 接手指南
 
-1. **下一步：F4.5 真机验收**：装包到 K50，过 4 项：首页视觉（hero/预算卡/列表）、header 开抽屉切账本 + 管理账本、底栏 4 tab 切换 + 中央橙 + 记一笔、占位点击 SnackBar 反馈。测完反馈 UI/UX 回归。
-2. **占位清单（未做功能，别当 bug）**：预算卡全静态、header 搜索/报表/统计、`全部账单 ›`、日历/资产页、「我的」页除分类管理外条目。
-3. **F4/F4.5 代码结构**（都已落库）：
+1. **下一步：F5 真机验收（M2 等价 8 项，SPEC §7）**：装包到 K50。关键 3 项：①导入页唤起 SAF 文件选择（Android 真机才走 FilePicker，测试用注入）②微信 xlsx 真实件导入 → 首页/日历数据正确、中文无乱码 ③同一文件重导 → 全部重复跳过。其余：支付宝 GBK 件、单条取消、坏行不中断、跨账本隔离、杀进程重启数据在。
+2. **F4.5 遗留占位（未做功能，别当 bug）**：预算卡全静态、header 搜索/报表/统计、`全部账单 ›`、日历/资产页。
+3. **F4/F4.5/F5 代码结构**（都已落库）：
    - `lib/core/providers/` — database / book_providers / category_providers（DI + 当前账本状态）
    - `lib/features/nav/` — AppShell（抽屉+底栏+壳路由）+ PlaceholderPage
    - `lib/features/ledger/` — 首页（LedgerController + MonthHero + BudgetCardPlaceholder + BookDrawer + TxGroupList）
-   - `lib/features/profile/` — 我的页（分类管理入口）
+   - `lib/features/import/` — 账单导入五层（data/decode·csv·profiles·normalize·xlsx·parse + category_rules）+ application/bill_importer（drift 事务+dryRun）+ presentation/import_page
+   - `lib/features/profile/` — 我的页（分类管理 + 导入账单入口）
    - `lib/features/record/` — 记一笔（AmountKeyboard + CategoryPicker + amount_input 纯函数）
    - `lib/features/book/`、`lib/features/category/` — 管理页；`lib/features/shared/name_dialog.dart`
-   - 路由：壳 `/` `/calendar` `/assets` `/profile`；全屏 `/record`（extra=流水 id）`/books` `/categories`
+   - 路由：壳 `/` `/calendar` `/assets` `/profile`；全屏 `/record`（extra=流水 id）`/books` `/categories` `/import`
 3. **不要重复**：不要重装 Flutter/JDK/SDK；不要升 drift/sqlite3/build_runner；不要用 `pub add`；不要修 doctor 的 Windows / Connected device ☠；不要复制 gradle 缓存；不要回头做旧栈 T2.8
 4. **信息不足先问用户**：目前无阻塞项；F5 前不要提前装 excel/csv/gbk_codec 依赖（等 F5 开工再装）
 
@@ -181,10 +182,10 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → **F3 数据层（drift）**
 # 极简版
 
 - 颜芯记账 uni-app → Flutter，新仓库 `D:\Tencent\yanxin-flutter`（远端 `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`，**已推送 `7a498d8`**）。旧仓库 `D:\Tencent\yanxin` 只读归档。
-- **F1–F4 ✅ 全部完成且真机验收过**。**F4.5 ✅（代码）**：深色主题 + 底部导航 + 首页改版 + 账本抽屉，69/69 测试。
+- **F1–F4.5 ✅ 全部完成且真机验收过**。**F5 ✅（代码）**：账单导入全链路，真实件对拍逐行一致，143/143 测试。
 - 环境：Flutter 3.47.2 / JDK **17**（勿用 25）/ Android SDK `D:\Download\Java\Android`。**开终端先 `source env.sh`**。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0，新增 crypto 3.0.7。
 - 三条最致命的坑：① **gradle 缓存只能用全新空目录**（复制必挂，伪装成网络慢）；② **`dart:convert` 无 sha1** 需 `crypto` 包；③ **`flutter test` 必须去代理**、构建必须走镜像。
 - 另：Dart 泛型上界不能是 record 类型；`env "PROGRAMFILES(X86)=..."` 前缀注入；杀构建后先 `taskkill /F /IM java.exe`；批量删除会被 shim 拦。
 - F3 三条 drift 坑：**索引必须走原始 SQL**（不支持 DESC/部分索引）、**`Transactions` 数据类名改 `TxRow`**、**drift 与 matcher 的 `isNull` 冲突要 hide**。
-- 下一步：**F4.5 真机验收 4 项**，过后进 F5 账单导入。
+- 下一步：**F5 真机验收（M2 等价 8 项）**，过后 F6 收尾。

@@ -28,6 +28,9 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  # xlsx 解压（纯 Dart，无 native 钩子；sheet 内部用旧栈同款正则解析器，不过 double 保 31 位单号精度）
+  archive: ^4.2.0
+
   # 数据层：drift 提供编译期参数绑定，彻底消除手写 SQL 拼接（旧栈 ADR-5 最高危点）
   # ⚠️ 锁在 drift 2.31.0 / sqlite3 2.9.4：sqlite3 3.x 起带 C 构建钩子（native-assets），
   #    Windows 上 flutter test 需要 MSVC 编译器，本机无 VS 会直接报
@@ -37,15 +40,24 @@ dependencies:
   cupertino_icons: ^1.0.8
   drift: 2.31.0
   drift_flutter: 0.2.8
+  # 文件选择（Android SAF）
+  file_picker: ^12.2.0
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.4.3
+  # GBK 解码（纯 Dart 映射表）；0.4.0 sdk 上界 <3.0.0 是历史遗留，代码 dart3 可编译，走 override
+  gbk_codec: 0.4.0
   go_router: ^18.0.1
   path: ^1.9.1
   sqlite3: 2.9.4
 
   # 客户端发号（ADR-1）
   uuid: ^4.6.0
+
+
+# gbk_codec 0.4.0 的 sdk 上界 <3.0.0 为历史遗留（代码纯 Dart 可编译），强制放行
+dependency_overrides:
+  gbk_codec: 0.4.0
 
 dev_dependencies:
   # ⚠️ 锁 2.15.x：build_runner 2.16+ 要求 analyzer >=13，与 drift_dev 2.31（analyzer <11）冲突

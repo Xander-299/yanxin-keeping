@@ -2,7 +2,7 @@
 ///
 /// 路由表在 State 里构建（每个 App 实例独立一份 GoRouter，测试互不串扰）：
 /// - 壳路由（底部导航 4 tab）：`/` `/calendar` `/assets` `/profile`
-/// - 全屏路由：`/record`（extra = 流水 id）、`/books`、`/categories`
+/// - 全屏路由：`/record`（extra = 流水 id）、`/books`、`/categories`、`/import`
 ///
 /// 主题对齐 app_template/home_ui.jpg：深黑底 + 琥珀橙强调。
 library;
@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/features/book/presentation/book_manage_page.dart';
 import 'package:yanxin/features/category/presentation/category_manage_page.dart';
+import 'package:yanxin/features/import/presentation/import_page.dart';
 import 'package:yanxin/features/ledger/presentation/home_page.dart';
 import 'package:yanxin/features/nav/presentation/app_shell.dart';
 import 'package:yanxin/features/nav/presentation/placeholder_page.dart';
@@ -71,6 +72,7 @@ class _YanxinAppState extends State<YanxinApp> {
             RecordPage(txId: state.extra as String?),
       ),
       GoRoute(path: '/books', builder: (_, _) => const BookManagePage()),
+      GoRoute(path: '/import', builder: (_, _) => const ImportPage()),
       GoRoute(
         path: '/categories',
         builder: (_, _) => const CategoryManagePage(),

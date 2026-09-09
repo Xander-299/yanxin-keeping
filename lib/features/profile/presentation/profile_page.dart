@@ -49,6 +49,11 @@ class ProfilePage extends ConsumerWidget {
               title: '分类管理',
               onTap: () => context.push('/categories'),
             ),
+            _EntryTile(
+              icon: Icons.file_download_rounded,
+              title: '导入账单',
+              onTap: () => context.push('/import'),
+            ),
             const _EntryTile(
               icon: Icons.construction_rounded,
               title: '数据导出（建设中）',
