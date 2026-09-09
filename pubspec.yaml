@@ -32,6 +32,8 @@ dependencies:
   # ⚠️ 锁在 drift 2.31.0 / sqlite3 2.9.4：sqlite3 3.x 起带 C 构建钩子（native-assets），
   #    Windows 上 flutter test 需要 MSVC 编译器，本机无 VS 会直接报
   #    "%PROGRAMFILES(X86)% environment variable not found"。本机无 VS，勿升。
+  # 入账指纹 SHA-1（纯 Dart，无 native 钩子；锁 3.0.7 与 lock 一致）
+  crypto: 3.0.7
   cupertino_icons: ^1.0.8
   drift: 2.31.0
   drift_flutter: 0.2.8
