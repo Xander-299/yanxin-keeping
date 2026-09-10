@@ -4,6 +4,8 @@
 /// 页面本身无 Scaffold（壳路由 AppShell 提供抽屉与底栏）。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,10 +13,12 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
+import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 
 import '../application/ledger_controller.dart';
 import 'widgets/budget_card_placeholder.dart';
 import 'widgets/month_hero.dart';
+import 'widgets/tx_delete_dialog.dart';
 import 'widgets/tx_group_list.dart';
 
 /// 首页。
@@ -99,26 +103,11 @@ class HomePage extends ConsumerWidget {
     WidgetRef ref,
     TxRow tx,
   ) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('删除这笔'),
-        content: const Text('删除后在回收站保留，确定删除？'),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
-          ),
-        ],
-      ),
-    );
-    if (ok ?? false) {
-      await ref.read(ledgerProvider.notifier).removeTx(tx.id);
-    }
+    if (!await confirmDeleteTx(context)) return;
+    await ref.read(ledgerProvider.notifier).removeTx(tx.id);
+    ref.invalidate(yearDayIndexProvider);
+    // 日历是同月数据的另一视图，保持一致
+    unawaited(ref.read(calendarProvider.notifier).refresh());
   }
 }
 

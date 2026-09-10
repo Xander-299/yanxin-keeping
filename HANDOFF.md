@@ -1,7 +1,7 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F6 ✅ / F7 未排期）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F6 ✅ / F7.1 日历 ✅ / F7.2 待排期）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-11 02:55 · 更新人：AI 助手（第二轮 first-run-acceptance 复走 M1/M2 零阻断、P1–P6 全部 hold、六维度全过 + 文档回写）
+> 最后更新：2026-09-11 03:50 · 更新人：AI 助手（F7.1 日历页交付：月历标注 + 日账单 + 月份选择子页 + 按日期记账；门禁 166/166；MuMu 冒烟通过）
 
 ---
 
@@ -88,6 +88,17 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 - **F5** 账单导入 ✅ 代码（`0c82620`）：decode/csv/profiles/normalize/xlsx/categorize 五层 + drift 事务 importer（指纹 IN 预查 + 文件内去重 + dryRun 哨兵回滚）+ 导入页 UI（选文件→预览可单条取消→确认→报告）；真实件对拍：微信 xlsx 335→327（8 笔退款黑名单）、支付宝 GBK 32→28、31 位单号不丢精度；**143/143**
 - **2026-09-11 环境体检** ✅：依赖/缓存/配置全部在位，门禁复跑全绿，`env.sh` 的 `fx-test`/`fx-qa` 缺陷已修
 - **2026-09-11 SDK 误删与还原** ✅：`D:\Download\Java\Android`（10.04GB）于 00:27 被删进 D 盘回收站（`$R0X47RA`），`flutter doctor` 报 SDK not found → 已用 `mv` 同盘还原，`[√] Android toolchain (Android SDK version 36.0.0)` 恢复，APK 重编成功。**教训：磁盘清理会误伤 SDK，别把 `D:\Download\Java\` 当垃圾目录**
+- **F6 收尾** ✅：README 进度表 + 技术选型纠错、新建 `CHANGELOG.md`、`tasks/todo-flutter.md` 补 F5.5/F6/F7
+- **F7.1 日历页** ✅（2026-09-11，`lib/features/calendar/`）：
+  - 页面 `CalendarPage`（`/calendar` 分支）+ 子页 `MonthPickerPage`（`/month-picker`）
+  - `CalendarController`（`calendarProvider`）与首页 `ledgerProvider` **状态分离**，两个 tab 各自记月份
+  - 月历网格：日期下方标支出（负数·红）/ 收入（正数·绿），今天琥珀文字、选中日琥珀描边
+  - 汇总条：月结余 + 日均支出（当月按已过天数、历史月按整月天数，整数四舍五入到分）
+  - 选中日账单区（点编辑 / 长按删除）+ 空态「这天没有账单哦，赶紧记一笔吧~」
+  - 月份选择子页：按年 12 个月缩略日历，有账日期标琥珀，点某天跳月选日并返回；底部「上一年/下一年」
+  - **记录某一天的账**：`/record?date=<ms>` + 记一笔页新增「日期」字段（可改，上限今天）
+  - 新增 `TransactionRepository.listByYear()`；跨 tab 一致性（记一笔 / 删除后同时刷新首页与日历）
+  - 门禁：analyze 0 issue、`flutter test` **166/166**（新增 15 条：聚合 8 + 仓储 1 + 日历 widget 6）
 
 # 已尝试但失败/放弃的方案
 
@@ -109,13 +120,15 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 
 # 当前状态
 
-- `master` @ `0c82620`，代码已推远端。**未提交的工作区改动 3 项**（2026-09-11 体检产生）：
-  1. `env.sh` — `fx-test`/`fx-qa` 重写修复（**建议提交**）
-  2. `pubspec.lock` — `android_file_picker` 1.1.0 → **1.1.1**（传递依赖，无害；可提交也可 `git checkout` 还原）
-  3. 未跟踪：`.workbuddy/memory/2026-09-10.md`、`devtools_options.yaml`
+- `master` 已包含 **F1–F6 + F7.1（日历页）**；`env.sh` 修复、`pubspec.lock`、HANDOFF/README/CHANGELOG 均已提交
+- **F7.1 门禁**：`flutter analyze` No issues found；`flutter test` **166/166**
+- **F7.1 真机冒烟（MuMu 12，横屏 1600×900）**：日历 tab 渲染、点日期切换当日账单、空态「记一笔」按选中日期带入、
+  月份选择子页跳月选日、日期选择器改日期后入账到该日 —— 全部通过（截图见 `.workbuddy/shots/f7-*.png`）
 - `lib/core/db/database.g.dart` 已入库；**改表结构后必须重跑 `dart run build_runner build`**
 - `.gradle-home` 4.1GB 完好 → 后续构建走增量，快很多
-- 残留 `.trash-caches/` `.trash-wrapper/` `.trash-test/`（约 2.5GB 旧副本，已 gitignore）
+- 原 `.trash-*` 残留目录已消失
+- **环境要点**：MuMu 由自身控制横竖屏（`settings put user_rotation` 改不动），横屏逻辑视口约 1067×600，
+  日历页在此高度下需滚动才能看到当日账单（竖屏真机不需要）
 
 # 首次使用验收（M1/M2，2026-09-11 实走）
 
@@ -170,13 +183,13 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 2. 【P3】gradle wrapper 用 `gradle-9.3.1-all.zip`（230MB），换 `-bin.zip` 可提速
 3. 【P3 已解】`CHANGELOG.md` 已建；README「迁移进度」表已更新至 F5 完成，技术选型已补全并纠正 `excel` 包误记
 4. 【P2 已解】`first-run-acceptance` 复查已完成 —— 2026-09-11 02:47 第二轮复走：M1/M2 零阻断、P1–P6 全部 hold，六维度全过（详见验收节 + `docs/acceptance-M1-M2.md` 第 11 节）
-5. 【P3】「我的」页数据导出 / 首页搜索·报表·统计 / 日历 / 资产 均为占位，未排期（F7）
+5. 【P3】「我的」页数据导出 / 首页搜索·报表·统计 / 资产页仍为占位；预算卡为示例数据（F7.2 待排期）
+6. 【P3】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）；如需改可压缩格子高度或把月历改可折叠
 
 # 待确认事项
 
-- **F5 真机验收需要真机 + 真实回单文件**（微信 xlsx / 支付宝 GBK CSV）。若用户手头没有原始回单，需先补齐测试样本
 - 【待定】`lib/core/result.dart`（SPEC §4 列的 `Result<T>`）**暂未建**：目前校验全走异常（与旧栈一致），无真正调用方，等有需要再引入
-- 【待确认】`env.sh` 与 `pubspec.lock` 的两处改动是否要我提交（我暂未 commit，等你发话）
+- 【待确认】日历页是否要加农历 / 节假日（参考图上有农历，当前未实现，无农历依赖）
 
 # 关键资料
 

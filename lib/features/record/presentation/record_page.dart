@@ -17,7 +17,9 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/core/utils/money.dart';
+import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 
 import '../application/amount_input.dart';
@@ -25,11 +27,17 @@ import 'widgets/amount_keyboard.dart';
 import 'widgets/category_picker.dart';
 
 /// 记一笔页。[txId] 非空时为编辑模式。
+///
+/// [occurredAtMs] 为新建时的默认发生时间（日历页按选中日期带入）；
+/// 为空取「现在」。
 class RecordPage extends ConsumerStatefulWidget {
-  const RecordPage({super.key, this.txId});
+  const RecordPage({super.key, this.txId, this.occurredAtMs});
 
   /// 待编辑的流水 id；为空则新建。
   final String? txId;
+
+  /// 新建时的默认发生时间（毫秒）；为空取当前时间。
+  final int? occurredAtMs;
 
   @override
   ConsumerState<RecordPage> createState() => _RecordPageState();
@@ -40,6 +48,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   String _type = 'expense';
   String _amount = '';
   String? _categoryId;
+  late int _occurredAtMs;
   bool _saving = false;
 
   bool get _isEdit => widget.txId != null;
@@ -47,6 +56,8 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   @override
   void initState() {
     super.initState();
+    _occurredAtMs =
+        widget.occurredAtMs ?? DateTime.now().millisecondsSinceEpoch;
     // 仅编辑模式需要补流水详情；分类数据走缓存 provider，不挡首帧
     if (_isEdit) {
       unawaited(_loadTx());
@@ -63,6 +74,33 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       _amount = centsToYuan(tx.amountCents);
       _noteController.text = tx.note;
       _categoryId = tx.categoryId;
+      _occurredAtMs = tx.occurredAt;
+    });
+  }
+
+  /// 选日期（上限为今天：未来月份首页翻不过去，记未来账会「看不见」）。
+  Future<void> _pickDate() async {
+    final DateTime initial = DateTime.fromMillisecondsSinceEpoch(_occurredAtMs);
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime last = initial.isAfter(today) ? initial : today;
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2000, 1, 1),
+      lastDate: last,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      // 保留原有时分秒，只换年月日
+      _occurredAtMs = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        initial.hour,
+        initial.minute,
+        initial.second,
+      ).millisecondsSinceEpoch;
     });
   }
 
@@ -115,6 +153,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
           type: _type,
           categoryId: _categoryId,
           amountCents: amountCents,
+          occurredAt: _occurredAtMs,
           note: _noteController.text.trim(),
         );
       } else {
@@ -124,14 +163,16 @@ class _RecordPageState extends ConsumerState<RecordPage> {
           type: _type,
           categoryId: _categoryId,
           amountCents: amountCents,
-          occurredAt: DateTime.now().millisecondsSinceEpoch,
+          occurredAt: _occurredAtMs,
           note: _noteController.text.trim(),
         );
       }
-      // 刷新首页（go_router push 的 Future 在壳路由下不兑现 .then，
+      // 刷新首页 / 日历（go_router push 的 Future 在壳路由下不兑现 .then，
       // 刷新必须在 pop 前由本页自己触发）
       if (ref.context.mounted) {
         unawaited(ref.read(ledgerProvider.notifier).refresh());
+        unawaited(ref.read(calendarProvider.notifier).refresh());
+        ref.invalidate(yearDayIndexProvider);
       }
       if (mounted) Navigator.of(context).pop(true);
     } finally {
@@ -203,6 +244,14 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                 value: selected?.name,
                 placeholder: '请选择分类',
                 onTap: () => _pickCategory(visible),
+              ),
+              _FieldTile(
+                label: '日期',
+                value: formatFullDay(
+                  DateTime.fromMillisecondsSinceEpoch(_occurredAtMs),
+                ),
+                placeholder: '',
+                onTap: _pickDate,
               ),
               TextField(
                 controller: _noteController,

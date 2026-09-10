@@ -209,4 +209,31 @@ void main() {
     expect(await repo.listByMonth('book-b', 2026, 9), isEmpty);
     expect(await repo.listByMonth('book-a', 2026, 9), hasLength(1));
   });
+
+  test('listByYear：跨 12 个月取数，跨年 / 已删不计', () async {
+    Future<void> add(DateTime at, {String book = baseBookId}) => repo.create(
+      bookId: book,
+      accountId: baseAccountId,
+      categoryId: baseCategoryId,
+      type: 'expense',
+      amountCents: 100,
+      occurredAt: at.millisecondsSinceEpoch,
+    );
+
+    await add(DateTime(2026, 1, 1)); // 年初边界（含）
+    await add(DateTime(2026, 7, 16));
+    await add(DateTime(2026, 12, 31, 23, 59)); // 年末边界（含）
+    await add(DateTime(2025, 12, 31, 23, 59)); // 上一年 → 不含
+    await add(DateTime(2027, 1, 1)); // 下一年 → 不含
+    await add(DateTime(2026, 3, 3), book: 'book-b'); // 别的账本 → 不含
+
+    final rows = await repo.listByYear(baseBookId, 2026);
+    expect(rows, hasLength(3));
+    // 倒序：年末 → 年初
+    expect(rows.first.occurredAt, DateTime(2026, 12, 31, 23, 59).millisecondsSinceEpoch);
+
+    // 软删后不再计入
+    await repo.softDelete(rows.first.id);
+    expect(await repo.listByYear(baseBookId, 2026), hasLength(2));
+  });
 }

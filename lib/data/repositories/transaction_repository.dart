@@ -109,6 +109,24 @@ class TransactionRepository {
         .get();
   }
 
+  /// 查询某账本某一整年的流水（本地时区），按发生时间倒序。
+  ///
+  /// 供日历的「月份缩略图」索引每月的有账日期，一次查询覆盖 12 个月。
+  Future<List<TxRow>> listByYear(String bookId, int year) {
+    final start = DateTime(year, 1, 1).millisecondsSinceEpoch;
+    final end = DateTime(year + 1, 1, 1).millisecondsSinceEpoch;
+    return (_db.select(_db.transactions)
+          ..where(
+            (t) =>
+                t.bookId.equals(bookId) &
+                t.deletedAt.isNull() &
+                t.occurredAt.isBiggerOrEqualValue(start) &
+                t.occurredAt.isSmallerThanValue(end),
+          )
+          ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]))
+        .get();
+  }
+
   /// 局部更新。目标不存在或已删则抛错。
   Future<TxRow> update(
     String id, {

@@ -17,6 +17,22 @@ bool isInMonth(int ms, int year, int month) {
   return ms >= r.start && ms < r.end;
 }
 
+/// 某年某月的天数（本地时区；自动处理闰年）。[month] 取值 1-12。
+int daysInMonth(int year, int month) => DateTime(year, month + 1, 0).day;
+
+/// 中文星期标签（周一 … 周日）。
+String weekdayLabel(DateTime d) {
+  const names = <String>['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  return names[d.weekday - 1];
+}
+
+/// 日历表头（周日起始，与参考图一致）。
+const List<String> weekdayHeaders = <String>['日', '一', '二', '三', '四', '五', '六'];
+
+/// 「2026年9月11日 周五」——日历与记一笔页展示用。
+String formatFullDay(DateTime d) =>
+    '${d.year}年${d.month}月${d.day}日 ${weekdayLabel(d)}';
+
 /// 本地日期 key（YYYY-MM-DD），用于流水按天分组。
 String dayKey(int ms) {
   final d = DateTime.fromMillisecondsSinceEpoch(ms);
