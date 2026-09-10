@@ -1,7 +1,7 @@
 # HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F6 ✅ / F7.1 日历 ✅ / F7.2 待排期）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-11 03:50 · 更新人：AI 助手（F7.1 日历页交付：月历标注 + 日账单 + 月份选择子页 + 按日期记账；门禁 166/166；MuMu 冒烟通过）
+> 最后更新：2026-09-11 03:50 · 更新人：AI 助手（F7.1 日历页交付并提交 **`c17abfd`** 推远端：月历标注 + 日账单 + 月份选择子页 + 按日期记账；提交前复跑门禁 166/166；MuMu 冒烟通过）
 
 ---
 
@@ -120,8 +120,8 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 
 # 当前状态
 
-- `master` 已包含 **F1–F6 + F7.1（日历页）**；`env.sh` 修复、`pubspec.lock`、HANDOFF/README/CHANGELOG 均已提交
-- **F7.1 门禁**：`flutter analyze` No issues found；`flutter test` **166/166**
+- `master` @ **`c17abfd`**，已推远端（`d50ef73..c17abfd`）；工作区干净。已含 **F1–F6 + F7.1（日历页）**；`env.sh` 修复、`pubspec.lock`、HANDOFF/README/CHANGELOG 均已提交
+- **F7.1 门禁**：`flutter analyze` No issues found；`flutter test` **166/166**（提交前复跑，与实现时一致）
 - **F7.1 真机冒烟（MuMu 12，横屏 1600×900）**：日历 tab 渲染、点日期切换当日账单、空态「记一笔」按选中日期带入、
   月份选择子页跳月选日、日期选择器改日期后入账到该日 —— 全部通过（截图见 `.workbuddy/shots/f7-*.png`）
 - `lib/core/db/database.g.dart` 已入库；**改表结构后必须重跑 `dart run build_runner build`**
@@ -129,6 +129,9 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 - 原 `.trash-*` 残留目录已消失
 - **环境要点**：MuMu 由自身控制横竖屏（`settings put user_rotation` 改不动），横屏逻辑视口约 1067×600，
   日历页在此高度下需滚动才能看到当日账单（竖屏真机不需要）
+- **工具链调用**（2026-09-11 新增坑）：沙箱里用 Git Bash 直接跑 `flutter`（`bin/flutter` 包装脚本）会触发
+  `wsl.exe` 被安全策略拦截而失败 → 改走**原生通道**：用 PowerShell 调 `flutter.bat`，
+  并把输出 `*> 日志文件` 再读（PS 直出会被吞）。代理/`GRADLE_USER_HOME` 仍需按 `env.sh` 注入。
 
 # 首次使用验收（M1/M2，2026-09-11 实走）
 
