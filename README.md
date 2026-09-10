@@ -84,3 +84,8 @@ flutter build apk --debug
 - ❌ 用浮点表示或计算金额（一律 `int` 分）
 - ❌ 物理 DELETE 业务数据（一律软删 `deleted_at`）
 - ❌ 绕过 `importTransaction()` 直接写 `transactions` 表
+
+## 开发规范
+
+- **首次使用验收**：新增功能、改动入口文案/默认值/授权流程后，重跑 `first-run-acceptance`。
+  规则与验收标准见 [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)（M1/M2 基线报告）。

@@ -101,6 +101,11 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       await ref.read(ledgerProvider.notifier).refresh();
       if (!mounted) return;
       setState(() => _importing = false);
+      // 导入的账单几乎都属于历史月份，首页停在当前月会「看起来什么都没发生」
+      // → 报告里说明数据落在哪个月，并给一个直达入口。
+      final target = _latestMonthOf(parsed.rows, _cancelled);
+      final activeRows = _cancelled.where((bool c) => !c).length;
+      var goToLedger = false;
       await showDialog<void>(
         context: context,
         builder: (BuildContext dialogContext) => AlertDialog(
@@ -110,17 +115,36 @@ class _ImportPageState extends ConsumerState<ImportPage> {
             '重复跳过 ${report.duplicates} 笔\n'
             '文件内重复 ${report.fileDuplicates} 笔\n'
             '已取消 ${report.cancelled} 笔\n'
-            '未匹配分类 ${report.uncategorized} 笔',
+            '未匹配分类 ${report.uncategorized} 笔'
+            '${target == null ? '' : '\n\n其中 $activeRows 笔属于 ${_fmtMonth(target)}，'
+                '点「去看账单」直接翻到该月'}',
           ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('好的'),
+              child: const Text('完成'),
             ),
+            if (target != null)
+              FilledButton(
+                onPressed: () {
+                  goToLedger = true;
+                  Navigator.of(dialogContext).pop();
+                },
+                child: const Text('去看账单'),
+              ),
           ],
         ),
       );
-      if (mounted) context.pop(true);
+      if (!mounted) return;
+      if (goToLedger && target != null) {
+        await ref
+            .read(ledgerProvider.notifier)
+            .jumpToMonth(target.year, target.month);
+        if (!mounted) return;
+        context.go('/');
+      } else {
+        context.pop(true);
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _importing = false);
@@ -269,6 +293,25 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       ],
     );
   }
+
+  /// 未取消行中最晚的账单月份（导入后跳到这个月，用户才看得到结果）。
+  ({int year, int month})? _latestMonthOf(
+    List<ParsedRow> rows,
+    List<bool> cancelled,
+  ) {
+    int? latest;
+    for (var i = 0; i < rows.length; i++) {
+      if (i < cancelled.length && cancelled[i]) continue;
+      final ms = rows[i].occurredAt;
+      if (latest == null || ms > latest) latest = ms;
+    }
+    if (latest == null) return null;
+    final d = DateTime.fromMillisecondsSinceEpoch(latest);
+    return (year: d.year, month: d.month);
+  }
+
+  String _fmtMonth(({int year, int month}) m) =>
+      '${m.year}-${m.month.toString().padLeft(2, '0')}';
 
   String _fmtTime(int ms) {
     final d = DateTime.fromMillisecondsSinceEpoch(ms);

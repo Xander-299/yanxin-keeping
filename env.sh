@@ -37,23 +37,20 @@ export GRADLE_USER_HOME="D:\\Tencent\\yanxin-flutter\\.gradle-home"
 mkdir -p "$GRADLE_USER_HOME"
 
 # --- flutter test：代理会劫持测试进程的 WebSocket → 先去代理再跑 ---
+# ⚠️ 2026-09-10 修：原先用 `env -u ...` 前缀，但沙箱里 `env` 被 safe-bin shim 吞掉
+#    （命令零输出、0.5s 即返回，极具误导性）。改用 bash 内建 unset + 子 shell，
+#    副作用不外泄且必然有输出。
+# ⚠️ 不再注入 PROGRAMFILES(X86)：那是 sqlite3 3.x 的 native-assets MSVC 探测才需要，
+#    本项目锁在 sqlite3 2.9.4，实测 analyze/test 均不需要。
 fx-test() {
-  env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
-      -u ALL_PROXY -u all_proxy \
-      "PROGRAMFILES(X86)=C:/Program Files (x86)" \
-      flutter.bat test --no-pub "$@"
+  ( unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
+    flutter test --no-pub "$@" )
 }
 
-# --- flutter test / analyze：需要 PROGRAMFILES(X86) 但不需要网络代理 ---
+# --- analyze + test 一条龙 ---
 fx-qa() {
-  env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
-      -u ALL_PROXY -u all_proxy \
-      "PROGRAMFILES(X86)=C:/Program Files (x86)" \
-      flutter.bat analyze && \
-  env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
-      -u ALL_PROXY -u all_proxy \
-      "PROGRAMFILES(X86)=C:/Program Files (x86)" \
-      flutter.bat test --no-pub
+  ( unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY ALL_PROXY all_proxy
+    flutter analyze ) && fx-test "$@"
 }
 
 echo "[env] Flutter 环境 OK（flutter / JAVA 17 / SDK D:\\Download\\Java\\Android）"

@@ -85,6 +85,10 @@ void main() {
     expect(find.text('-1.00'), findsNWidgets(2)); // hero 结余 + 列表金额
 
     // 长按删除（长按列表里的分类名，避开 hero 上的同文本金额）
+    // 视口 800×600 下列表项会被预算卡挤出屏幕 → 必须先滚进可视区，否则
+    // longPress 落空（"would not hit test"）。
+    await tester.ensureVisible(find.text(cat.name));
+    await tester.pumpAndSettle();
     await tester.longPress(find.text(cat.name));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(TextButton, '删除'));

@@ -95,6 +95,17 @@ class LedgerController extends AsyncNotifier<LedgerState> {
     await _reload(current.bookId, current.year, current.month);
   }
 
+  /// 直接切到指定年月（导入账单后跳到数据所在月用）。
+  ///
+  /// 与 [shiftMonth] 的区别：不依赖当前月份，也不受 [canGoNext] 限制，
+  /// 因为导入的历史账单可能远早于当前月。
+  Future<void> jumpToMonth(int year, int month) async {
+    // state.value 可能为 null（首页 tab 还没构建过就先导入的场景）→ 退回到
+    // future 等 build 完成，保证 jumpToMonth 在任何入口都成立。
+    final current = state.value ?? await future;
+    await _reload(current.bookId, year, month);
+  }
+
   /// 软删除一笔并从列表移除（不物理删，DB 里 deleted_at 非空）。
   Future<void> removeTx(String id) async {
     await ref.read(transactionRepositoryProvider).softDelete(id);

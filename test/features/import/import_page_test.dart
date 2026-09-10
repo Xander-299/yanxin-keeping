@@ -80,7 +80,7 @@ void main() {
     expect(find.text('导入完成'), findsOneWidget);
     expect(find.textContaining('成功导入 1 笔'), findsOneWidget);
 
-    await tester.tap(find.text('好的'));
+    await tester.tap(find.text('完成'));
     await tester.pumpAndSettle();
 
     // 落库校验：仅 1 笔，备注/分类正确
@@ -90,5 +90,55 @@ void main() {
     expect(txs.first.note, '滴滴出行 · 快车');
     expect(txs.first.amountCents, 800);
     expect(txs.first.source, 'wechat_csv');
+  });
+
+  // 回归：首次使用验收 P1 —— 导入的账单属于历史月份，首页停在当前月会
+  // 「看起来什么都没发生」。报告必须给出数据所在月份 + 直达入口。
+  testWidgets('导入完成报告给出数据月份，点「去看账单」跳到首页该月',
+      (WidgetTester tester) async {
+    final db = openTestDatabase();
+    await BookRepository(db).ensureDefaultBook();
+    addTearDown(db.close);
+
+    // 8 月的账单，而「当前月」是测试运行当月 → 不跳转就看不到
+    const csv = '交易时间,交易类型,交易对方,商品,收/支,金额(元),支付方式,当前状态,交易单号,商户单号,备注\n'
+        '2026-08-01 12:00:00,x,美团平台商户,外卖订单,支出,¥12.30,零钱,支付成功,IMPA,MA,/';
+    final bytes = utf8.encode(csv);
+
+    final router = GoRouter(
+      initialLocation: '/import',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: Text('LEDGER_HOME')),
+        ),
+        GoRoute(
+          path: '/import',
+          builder: (_, _) => ImportPage(pickBytesOverride: () async => bytes),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('选择文件'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('确认导入（1 笔）'));
+    await pumpUntil(tester, find.text('导入完成'));
+
+    // 报告里必须说明数据落在哪个月
+    expect(find.text('去看账单'), findsOneWidget);
+    expect(find.textContaining('其中 1 笔属于 2026-08'), findsOneWidget);
+
+    // 点「去看账单」→ 跳首页
+    await tester.tap(find.text('去看账单'));
+    await tester.pumpAndSettle();
+    expect(find.text('LEDGER_HOME'), findsOneWidget);
   });
 }

@@ -69,3 +69,6 @@ app.*.map.json
 # 真实账单样本（含隐私，只留本机）
 test/fixtures/*-real.*
 
+# 走查截图（二进制，只留本机）
+/.workbuddy/shots/
+
