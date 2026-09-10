@@ -129,9 +129,11 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 - 原 `.trash-*` 残留目录已消失
 - **环境要点**：MuMu 由自身控制横竖屏（`settings put user_rotation` 改不动），横屏逻辑视口约 1067×600，
   日历页在此高度下需滚动才能看到当日账单（竖屏真机不需要）
-- **工具链调用**（2026-09-11 新增坑）：沙箱里用 Git Bash 直接跑 `flutter`（`bin/flutter` 包装脚本）会触发
-  `wsl.exe` 被安全策略拦截而失败 → 改走**原生通道**：用 PowerShell 调 `flutter.bat`，
-  并把输出 `*> 日志文件` 再读（PS 直出会被吞）。代理/`GRADLE_USER_HOME` 仍需按 `env.sh` 注入。
+- **工具链调用**（2026-09-11 更正）：在沙箱 Bash 里跑 `flutter` 前**必须先补 PATH**：
+  `export PATH="/usr/bin:/bin:$PATH"`。不补会看到两类看起来无关的怪象 ——
+  ① `grep/head/tail/date/find/dirname` 全报 `command not found`（其实都在 `/usr/bin`，只是没进 PATH）；
+  ② `flutter`（bash 包装脚本）报 `PROGRAM BLOCKED BY SECURITY POLICY ... wsl.exe`，**连 `flutter --version` 都跑不了**。
+  两者同根因，补 PATH 即同时消失（已实测 `flutter --version` rc=0）。`env.sh` 的 `fx-test`/`fx-qa` 可正常用。
 
 # 首次使用验收（M1/M2，2026-09-11 实走）
 
