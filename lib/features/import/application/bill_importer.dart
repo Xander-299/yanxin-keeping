@@ -46,6 +46,9 @@ class ImportReport {
   final int imported;
   final int duplicates;
   final int fileDuplicates;
+
+  /// 真正入库的行中，分类规则未命中（暂归「其他」）的条数。
+  /// 只统计已入库行 —— 重复跳过的行与分类匹配无关，计入会让人误以为有新增。
   final int uncategorized;
   final int unknownStatus;
   final int cancelled;
@@ -139,7 +142,6 @@ Future<ImportReport> importRows(
 
   // 1. 分类 + 指纹（Prepared 内联计算）
   final prepared = active.map(_Prepared.new).toList();
-  var uncategorized = 0;
   var unknownStatusCount = 0;
   for (final p in prepared) {
     final cat = categorizeRow(p.row);
@@ -160,7 +162,6 @@ Future<ImportReport> importRows(
         }
       }
     }
-    if (!p.matched) uncategorized++;
     if (p.row.unknownStatus) unknownStatusCount++;
   }
 
@@ -196,6 +197,7 @@ Future<ImportReport> importRows(
       }
 
       var imported = 0;
+      var uncategorized = 0; // 只统计真正入库的未匹配行（重复跳过的与分类无关）
       var duplicates = existing.length; // 预查命中的直接计为重复
       for (final p in prepared) {
         if (existing.contains(p.fingerprint)) continue;
@@ -215,6 +217,7 @@ Future<ImportReport> importRows(
         switch (res) {
           case ImportOk():
             imported++;
+            if (!p.matched) uncategorized++;
           case ImportDuplicate():
             duplicates++; // 并发/边界下唯一索引兜底，同样不算错误
         }

@@ -78,7 +78,7 @@
 - [x] 首页：header（左=账本名开抽屉，右=搜索/报表/统计占位图标）+ 琥珀 hero 月支出卡（保留 ‹ › 翻月）+ 预算占位卡（纯静态）+「本月账单」列表
 - [x] 账本抽屉：全部账本（当前高亮）+ 右下角「管理账本」
 - [x] 门禁：`flutter analyze` No issues found；`flutter test` **69/69**
-- [ ] 真机验收（首页视觉 + 抽屉切账本 + 底栏四 tab + 占位反馈）
+- [x] 真机验收（首页视觉 + 抽屉切账本 + 底栏四 tab + 占位反馈）→ 2026-09-11 MuMu 12 走查通过
 
 > **坑 6**：go_router `context.push` 的 Future 在 StatefulShellRoute 壳下**不兑现 .then 回调**
 > → 保存后的列表刷新必须由记一笔页在 pop 前自己 `refresh()`，不能靠调用方 `.then`。
@@ -92,12 +92,41 @@
 - [x] importer：drift 单事务 + 指纹 IN 分批预查（参数绑定，escapeLiteral 不再需要）+ 文件内去重 + dryRun 哨兵回滚
 - [x] 导入页 UI（我的页入口 → 选文件 → 预览可单条取消 → 确认导入 → 报告对话框 → 首页 refresh）
 - [x] 门禁：移植 bill-import 6 组用例 + **真实件对拍逐行一致**（微信 xlsx 335 笔/导入 327、支付宝 GBK 32 笔/导入 28、31 位单号不丢精度）；`flutter test` **143/143**、analyze 0 issue
-- [ ] 真机验收（M2 等价 8 项）
+- [x] 真机验收（M2 等价 8 项）→ 2026-09-11 MuMu 12 走查全过（详见 `docs/acceptance-M1-M2.md`）
 
+
+## F5.5 首次使用验收修复 ✅（2026-09-11）
+
+用 `first-run-acceptance` 在 MuMu 12 隔离环境实走 M1/M2，报告 `docs/acceptance-M1-M2.md`。
+
+- [x] **P1（阻断）** 导入成功但首页看不到数据、无引导 → `ledger_controller.jumpToMonth()`
+      + 报告框拆「去看账单 / 完成」+ 月份说明
+- [x] **P2（阻断）** 预算卡假数据与 hero 矛盾 → 「示例」标签 + 卡片底部说明（非真实数据）
+- [x] **P3** 二次导入「导入完成 / 0 笔」自相矛盾 → 标题改「没有新增」；
+      `ImportReport.uncategorized` 改为只统计真正入库的未匹配行
+- [x] **P4** 首页空态不可见（大屏下被挤到折叠下方）→ 空态压成紧凑单行 + 「记一笔」入口 + 导入指路
+- [x] **P5** 保存按钮藏在折叠下方 → 记一笔页 AppBar 加常驻「保存」
+- [x] **P6** 预览页看不出如何取消单条 → 补勾选说明 + 全选/全不选
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **151/151**
+      （146 + 新增 5 条回归：bill_importer P3 / import_page ×2 / home_empty_state / record_save_entry）
+
+> **坑**：`find.widgetWithText(AppBar, '保存')` 返回的是 **AppBar 本身**，直接 tap 会点到标题区；
+> 点击要用 `find.text('保存')`，前者只用于断言「在 AppBar 里」。
 
 
 ## F6 验收收尾
 
-- [ ] M2 等价验收 8 项（真机）
-- [ ] README / CHANGELOG 建立
+- [x] M2 等价验收 8 项（真机）→ MuMu 12 走查通过（SAF 唤起 / 微信 335→327 / 支付宝 GBK 32→28 /
+      **二次导入 0 新增** / 翻月可见 / 退款跳过 / force-stop 持久化）
+- [x] README / CHANGELOG 建立
+  - [x] README 迁移进度表更新至 F5 完成，技术选型补全（archive 手写正则、file_picker、crypto、gbk_codec）
+  - [x] 纠正 README 中 xlsx 选型误记（写 `excel` 包，实际是 `archive` + 手写正则）
+  - [x] 新增 `CHANGELOG.md`（Keep a Changelog 格式，F0–F5 + Unreleased）
 - [x] 旧仓库 README 顶部加「已迁移至 yanxin-flutter」说明
+
+## F7 后续（未排期）
+
+- [ ] P3–P6 之外的新一轮 `first-run-acceptance` 复查（验证修复后无新摩擦）
+- [ ] 预算功能实装（接真实数据后移除 `budget_card_placeholder` 的「示例」标注）
+- [ ] 统计 / 报表 / 搜索 / 日历 / 资产页（当前均为占位）
+- [ ] 数据导出（「我的」页占位）

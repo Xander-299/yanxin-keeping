@@ -271,6 +271,35 @@ void main() {
     expect(r2.duplicates, 4);
   });
 
+  // 回归：首次使用验收 P3 —— 零新增却报「未匹配分类 N 笔」自相矛盾。
+  // 未匹配分类只对真正入库的行有意义；重复跳过的行与分类规则无关。
+  test('二次导入零新增 → uncategorized 归零（不虚报未匹配分类）', () async {
+    final rows = [
+      _row(externalId: 'P3A', counterparty: '无关键词甲', product: '神秘甲'),
+      _row(externalId: 'P3B', counterparty: '无关键词乙', product: '神秘乙'),
+    ];
+    final r1 = await importRows(
+      db,
+      bookId: book.id,
+      accountId: accountId,
+      categoryMaps: categoryMaps,
+      rows: rows,
+    );
+    expect(r1.imported, 2);
+    expect(r1.uncategorized, 2); // 首导：两笔都未命中规则
+
+    final r2 = await importRows(
+      db,
+      bookId: book.id,
+      accountId: accountId,
+      categoryMaps: categoryMaps,
+      rows: rows,
+    );
+    expect(r2.imported, 0);
+    expect(r2.duplicates, 2);
+    expect(r2.uncategorized, 0); // 零新增 → 不得再有「未匹配分类」
+  });
+
   test('ensureImportAccount 幂等：多次调用不重复建账户', () async {
     final id1 = await ensureImportAccount(AccountRepository(db), book.id);
     final id2 = await ensureImportAccount(AccountRepository(db), book.id);

@@ -105,19 +105,20 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       // → 报告里说明数据落在哪个月，并给一个直达入口。
       final target = _latestMonthOf(parsed.rows, _cancelled);
       final activeRows = _cancelled.where((bool c) => !c).length;
+      final hasNew = report.imported > 0;
       var goToLedger = false;
       await showDialog<void>(
         context: context,
         builder: (BuildContext dialogContext) => AlertDialog(
-          title: const Text('导入完成'),
+          // 幂等重复导入时「导入完成 / 成功导入 0 笔」自相矛盾 → 按结果分叉标题
+          title: Text(hasNew ? '导入完成' : '没有新增'),
           content: Text(
-            '成功导入 ${report.imported} 笔\n'
-            '重复跳过 ${report.duplicates} 笔\n'
-            '文件内重复 ${report.fileDuplicates} 笔\n'
-            '已取消 ${report.cancelled} 笔\n'
-            '未匹配分类 ${report.uncategorized} 笔'
-            '${target == null ? '' : '\n\n其中 $activeRows 笔属于 ${_fmtMonth(target)}，'
-                '点「去看账单」直接翻到该月'}',
+            _reportText(
+              report,
+              hasNew: hasNew,
+              activeRows: activeRows,
+              target: target,
+            ),
           ),
           actions: <Widget>[
             TextButton(
@@ -208,6 +209,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     final stats = parsed.stats;
     final activeCount =
         _cancelled.where((c) => !c).length;
+    final allSelected = activeCount == _cancelled.length;
     return Column(
       children: <Widget>[
         Padding(
@@ -230,6 +232,40 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.check_box_outlined,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '勾选的条目会导入，点条目可取消它',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () => setState(
+                          () => _cancelled = List<bool>.filled(
+                            _cancelled.length,
+                            allSelected,
+                          ),
+                        ),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(allSelected ? '全不选' : '全选'),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -292,6 +328,42 @@ class _ImportPageState extends ConsumerState<ImportPage> {
         ),
       ],
     );
+  }
+
+  /// 报告正文：按「是否真的有新增」分叉，零新增时不出现与「没有新增」矛盾的数字。
+  String _reportText(
+    ImportReport report, {
+    required bool hasNew,
+    required int activeRows,
+    required ({int year, int month})? target,
+  }) {
+    final lines = <String>[];
+    if (hasNew) {
+      lines.add('成功导入 ${report.imported} 笔');
+      if (report.duplicates > 0) lines.add('重复跳过 ${report.duplicates} 笔');
+      if (report.fileDuplicates > 0) {
+        lines.add('文件内重复 ${report.fileDuplicates} 笔');
+      }
+      if (report.cancelled > 0) lines.add('已取消 ${report.cancelled} 笔');
+      // 未匹配分类只对真正入库的行有意义（重复跳过时显示会自相矛盾）
+      if (report.uncategorized > 0) {
+        lines.add('未匹配分类 ${report.uncategorized} 笔（暂归「其他」）');
+      }
+      if (target != null) {
+        lines.add('');
+        lines.add(
+          '其中 $activeRows 笔属于 ${_fmtMonth(target)}，点「去看账单」直接翻到该月',
+        );
+      }
+    } else {
+      lines.add('这 $activeRows 笔之前已经导入过了，没有重复记账。');
+      if (report.duplicates > 0) lines.add('重复跳过 ${report.duplicates} 笔');
+      if (report.fileDuplicates > 0) {
+        lines.add('文件内重复 ${report.fileDuplicates} 笔');
+      }
+      if (report.cancelled > 0) lines.add('已取消 ${report.cancelled} 笔');
+    }
+    return lines.join('\n');
   }
 
   /// 未取消行中最晚的账单月份（导入后跳到这个月，用户才看得到结果）。

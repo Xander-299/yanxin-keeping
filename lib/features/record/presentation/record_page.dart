@@ -157,7 +157,17 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     final selected = _selectedCategory(categories);
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isEdit ? '编辑流水' : '记一笔')),
+      appBar: AppBar(
+        title: Text(_isEdit ? '编辑流水' : '记一笔'),
+        // 大屏（如横屏平板/模拟器）下底部按钮会被折叠到视口外，
+        // AppBar 常驻保存入口保证「填完就能保存」；底部按钮保留作为主要入口。
+        actions: <Widget>[
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: const Text('保存'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),

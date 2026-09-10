@@ -256,6 +256,10 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// 空态：必须「不用滚动就能看到」。
+///
+/// 首页 hero + 预算卡已占满首屏（横屏/大屏尤其明显），因此这里走紧凑单行，
+/// 而不是大图标居中块 —— 大块空态会被挤到折叠下方，用户只看到「本月账单」下一片空白。
 class _EmptyMonth extends StatelessWidget {
   const _EmptyMonth({required this.year, required this.month});
 
@@ -264,27 +268,39 @@ class _EmptyMonth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 48, 0, 48),
-      child: Center(
-        child: Column(
-          children: <Widget>[
-            Icon(
-              Icons.receipt_long_rounded,
-              size: 56,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+      padding: const EdgeInsets.fromLTRB(20, 6, 16, 12),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.receipt_long_rounded, size: 20, color: muted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  '$year年$month月还没有记账',
+                  style: const TextStyle(fontSize: 14),
+                ),
+                Text(
+                  '已有微信 / 支付宝账单？到「我的 → 导入账单」一键导入',
+                  style: TextStyle(fontSize: 11, color: muted),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            Text('$year年$month月还没有记账'),
-            const SizedBox(height: 8),
-            Text(
-              '点底部的 ＋ 记下第一笔吧',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+          ),
+          TextButton.icon(
+            onPressed: () => context.push('/record'),
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: const Text('记一笔'),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
