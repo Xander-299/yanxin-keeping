@@ -6,7 +6,8 @@ import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-ADB = r"D:\Download\Java\Android\platform-tools\adb.exe"
+# 2026-09-12 换机：adb 移到桌面 platform-tools（C:\src\Android 未装 platform-tools 也行）
+ADB = r"C:\Users\Administrator\Desktop\platform-tools\adb.exe"
 SERIAL = "127.0.0.1:16384"
 
 

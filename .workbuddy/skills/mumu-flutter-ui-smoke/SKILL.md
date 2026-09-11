@@ -9,47 +9,52 @@ agent_created: true
 用语义树（uiautomator dump）代替截图来做判读：Flutter 的文本/按钮都会出现在语义树里，
 读得到文案就等价于「用户看得到」，而且比看图更适合脚本化断言。
 
-## 前置：环境常量（本项目实测）
+## 前置：环境常量（2026-09-12 换机后实测，Administrator 机器）
 
-- adb：`/d/Download/Java/Android/platform-tools/adb.exe`
-- MuMu adb 端口：`16384`（另有 `7555`）；设备名 `emulator-5554`
+- adb：`C:\Users\Administrator\Desktop\platform-tools\adb.exe`
+- MuMu 15 安装位置：`C:\Program Files\Netease\MuMu`（管理器 `nx_main\MuMuManager.exe`）
+- MuMu adb 端口：`16384`（另有 `7555`，等价）；设备名 `127.0.0.1:16384`
 - 包名：`com.teacodeman.yanxin`
-- python：`/c/Users/panda/.workbuddy/binaries/python/versions/3.13.12/python.exe`
+- python：`/c/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe`
 - 项目里已有抓取脚本：`.workbuddy/ui_dump.py`（打印「[可点] 文案 @(x,y)」列表）
+- 装包前先有 APK：`flutter build apk --debug`（本机需 NDK r28c + cmake 3.22.1，已装于 `C:\src\Android`）
 
 ## 标准动作序列
 
 ```bash
 export PATH="/usr/bin:/bin:$PATH"          # 本环境 bash 偶尔丢 PATH，先补
-cd /d/Tencent/yanxin-flutter
-ADB="/d/Download/Java/Android/platform-tools/adb.exe"
+cd /c/Users/Administrator/Desktop/yanxin-bookkeeping-flutter-master
+ADB="/c/Users/Administrator/Desktop/platform-tools/adb.exe"
 
 # 1) 连接（adbd 会被沙箱按调用回收，每次调用都要重连 + 操作放在同一次调用里）
 "$ADB" connect 127.0.0.1:16384 >/dev/null 2>&1
 
 # 2) 装 debug 包（必须 -t，debug 包带 testOnly）
-"$ADB" -s emulator-5554 install -r -t build/app/outputs/flutter-apk/app-debug.apk
+"$ADB" -s 127.0.0.1:16384 install -r -t build/app/outputs/flutter-apk/app-debug.apk
 
 # 3) 归零 + 冷启动（做「首次使用」类验收必须 pm clear）
-"$ADB" -s emulator-5554 shell pm clear com.teacodeman.yanxin
-"$ADB" -s emulator-5554 shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
+"$ADB" -s 127.0.0.1:16384 shell pm clear com.teacodeman.yanxin
+"$ADB" -s 127.0.0.1:16384 shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
 sleep 7
 
 # 4) 抓语义树拿坐标 → 点击
 $PY .workbuddy/ui_dump.py
-"$ADB" -s emulator-5554 shell input tap <x> <y>
+"$ADB" -s 127.0.0.1:16384 shell input tap <x> <y>
 
 # 5) 截图留证
-"$ADB" -s emulator-5554 exec-out screencap -p > .workbuddy/shots/xx.png
+"$ADB" -s 127.0.0.1:16384 exec-out screencap -p > .workbuddy/shots/xx.png
 ```
 
 ## 关键坑（都踩过）
 
 1. **每次 bash 调用结束 adbd 会被回收** → 命令必须「connect + 操作」同一次调用完成，否则 `device offline`。
 2. **坐标会随屏幕方向整批失效**。先确认当前渲染尺寸：
-   `dumpsys window displays | grep -m1 "cur="`（`cur=1600x900` 就是横屏）。
-   **MuMu 的旋转只认它自己的 UI**：`settings put system user_rotation 0` 改不动实际显示，
-   别浪费时间在 adb 里转屏。
+   `dumpsys window displays | grep -m1 "cur="`（`cur=1920x1080` 就是横屏）。
+   **MuMu 转屏的正确姿势（2026-09-12 实测）**：用官方 CLI——
+   `MuMuManager.exe setting -v 0 -k resolution_mode -val phone.1`（竖屏手机 1080×1920@480dpi，
+   视口 360×640dp）→ `control -v 0 restart` → 等 `info -v 0` 里 `is_android_started=true`。
+   `adb shell settings put system user_rotation` / `wm user-rotation` 都无效，别浪费时间。
+   平板横屏对应 `tablet.1`（2560×1440），默认就是它。
 3. **横屏逻辑视口只有约 1067×600**（dpr≈1.5）→ 日历/长表单类页面必然滚动。
    走查前先 `input swipe` 滚到目标，再 dump 取坐标；不要假设 dump 出的 y 一定在首屏可点。
 4. **Material 日期选择器在矮窗口里下半屏点不动**：`showDatePicker` 的日期网格被压成可滚动，
@@ -68,3 +73,6 @@ $PY .workbuddy/ui_dump.py
 - 断言「点得动」必须真的 `input tap` 后重新 dump 看状态变化，不能只看节点是 `[可点]`。
 - 「结果可取用」类检查：操作后回到列表页，确认新数据出现在预期位置（月/日/分组）。
 - 走查记录用「操作 → 看到的反馈」两列表，避免事后凭记忆写结论。
+- **跨页一致性必查（2026-09-12 抓到过真 bug）**：凡是「常驻 Notifier / 只在首次进入时 build」的页面
+  （本项目如统计页），记完一笔后必须**再进一次**验证数据刷新——首页对了不代表别的页也对。
+- 多个页面各有一份「当前月份」时，记账入口从哪个页进，保存后就回到哪个页（本项目行为），别误判成跳错页。

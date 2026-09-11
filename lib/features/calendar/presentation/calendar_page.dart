@@ -17,6 +17,7 @@ import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/tx_delete_dialog.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/tx_group_list.dart';
+import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/calendar_controller.dart';
 import 'widgets/month_grid.dart';
@@ -94,6 +95,8 @@ class CalendarPage extends ConsumerWidget {
     ref.invalidate(yearDayIndexProvider);
     // 首页是同月数据的另一视图，保持一致
     unawaited(ref.read(ledgerProvider.notifier).refresh());
+    // 统计页同理（常驻 Notifier，不会自己感知删除）
+    unawaited(ref.read(statsProvider.notifier).refresh());
   }
 }
 

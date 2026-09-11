@@ -14,6 +14,7 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
+import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/ledger_controller.dart';
 import 'widgets/budget_card_placeholder.dart';
@@ -108,6 +109,8 @@ class HomePage extends ConsumerWidget {
     ref.invalidate(yearDayIndexProvider);
     // 日历是同月数据的另一视图，保持一致
     unawaited(ref.read(calendarProvider.notifier).refresh());
+    // 统计页同理（常驻 Notifier，不会自己感知删除）
+    unawaited(ref.read(statsProvider.notifier).refresh());
   }
 }
 

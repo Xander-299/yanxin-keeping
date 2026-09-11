@@ -65,14 +65,14 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 |---|---|
 | Flutter / Dart | **3.47.2 / 3.13.2**（stable），`C:\src\flutter`（2026-09-12 从 `storage.flutter-io.cn` 下 zip 解压，1.93GB/97s） |
 | JDK | **Oracle 17.0.12**，`M:\QQcache`（系统 `java` 即它；无需额外装 JDK） |
-| Android SDK | `C:\src\Android`（platform-tools 37.0.1 + platforms **35/36** + build-tools 36.0.0 + cmdline-tools/latest） |
+| Android SDK | `C:\src\Android`（platform-tools 37.0.1 + platforms **35/36** + build-tools 36.0.0 + cmdline-tools/latest + **NDK 28.2.13676358（r28c）** + **cmake 3.22.1**） |
 | Pub 缓存 | `C:\Users\Administrator\AppData\Local\Pub\Cache`，**645 MB**，114 个包源全为 `pub.flutter-io.cn`（与 `pubspec.lock` 一致） |
-| Gradle 缓存 | **`C:\src\gradle-home`**（全新空目录，尚未构建过 APK；**切勿复制已有缓存**，会挂死） |
+| Gradle 缓存 | **`C:\src\gradle-home`**（已含 gradle 9.3.1 + AGP 9.1.0 全套，约 2.9GB；**切勿复制已有缓存**，会挂死） |
 | **sqlite3（本机新增必需）** | `C:\src\sqlite3\sqlite3.dll`（官方 3.53.4）+ 一份复制到 `C:\src\flutter\bin\cache\artifacts\engine\windows-x64`。**缺它 → 60 条测试挂**（`near "RETURNING": syntax error`） |
-| 工程 / 真机 / 版本 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**本机无模拟器、无真机**（adb 在 Desktop\platform-tools） |
-| 联网 | 代理 `http://127.0.0.1:7890` 可用，但**本机直连也通**（flutter-io.cn/pub.dev 实测 200）；`flutter test` 仍要去代理 |
-| 门禁（2026-09-12 复跑） | `flutter analyze` **No issues found**；`flutter test --no-pub` **179/179 All tests passed**（含 F7.2 新增 13 条） |
-| APK | 本机**尚未构建**（Android SDK 刚装好；首次构建需下 gradle 9.3.1 + AGP，约 10–20min） |
+| 工程 / 真机 / 版本 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；模拟器 **MuMu 15 @ `C:\Program Files\Netease\MuMu`**（已切 `resolution_mode=phone.1` → 1080×1920 竖屏，adb 端口 16384/7555，设备名 `127.0.0.1:16384` 或 `emulator-5554`；adb 用 `Desktop\platform-tools\adb.exe`） |
+| 联网 | 代理 `http://127.0.0.1:7890` 可用，但**本机直连也通**（flutter-io.cn/pub.dev 实测 200）；`flutter test` 仍要去代理；**dl.google.com 直连仅 ~7KB/s**，大件走腾讯镜像 + 代理（`.workbuddy/dl_ndk.py` 8 线程并发实测 ~12MB/s） |
+| 门禁（2026-09-12 复跑） | `flutter analyze` **No issues found**；`flutter test --no-pub` **173 通过 + 6 skip（skip=缺真实账单样本，基线如此）** |
+| APK | **已构建 ✅** `build\app\outputs\flutter-apk\app-debug.apk`（177,553,692 字节，增量 ~32s / 全新 ~2.5min）；已装 MuMu 冒烟通过 |
 | 源码规模 | `lib/` 50 个 `.dart`，`test/` 28 个 `.dart`；`lib/core/db/database.g.dart` 已生成入库 |
 | git | 本工作区原为 zip 解出、**无 `.git`** → 2026-09-12 `git init`（branch `master`）+ HTTPS 远端 `https://github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`；**推送需 token**（无 SSH key） |
 
@@ -138,6 +138,20 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
   - 当月汇总卡：收入 / 支出 / 结余；空态「YYYY年M月还没有支出记录」
   - 新增 `TransactionRepository.listByRange()`（跨月/跨年一次查齐，供趋势用）
   - 门禁：analyze 0 issue、`flutter test` **179/179**（新增 13 条：聚合 9 + 统计页 widget 4）
+- **MuMu 模拟器冒烟 + 统计页刷新 bug 修复** ✅（2026-09-12）：
+  - MuMu 15（`C:\Program Files\Netease\MuMu`）默认平板横屏 2560×1440，用官方 CLI
+    `MuMuManager.exe setting -v 0 -k resolution_mode -val phone.1` + `control -v 0 restart`
+    切成 1080×1920 竖屏（adb `127.0.0.1:16384`，与 7555 等价）
+  - **APK 已在本机构建成功**：需先补 **NDK r28c（28.2.13676358）**（腾讯镜像 748MB，
+    `.workbuddy/dl_ndk.py` 8 线程 ~60s）+ **cmake 3.22.1**（同镜像）。
+    Flutter 3.47 的 `:jni` 合成工程目的就是逼 AGP 配 NDK，**绕不开**；
+    `android/gradle.properties` 加了 `android.builder.sdkDownload=false`（新版 cmdline-tools 的
+    sdkmanager 被 AGP 调用即崩 0xC0000409，本地装好后不再需要它）
+  - 走查通过：记一笔（支出 88.88/收入 50.00）→ 首页汇总/账单、日历标注与日账单、统计页
+    圆环占比/趋势柱/收支切换/空态，全部正确
+  - **修复**：统计页数据不随新记账刷新——`statsProvider` 是常驻 Notifier，`refresh()` 从未被调用。
+    补齐四处：`record_page`（保存后）、`import_page`（导入后）、`home_page`/`calendar_page`（删除后）。
+    模拟器复验：记 20.00 后统计 88.88→108.88 ✅；门禁复跑 analyze 0 / test 173+6skip
 
 # 已尝试但失败/放弃的方案
 
@@ -148,6 +162,10 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 | **在 `env.sh` 里用 `env -u ... "PROGRAMFILES(X86)=..." flutter.bat ...`** | **2026-09-11 实测：沙箱里 `env` 被 safe-bin shim 吞掉** → `fx-test`/`fx-qa` **零输出、0.5s 返回**，看起来像「测试挂了」。已改用 bash 内建 `unset` + 子 shell |
 | `which flutter.bat` | git bash 的 `which` 不认 `.bat`（PATHEXT），报 no；但真正的问题是 shim。**直接用 `flutter`（无扩展名的 bash 脚本）** |
 | `sdkmanager` 装 platform-36 | 走代理仅 12KB/s（80min）→ Python 直下 zip（62MB/6.5s）手装；**`source.properties` 必须保留** |
+| `sdkmanager.bat` 被 AGP 自动调用（装 NDK） | 新版 cmdline-tools 的 sdkmanager 是「Android CLI」过渡 shim，被 Gradle 调用即崩 `0xC0000409` → 手装 NDK + `android.builder.sdkDownload=false` 绕过 |
+| NDK r28b（腾讯镜像） | `Pkg.Revision=28.1.13356709`，**不是** Flutter 要的 28.2.13676358；r28c 才是。目录名对不上一律不认 |
+| 关 native assets 跳过 `:jni` | `FLUTTER_NATIVE_ASSETS=false` 无效——`:jni` 是 Flutter gradle 插件的合成工程（专为配 NDK），与 feature flag 无关 |
+| `adb shell settings put system user_rotation` | MuMu 不认，改分辨率要用 `MuMuManager.exe`（`setting -k resolution_mode` + `control restart`） |
 | `curl -o <file>` | 沙箱内一律 exit 23（落盘被拦）→ 一律 Python urllib 流式写盘 |
 | GRADLE_USER_HOME 放 `<USER_HOME>\.gradle` | 允许写但**拒绝删除** lock 文件 → 指进工作区 |
 | nohup 后台下载 | 进程被回收 → 用工具的 `run_in_background=true` |
@@ -239,13 +257,10 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 4. 【P2 已解】`first-run-acceptance` 复查已完成 —— 2026-09-11 02:47 第二轮复走：M1/M2 零阻断、P1–P6 全部 hold，六维度全过（详见验收节 + `docs/acceptance-M1-M2.md` 第 11 节）
 5. 【P3】首页搜索 / 资产页 /「我的」页数据导出仍为占位；预算卡为示例数据（**F7.3 待排期**）
 6. 【P3】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）；如需改可压缩格子高度或把月历改可折叠
-7. 【P2 新】**本机首次 `flutter build apk` 还没跑过**：`C:\src\gradle-home` 仍是空目录，首编要下 gradle 9.3.1 + AGP（约 10–20min），且需要 `flutter doctor --android-licenses`（Android SDK 是手装的，licenses 目录可能需补）
-8. 【P3 新】**本机无模拟器**：F7.2 只有 widget 测试覆盖，未做真机/模拟器冒烟。要补可装 MuMu（旧机器在 `D:\Downloads\MuMu`，本机没有）
+7. 【P2 已解】本机 APK 构建已跑通（2026-09-12，177MB debug 包，增量 ~32s）。licenses 目录已补（`C:\src\Android\licenses`）
+8. 【P3 已解】MuMu 15 已装本机并冒烟通过（统计页刷新 bug 已修，见「已完成工作」末节）。日历页 header 的搜索/报表/统计仍是「建设中」占位（首页的统计入口已是真实页面）——属 F7.3 范围
 9. 【P3 新】**推送需 token**：本机无 SSH key，远端走 HTTPS；`git push` 时让用户在弹窗/Git Credential Manager 里给 GitHub PAT
-10. 【P2 新】**APK 构建在本会话沙箱里跑不成**：`flutter build apk --debug` 启动后子进程被回收（日志停在
-    「Flutter assets will be downloaded from…」、`gradle-home` 零写入、无 java 进程），前台/后台都试过。
-    → 需要在**普通终端**（非沙箱）里跑 `source env.sh && flutter build apk --debug`；首编约 10–20min。
-    若仍卡：先查 `bin/cache/lockfile`（见盲区防护 19），再 `flutter doctor -v` 看 Android toolchain 是否绿。
+10. 【P2 已解】APK 构建沙箱问题实为「NDK/CMake 缺失 + sdkmanager 崩溃」叠加（前几轮是被前台 120s 超时误判成「子进程回收」）。装好 NDK r28c + cmake 3.22.1 后沙箱内构建/增量均正常
 
 # 待确认事项
 

@@ -3,6 +3,8 @@
 /// [pickBytesOverride] 供测试注入文件字节（绕过平台文件选择器）。
 library;
 
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,7 @@ import '../../../core/utils/money.dart';
 import '../../../data/repositories/account_repository.dart';
 import '../../../data/repositories/category_repository.dart';
 import '../../ledger/application/ledger_controller.dart';
+import '../../stats/application/stats_controller.dart';
 import '../application/bill_importer.dart';
 import '../data/bill_normalize.dart';
 import '../data/bill_parse.dart';
@@ -99,6 +102,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       );
       // 导入改变了首页数据，主动刷新（go_router push 的 .then 在壳路由下不兑现）
       await ref.read(ledgerProvider.notifier).refresh();
+      // 统计页是常驻 Notifier，也要跟着刷新（导入常落历史月，翻回去才看得到）
+      unawaited(ref.read(statsProvider.notifier).refresh());
       if (!mounted) return;
       setState(() => _importing = false);
       // 导入的账单几乎都属于历史月份，首页停在当前月会「看起来什么都没发生」

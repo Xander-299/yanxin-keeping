@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+### 修复 — 统计页不随记账刷新（2026-09-12，MuMu 冒烟发现）
+
+- 现象：记一笔/导入/删除后，首页与日历都会刷新，**统计页仍是旧数据**（收入 50.00 已入账，统计摘要仍显示 0.00）。
+- 根因：`statsProvider` 是常驻 `AsyncNotifierProvider`，`build()` 只在首次进页执行一次；
+  `refresh()` 虽已预留但**无任何调用方**。
+- 修复：与首页/日历的既有刷新模式对齐，补齐四处调用——
+  `record_page`（保存后）、`import_page`（导入后）、`home_page` / `calendar_page`（删除后）。
+- MuMu 模拟器复验：记 20.00 后统计支出 88.88 → 108.88；门禁复跑 analyze 0 issue、test 173 通过 + 6 skip（skip 为缺真实账单样本，基线一致）。
+
+### 环境 — MuMu 冒烟链路补齐（2026-09-12）
+
+- 补装 **NDK r28c（28.2.13676358）** 与 **CMake 3.22.1**（腾讯镜像 + 7890 代理，8 线程分片下载 ~60s，
+  脚本 `.workbuddy/dl_ndk.py`）；`android/gradle.properties` 加 `android.builder.sdkDownload=false`
+  绕开新版 cmdline-tools sdkmanager 被 AGP 调用即崩（0xC0000409）的问题。
+- `flutter build apk --debug` 本机跑通（177MB，增量 ~32s）；MuMu 15 由平板横屏 2560×1440 切为
+  手机竖屏 1080×1920（`MuMuManager.exe setting -k resolution_mode phone.1` + restart）。
+
 ### 新增 — F7.2 统计·报表页（2026-09-12）
 
 - **统计页**（`/stats`）：首页 header 的「统计」图标由「建设中」占位改为真实入口。

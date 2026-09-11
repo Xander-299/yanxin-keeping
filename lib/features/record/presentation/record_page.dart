@@ -21,6 +21,7 @@ import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
+import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/amount_input.dart';
 import 'widgets/amount_keyboard.dart';
@@ -172,6 +173,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       if (ref.context.mounted) {
         unawaited(ref.read(ledgerProvider.notifier).refresh());
         unawaited(ref.read(calendarProvider.notifier).refresh());
+        unawaited(ref.read(statsProvider.notifier).refresh());
         ref.invalidate(yearDayIndexProvider);
       }
       if (mounted) Navigator.of(context).pop(true);
