@@ -114,6 +114,41 @@ class Categories extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 月度预算（schema v2 新增）。
+///
+/// 一个账本 + 一个月份最多一条有效记录（部分唯一索引见 `schema_v2.dart`）。
+/// 与其它业务表同构：五件套同步元数据、软删、金额整数分、客户端 UUID 主键。
+/// `period` 用 `'YYYY-MM'`：零填充后字典序即时序，便于范围查询与排查。
+@DataClassName('BudgetRow')
+class Budgets extends Table {
+  TextColumn get id => text()();
+
+  TextColumn get bookId => text()();
+
+  /// 'YYYY-MM'（如 '2026-09'）。
+  TextColumn get period => text()();
+
+  /// 预算金额（分），恒为正。
+  IntColumn get amountCents => integer()();
+
+  TextColumn get ownerId => text().nullable()();
+
+  IntColumn get createdAt => integer()();
+
+  IntColumn get updatedAt => integer()();
+
+  IntColumn get deletedAt => integer().nullable()();
+
+  IntColumn get dirty => integer().withDefault(const Constant(1))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+
+  /// 与流水一致：预算也不允许负数（用户传 0 视为「清除」，不落库）。
+  @override
+  List<String> get customConstraints => ['CHECK (amount_cents > 0)'];
+}
+
 /// 流水。数据类名 `TxRow`：避免与 drift 自带的 `Transaction` 冲突。
 @DataClassName('TxRow')
 class Transactions extends Table {

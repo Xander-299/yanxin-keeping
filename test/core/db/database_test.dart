@@ -1,8 +1,11 @@
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/db/schema_v1.dart';
+import 'package:yanxin/core/db/schema_v2.dart';
+import 'package:yanxin/data/repositories/budget_repository.dart';
 
 import '../../helpers/test_database.dart';
 
@@ -15,7 +18,7 @@ Future<Set<String>> _objects(AppDatabase db, String type) async {
 }
 
 void main() {
-  group('AppDatabase schema v1', () {
+  group('AppDatabase schema v1 + v2', () {
     late AppDatabase db;
 
     setUp(() {
@@ -23,7 +26,7 @@ void main() {
       addTearDown(db.close);
     });
 
-    test('空库建出全部表 + schema_meta', () async {
+    test('空库建出全部表 + schema_meta + budgets', () async {
       final tables = await _objects(db, 'table');
       expect(
         tables,
@@ -33,6 +36,7 @@ void main() {
           'categories',
           'transactions',
           'schema_meta',
+          'budgets', // v2 新增
         ]),
       );
     });
@@ -68,17 +72,41 @@ void main() {
       expect(occurred.read<String>('sql'), contains('DESC'));
     });
 
-    test('schemaVersion 落库为 1（PRAGMA user_version）', () async {
+    test('v2 索引：预算「账本 + 月份」部分唯一', () async {
+      final sql = await db
+          .customSelect(
+            'SELECT sql FROM sqlite_master '
+            "WHERE name = 'idx_budget_book_period'",
+          )
+          .getSingle();
+      final String ddl = sql.read<String>('sql');
+      expect(ddl, contains('UNIQUE'));
+      expect(ddl, contains('deleted_at IS NULL'));
+
+      // 直接插两行同账本同月份的未删预算 → 唯一冲突
+      Future<void> insert(String id, int deleted) => db.customStatement(
+            'INSERT INTO budgets(id, book_id, period, amount_cents, '
+            'created_at, updated_at, deleted_at) '
+            "VALUES('$id','b1','2026-09',100,1,1,"
+            '${deleted == 0 ? 'NULL' : deleted})',
+          );
+      await insert('g1', 1); // 已删
+      await insert('g2', 0);
+      expect(insert('g3', 0), throwsA(isA<sqlite.SqliteException>()));
+      await insert('g4', 1); // 已删的可以有任意多条
+    });
+
+    test('schemaVersion 落库为 2（PRAGMA user_version）', () async {
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 1);
+      expect(row.read<int>('user_version'), 2);
     });
 
     test('建表/建索引 DDL 幂等：重复执行不报错且版本不变', () async {
-      for (final sql in kSchemaV1Indexes) {
+      for (final sql in <String>[...kSchemaV1Indexes, ...kSchemaV2Indexes]) {
         await db.customStatement(sql);
       }
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 1);
+      expect(row.read<int>('user_version'), 2);
     });
 
     test('指纹部分唯一索引：同样指纹两条 → UNIQUE 冲突', () async {
@@ -126,6 +154,79 @@ void main() {
       expect(insert(0), throwsA(isA<sqlite.SqliteException>()));
       expect(insert(-1), throwsA(isA<sqlite.SqliteException>()));
       await insert(1);
+    });
+
+    test('budgets.amount_cents 必为正（CHECK 约束生效）', () async {
+      Future<void> insert(int cents) => db.customStatement(
+        'INSERT INTO budgets(id, book_id, period, amount_cents, '
+        'created_at, updated_at) '
+        "VALUES('b$cents','b1','2026-09',$cents,1,1)",
+      );
+      expect(insert(0), throwsA(isA<sqlite.SqliteException>()));
+      expect(insert(-1), throwsA(isA<sqlite.SqliteException>()));
+      await insert(1);
+    });
+  });
+
+  // 换机 / 升级路径的回归：老用户手上的库是 v1，装上新版本后必须只「加表」，
+  // 既有的账本与流水一笔都不能少。
+  group('v1 → v2 迁移', () {
+    test('老库升级：加出 budgets 表与索引，既有数据不丢', () async {
+      final sqlite.Database raw = sqlite.sqlite3.openInMemory();
+
+      // 先用当前代码建出完整 schema，再退回成「v1 库」：删掉 budgets + 版本号改回 1
+      // （first 实例不接管关闭，好让同一个连接交给下一个实例继续用）
+      final AppDatabase v1 = AppDatabase(
+        NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+      );
+      await v1.customSelect('SELECT 1').get(); // 触发建表
+      await v1.customStatement(
+        'INSERT INTO books(id, name, created_at, updated_at) '
+        "VALUES('b1','旧账本',1,1)",
+      );
+      await v1.customStatement(
+        'INSERT INTO transactions(id, book_id, account_id, type, amount_cents, '
+        'occurred_at, created_at, updated_at) '
+        "VALUES('t1','b1','a1','expense',8888,1,1,1)",
+      );
+      await v1.customStatement('DROP TABLE budgets');
+      await v1.customStatement('DROP INDEX IF EXISTS idx_budget_book_period');
+      await v1.customStatement('PRAGMA user_version = 1');
+      final int before = (await v1.customSelect('PRAGMA user_version').getSingle())
+          .read<int>('user_version');
+      expect(before, 1);
+      await v1.close();
+
+      // 用「新版本代码」打开同一个库 → 走 onUpgrade(from 1, to 2)
+      final AppDatabase v2 = AppDatabase(NativeDatabase.opened(raw));
+      addTearDown(v2.close);
+
+      expect(await _objects(v2, 'table'), contains('budgets'));
+      expect(await _objects(v2, 'index'), contains('idx_budget_book_period'));
+      final int after = (await v2.customSelect('PRAGMA user_version').getSingle())
+          .read<int>('user_version');
+      expect(after, 2);
+
+      // 老数据仍在
+      final book = await v2
+          .customSelect("SELECT name FROM books WHERE id = 'b1'")
+          .getSingle();
+      expect(book.read<String>('name'), '旧账本');
+      final tx = await v2
+          .customSelect("SELECT amount_cents FROM transactions WHERE id = 't1'")
+          .getSingle();
+      expect(tx.read<int>('amount_cents'), 8888);
+
+      // 升级后的库能正常读写预算
+      final repo = BudgetRepository(v2);
+      expect(await repo.getForMonth('b1', 2026, 9), isNull);
+      await repo.setForMonth(
+        bookId: 'b1',
+        year: 2026,
+        month: 9,
+        amountCents: 100000,
+      );
+      expect((await repo.getForMonth('b1', 2026, 9))!.amountCents, 100000);
     });
   });
 }

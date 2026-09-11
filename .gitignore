@@ -75,3 +75,6 @@ test/fixtures/*-real.*
 # 会话记忆（逐日工作日志，只留本机）
 /.workbuddy/memory/
 
+# 本地回收站（safe-delete shim 拦 rm，删文件一律 mv 到这里）
+/.workbuddy/trash/
+

@@ -17,7 +17,7 @@ import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/ledger_controller.dart';
-import 'widgets/budget_card_placeholder.dart';
+import 'widgets/budget_card.dart';
 import 'widgets/month_hero.dart';
 import 'widgets/tx_delete_dialog.dart';
 import 'widgets/tx_group_list.dart';
@@ -58,7 +58,7 @@ class HomePage extends ConsumerWidget {
                           ref.read(ledgerProvider.notifier).shiftMonth(1),
                     ),
                   ),
-                  const SliverToBoxAdapter(child: BudgetCardPlaceholder()),
+                  const SliverToBoxAdapter(child: BudgetCard()),
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   const SliverToBoxAdapter(child: _SectionHeader()),
                   if (state.items.isEmpty)
