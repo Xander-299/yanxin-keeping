@@ -166,12 +166,26 @@
 - [x] 门禁：`flutter analyze` No issues found；`flutter test` **199 通过 + 6 skip**（新增 26 条）
 - [x] MuMu 15 真机：旧版本覆盖安装（v1→v2）不丢数据、设置/超支/删除/持久化/记一笔自动刷新全过
 
-### F7.4 待排期
+### F7.4 流水搜索 ✅（2026-09-12）
 
-- [ ] 搜索流水（首页 header 搜索图标，当前占位）
+- [x] `TransactionRepository.listByBook(bookId)`：全时间、未删、倒序（搜索页一次读齐）
+- [x] `search_query.dart`（纯函数）：`normalizeQuery` / `matchesQuery` / `filterTx` / `amountTextOf`
+      —— 分类名 + 备注 + 金额三类取并集，空查询不返回全量
+- [x] `search_controller.dart`（`searchProvider`）：内存过滤，逐键即时出结果，无需防抖
+- [x] `/search` 全屏页：AppBar 即输入框（autofocus）+ **一键清空**；结果复用 `TxGroupList`（点=编辑、长按=删除）
+- [x] 结果条 `共 N 笔 · 支出 X · 收入 Y`（复用 `summarize`）；超 200 条截断并提示
+- [x] 三种状态：未输入（引导 + 示例词）、无结果（回显关键词 + 清空）、有结果
+- [x] 首页 header 搜索图标接线（tooltip 去「建设中」）；删除/编辑后 `searchProvider` +
+      首页/日历/统计/`yearDayIndex` 全刷
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **226 通过 + 6 skip**（新增 27 条）
+- [x] MuMu 15 真机：分类 / 备注 / 金额各搜一次、一键清空、结果点开编辑、长按删除全过
+
+### F7.5 待排期
+
 - [ ] 资产页（当前占位）
 - [ ] 数据导出（「我的」页占位）
 - [ ] 分类预算（每个分类单独额度）
+- [ ] 搜索增强：关键词高亮、账户名匹配、搜索历史、日期区间筛选、拼音 / 首字母匹配
 - [ ] 日历增强：农历 / 节假日、长按某天快速记一笔、日历页内直接改月份
 - [ ] 报表：按分类/账户的明细清单（统计页目前只有占比与趋势）
 

@@ -236,4 +236,42 @@ void main() {
     await repo.softDelete(rows.first.id);
     expect(await repo.listByYear(baseBookId, 2026), hasLength(2));
   });
+
+  test('listByBook：全量取数（跨年跨月）、倒序、排除已删、账本隔离', () async {
+    Future<TxRow> add(
+      DateTime at, {
+      String book = baseBookId,
+      String note = '',
+    }) => repo.create(
+      bookId: book,
+      accountId: baseAccountId,
+      categoryId: baseCategoryId,
+      type: 'expense',
+      amountCents: 100,
+      occurredAt: at.millisecondsSinceEpoch,
+      note: note,
+    );
+
+    await add(DateTime(2024, 3, 5), note: '两年前');
+    await add(DateTime(2026, 9, 12), note: '本月');
+    await add(DateTime(2026, 9, 20), note: '本月下旬');
+    // 搜索不受「不能翻到未来月」限制，未来日期的账也要能搜到
+    await add(DateTime(2027, 1, 2), note: '未来月');
+    await add(DateTime(2026, 5, 1), book: 'book-b', note: '别的账本');
+    final deleted = await add(DateTime(2026, 6, 1), note: '待删');
+
+    final rows = await repo.listByBook(baseBookId);
+    expect(rows, hasLength(5));
+    // 倒序：最新的在前
+    expect(rows.first.note, '未来月');
+    expect(rows.last.note, '两年前');
+
+    await repo.softDelete(deleted.id);
+    final after = await repo.listByBook(baseBookId);
+    expect(after, hasLength(4));
+    expect(after.map((t) => t.id), isNot(contains(deleted.id)));
+
+    // 账本隔离
+    expect(await repo.listByBook('book-b'), hasLength(1));
+  });
 }

@@ -143,6 +143,17 @@ class TransactionRepository {
         .get();
   }
 
+  /// 查询某账本**全部时间**的未删流水，按发生时间倒序。
+  ///
+  /// 供搜索页一次载入后在内存里过滤（数量级万级，见 SPEC-F7.4 §3.1）；
+  /// 与 [listByMonth] / [listByYear] / [listByRange] 的区别是**不带时间窗**。
+  Future<List<TxRow>> listByBook(String bookId) {
+    return (_db.select(_db.transactions)
+          ..where((t) => t.bookId.equals(bookId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]))
+        .get();
+  }
+
   /// 局部更新。目标不存在或已删则抛错。
   Future<TxRow> update(
     String id, {

@@ -149,7 +149,11 @@ class _Header extends StatelessWidget {
               ),
             ),
           ),
-          const _HeaderIcon(icon: Icons.search_rounded, tooltip: '搜索（建设中）'),
+          _HeaderIcon(
+            icon: Icons.search_rounded,
+            tooltip: '搜索',
+            onPressed: () => context.push('/search'),
+          ),
           const _HeaderIcon(
             icon: Icons.receipt_long_rounded,
             tooltip: '报表（建设中）',
