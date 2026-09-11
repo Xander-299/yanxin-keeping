@@ -1,0 +1,38 @@
+/// 回归：首次使用验收 P4 —— 零配置首页空态必须有可懂的下一步。
+///
+/// 原问题：列表区一片空白，文案还让用户找并不存在的「＋」按钮。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/pump_app.dart';
+
+void main() {
+  testWidgets('零配置首页空态：给出说明 + 可点的「记一笔」入口', (WidgetTester tester) async {
+    await pumpApp(tester);
+
+    // 空态有解释，而不是空白
+    expect(find.textContaining('还没有记账'), findsOneWidget);
+    // 导入是另一条常见入口，明确指路
+    expect(find.textContaining('导入账单'), findsOneWidget);
+
+    // 空态里的「记一笔」按钮（区别于底栏 tab 的「记一笔」）
+    final cta = find.widgetWithText(TextButton, '记一笔');
+    expect(cta, findsOneWidget);
+
+    // 800×600 测试视口下按钮在折叠下方，先滚进视口再点
+    await tester.dragUntilVisible(
+      cta,
+      find.byType(CustomScrollView),
+      const Offset(0, -120),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(cta);
+    await tester.pumpAndSettle();
+
+    // 真的进了记一笔页（AppBar 标题 + 常驻保存入口）
+    expect(find.widgetWithText(AppBar, '保存'), findsOneWidget);
+    expect(find.text('请选择分类'), findsOneWidget);
+  });
+}

@@ -1,0 +1,32 @@
+# 颜芯记账 lint 配置
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - "**/*.g.dart"   # drift 生成代码不参与分析
+    - "**/*.freezed.dart"
+
+language:
+  strict-casts: true
+  strict-inference: true
+  strict-raw-types: true
+
+linter:
+  rules:
+    # 风格统一
+    prefer_single_quotes: true
+    always_declare_return_types: true
+    unawaited_futures: true
+    directives_ordering: true
+    sort_pub_dependencies: true
+
+    # 正确性（对应旧栈踩过的坑）
+    avoid_print: true              # 用 log/debugPrint，别污染模块顶层
+    avoid_dynamic_calls: true
+    unnecessary_lambdas: true
+    prefer_final_locals: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    unnecessary_string_interpolations: true

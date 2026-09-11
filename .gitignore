@@ -1,0 +1,77 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+.flutter_tool_state
+.flutter_settings
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# Android 本地环境（含本机 SDK 绝对路径，禁止提交）
+/android/local.properties
+/android/.gradle/
+/android/captures/
+*.jks
+*.keystore
+/android/key.properties
+
+# Gradle 缓存（沙箱不允许删 <USER_HOME>\.gradle，故挪到工作区内）
+/.gradle-home/
+
+# 构建产物（android/ 根级 build 目录）
+/android/build/
+
+# 待删临时目录（旧缓存搬运残留，可安全清理）
+/.trash*/
+
+# 真实账单样本（含隐私，只留本机）
+test/fixtures/*-real.*
+
+# 走查截图（二进制，只留本机）
+/.workbuddy/shots/
+
+# 会话记忆（逐日工作日志，只留本机）
+/.workbuddy/memory/
+

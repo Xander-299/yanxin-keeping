@@ -1,0 +1,164 @@
+# 迁移任务清单（Flutter）
+
+> 配套 `SPEC-flutter-migration.md`（**未签字前不许开工**）
+> 每步：实现 → 测试门禁 → 勾选 → 再进下一步
+
+## F0 环境搭建 ✅ 已完成（2026-09-09）
+
+- [x] Flutter 3.47.2 → `D:\Download\Flutter\flutter`（Dart 3.13.2）
+- [x] JDK 17.0.20.1+1 → `D:\Download\Java\jdk-17.0.20.1+1`，已 `flutter config --jdk-dir`
+- [x] cmdline-tools → `D:\Download\Java\Android\cmdline-tools\latest`
+- [x] `flutter doctor --android-licenses` 已全部接受
+- [x] 门禁：`flutter doctor` → Flutter ✅ / Android toolchain ✅ / Network ✅；残留告警均为 Windows桌面、web、wmic 沙箱拦截，与 Android 无关
+- [x] 真机：Redmi K50 无线 adb 可见
+- [ ] 清理 `D:\Tencent\yanxin-flutter\_sdk`（2.1GB 临时 zip，F1 后删）
+
+## F1 空壳 + 依赖（analyze/test 已过，剩 APK 门禁）
+
+- [x] `flutter create --platforms=android --org com.teacodeman --project-name yanxin .`
+- [x] 依赖锁定（见 README「版本锁死的理由」）：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / drift_dev 2.31.0 / build_runner 2.15.1 / flutter_riverpod 3.4.3 / go_router 18.0.1 / uuid 4.6.0
+- [x] `flutter pub get` 通过
+- [x] `analysis_options.yaml` 收紧（strict-casts/inference/raw-types + prefer_const + avoid_print 等）
+- [x] lib 骨架：main.dart（ProviderScope）+ app.dart（go_router + 占位首页）+ 冒烟测试
+- [x] `flutter analyze` → **No issues found!**
+- [x] `flutter test` → **All tests passed!**（踩坑：沙箱吞 PROGRAMFILES(X86) + 代理劫持 WebSocket，解法固化在 `env.sh` 的 `fx-test`/`fx-qa`）
+- [x] git init + 提交 `ba45fba` + 远端 origin 已配（远端仓库待用户网页创建）
+- [x] 门禁：`flutter build apk --debug` 成功（2026-09-09，第 8 次构建，`build/app/outputs/flutter-apk/app-debug.apk` 169MB）
+- [x] 已推送 `origin/master`（`git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`）
+- [x] F5 再装：excel / csv / gbk_codec / file_picker
+
+> **坑**：`flutter pub add` 本机卡死 20min+ → 改「Python 查 pub API → 手写 pubspec → `pub get`」。
+> **坑**：sqlite3 3.x 带 C 构建钩子，无 VS 的 Windows 跑不了 `flutter test` → 锁 2.9.4。
+> **坑**：把 `<USER_HOME>\.gradle\caches` 复制到工作区会让 Gradle **启动即挂死**（`--status` 都无响应）→ 必须让 Gradle 用**全新空目录**自行下载（腾讯/阿里云镜像很快）。
+
+## F2 core/utils ✅ 已完成（2026-09-09）
+
+- [x] `money.dart`（整数分，格式化/解析）
+- [x] `id.dart`（UUID v4）
+- [x] `fingerprint.dart`（入账指纹算法，与旧版逐字节一致）
+- [x] `date.dart`（月份边界、月初月末、按天分组）
+- [x] 门禁：移植 money/id/date 全部旧用例 + 指纹 golden 向量 → `flutter test` 27/27、`flutter analyze` 0 issue
+
+## F3 数据层 ✅ 已完成（2026-09-09）
+
+- [x] drift tables：books / accounts / categories / transactions / schema_meta（DDL 对齐 schema v1，已对拍 `sqlite_master`）
+- [x] 7 条索引原样落地（含 `DESC` 与 `idx_tx_fingerprint` 部分唯一索引，见 `core/db/schema_v1.dart`）
+- [x] schemaVersion=1（drift 托管 `PRAGMA user_version`）+ onCreate 建表建索引
+- [x] repositories：book / account / category / transaction（含 `active_book_id` 持久化）
+- [x] `importTransaction()` 指纹幂等入账（先查后插，`ImportResult` sealed 类）
+- [x] 门禁：移植 db + repositories 用例（软删、指纹唯一、迁移幂等、账本隔离、月份边界）→ `flutter test` **56/56**、`flutter analyze` **No issues found**
+- [x] `dart run build_runner build` 生成 `lib/core/db/database.g.dart`（已入库）
+
+> **坑**：drift 的 `@TableIndex` 不支持 `DESC` / 部分索引 `WHERE` → 索引一律在 `onCreate` 走原始 SQL。
+> **坑**：`Transactions` 表数据类名必须改成 `TxRow`（`@DataClassName`），否则与 drift 自带 `Transaction` 撞名。
+> **坑**：`drift` 与 `matcher` 都导出顶层 `isNull` → 测试里 `import 'package:drift/drift.dart' hide isNull`。
+
+## F4 UI 基础（M1 等价）✅ 完成（2026-09-09 代码 + 真机验收通过）
+
+- [x] 首页：hero（月切换 ‹ ›，canNext 不超前当前月）+ 按天分组流水列表 + 空态 + FAB
+- [x] 记一笔：支出/收入 tab + 金额键盘 + 分类选择（宫格弹层）+ 备注
+- [x] 编辑已有流水（路由 extra 传流水 id）
+- [x] 长按删除（软删，带确认弹窗）
+- [x] 账本管理：列表 + 新建 + 切换（active_book_id 落库，BUG-016 语义）
+- [x] 分类管理：支出/收入分组 + 新建自定义分类 + 删除自定义分类（预置不可删）
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **68/68**（含 6 条 widget 测试走完整 UI 路径）
+- [x] M1 等价验收 8 项（真机，2026-09-10 用户确认通过）
+
+> **坑 1**：Riverpod 3 未公开导出 `Override` 类型 → ProviderScope.overrides 别写类型注解。
+> **坑 2**：`AsyncValue.valueOrNull` 在 Riverpod 3 已移除 → 用 `.value`。
+> **坑 3**：go_router 实例必须是 App State 成员，不能是顶层 final——否则多个测试共享导航状态，前一个测试 push 过的页面会污染后一个测试。
+> **坑 4**：showDialog 里的 TextField + controller 必须放 StatefulWidget，无状态 build 里 new controller 会丢输入。
+> **坑 5**：测试里写库（create）是真实异步，pumpAndSettle 可能在写库完成前返回 → 用 pumpUntil(finder) 轮询。
+
+## F4.5 首页改版 + 底部导航 ✅ 代码完成（2026-09-10，真机验收待做）
+
+- [x] 全局深色主题（近黑底 #0C0C0C + 琥珀橙 #FFAF38，对齐 app_template/home_ui.jpg）
+- [x] 底部导航 4 tab（首页/日历/资产/我的）+ 中央橙色「记一笔」；StatefulShellRoute.indexedStack
+- [x] 日历 / 资产 = 占位页；「我的」= 占位骨架 + 分类管理入口
+- [x] 首页：header（左=账本名开抽屉，右=搜索/报表/统计占位图标）+ 琥珀 hero 月支出卡（保留 ‹ › 翻月）+ 预算占位卡（纯静态）+「本月账单」列表
+- [x] 账本抽屉：全部账本（当前高亮）+ 右下角「管理账本」
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **69/69**
+- [x] 真机验收（首页视觉 + 抽屉切账本 + 底栏四 tab + 占位反馈）→ 2026-09-11 MuMu 12 走查通过
+
+> **坑 6**：go_router `context.push` 的 Future 在 StatefulShellRoute 壳下**不兑现 .then 回调**
+> → 保存后的列表刷新必须由记一笔页在 pop 前自己 `refresh()`，不能靠调用方 `.then`。
+
+## F5 账单导入（M2 等价）✅ 代码完成（2026-09-10，真机验收待做）
+
+- [x] `gbk_codec` 验证：纯 Dart 回环校验替代 U+FFFD 检测（gbk_bytesDecode 无 FFFD）；sdk 上界走 dependency_overrides
+- [x] CSV 解析（逐字符状态机）+ 微信/支付宝 profiles（列名回退数组、方向映射、状态白/黑名单）
+- [x] xlsx 解析：**不用 excel 包**（数值过 double 会丢 31 位单号精度）→ archive 解压 + 移植旧栈手写正则解析器；Excel 序列号本地时区换算
+- [x] categorize 关键词规则（39 条有序表，模式小写化等价 /i）
+- [x] importer：drift 单事务 + 指纹 IN 分批预查（参数绑定，escapeLiteral 不再需要）+ 文件内去重 + dryRun 哨兵回滚
+- [x] 导入页 UI（我的页入口 → 选文件 → 预览可单条取消 → 确认导入 → 报告对话框 → 首页 refresh）
+- [x] 门禁：移植 bill-import 6 组用例 + **真实件对拍逐行一致**（微信 xlsx 335 笔/导入 327、支付宝 GBK 32 笔/导入 28、31 位单号不丢精度）；`flutter test` **143/143**、analyze 0 issue
+- [x] 真机验收（M2 等价 8 项）→ 2026-09-11 MuMu 12 走查全过（详见 `docs/acceptance-M1-M2.md`）
+
+
+## F5.5 首次使用验收修复 ✅（2026-09-11）
+
+用 `first-run-acceptance` 在 MuMu 12 隔离环境实走 M1/M2，报告 `docs/acceptance-M1-M2.md`。
+
+- [x] **P1（阻断）** 导入成功但首页看不到数据、无引导 → `ledger_controller.jumpToMonth()`
+      + 报告框拆「去看账单 / 完成」+ 月份说明
+- [x] **P2（阻断）** 预算卡假数据与 hero 矛盾 → 「示例」标签 + 卡片底部说明（非真实数据）
+- [x] **P3** 二次导入「导入完成 / 0 笔」自相矛盾 → 标题改「没有新增」；
+      `ImportReport.uncategorized` 改为只统计真正入库的未匹配行
+- [x] **P4** 首页空态不可见（大屏下被挤到折叠下方）→ 空态压成紧凑单行 + 「记一笔」入口 + 导入指路
+- [x] **P5** 保存按钮藏在折叠下方 → 记一笔页 AppBar 加常驻「保存」
+- [x] **P6** 预览页看不出如何取消单条 → 补勾选说明 + 全选/全不选
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **151/151**
+      （146 + 新增 5 条回归：bill_importer P3 / import_page ×2 / home_empty_state / record_save_entry）
+
+> **坑**：`find.widgetWithText(AppBar, '保存')` 返回的是 **AppBar 本身**，直接 tap 会点到标题区；
+> 点击要用 `find.text('保存')`，前者只用于断言「在 AppBar 里」。
+
+
+## F6 验收收尾
+
+- [x] M2 等价验收 8 项（真机）→ MuMu 12 走查通过（SAF 唤起 / 微信 335→327 / 支付宝 GBK 32→28 /
+      **二次导入 0 新增** / 翻月可见 / 退款跳过 / force-stop 持久化）
+- [x] README / CHANGELOG 建立
+  - [x] README 迁移进度表更新至 F5 完成，技术选型补全（archive 手写正则、file_picker、crypto、gbk_codec）
+  - [x] 纠正 README 中 xlsx 选型误记（写 `excel` 包，实际是 `archive` + 手写正则）
+  - [x] 新增 `CHANGELOG.md`（Keep a Changelog 格式，F0–F5 + Unreleased）
+- [x] 旧仓库 README 顶部加「已迁移至 yanxin-flutter」说明
+
+## F7 后续
+
+### F7.1 日历页 ✅（2026-09-11）
+
+- [x] 路由：`/calendar` 分支由占位页换成 `CalendarPage`；新增 `/month-picker` 子页路由
+- [x] `CalendarController`（`calendarProvider`）：与首页 `ledgerProvider` 状态分离，各自记月份
+- [x] `calendar_aggregate.dart`：按天聚合 / 日均支出（整数四舍五入）/ 紧凑金额，纯函数单测
+- [x] 月历网格：日期下方标支出（负数·红）/ 收入（正数·绿），今天琥珀、选中日琥珀描边
+- [x] 日历下方汇总条：月结余 + 日均支出（当月按已过天数、历史月按整月天数）
+- [x] 选中日期账单区：日期头「今天 9月11日 周五」+ 流水列表；空态给「记一笔」入口
+- [x] 月份选择子页：按年 12 个月缩略日历，有账日期标琥珀，点某天跳月选日并返回
+- [x] 「记录某一天的账」：`/record?date=<ms>`，记一笔页新增「日期」字段（可改，上限今天）
+- [x] 跨 tab 一致性：记一笔 / 删除后同时刷新首页与日历
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **166/166**（新增 15 条）
+
+### F7.2 统计·报表页 ✅（2026-09-12）
+
+- [x] 路由 `/stats`；首页 header「统计」图标由占位 SnackBar 改为真实入口
+- [x] `stats_aggregate.dart`（纯函数）：`categoryBreakdown`（按分类汇总降序 + 占比）、
+      `trendRange` / `monthlyTrend`（近 6 月、缺月补 0、跨年）
+- [x] `StatsController`（`statsProvider`）：与首页 / 日历各自独立记月份；`shiftMonth` / `setKind` / `refresh`
+- [x] 分类占比卡：`SegmentedButton` 支出/收入切换 + 自绘圆环（`category_pie.dart`）+ 图例（占比 + 千分位金额）
+- [x] 近 6 月趋势卡：每月双柱（支出红 / 收入绿），`trend_bars.dart`
+- [x] 当月汇总卡：收入 / 支出 / 结余；空态「YYYY年M月还没有支出记录」
+- [x] 新增 `TransactionRepository.listByRange()`（跨月 / 跨年一次查齐）
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **179/179**（新增 13 条）
+
+> **坑**：Flutter 3.32+ 起 `SegmentedButton` 的回调叫 **`onSelectionChanged`**，旧的 `onSelected` 已移除。
+> **坑（本机）**：Windows 自带 `winsqlite3.dll` 不支持 `RETURNING` → 自带新版 `sqlite3.dll`（见 CHANGELOG 环境节）。
+
+### F7.3 待排期
+
+- [ ] 预算功能实装（接真实数据后移除 `budget_card_placeholder` 的「示例」标注）
+- [ ] 搜索流水（首页 header 搜索图标，当前占位）
+- [ ] 资产页（当前占位）
+- [ ] 数据导出（「我的」页占位）
+- [ ] 日历增强：农历 / 节假日、长按某天快速记一笔、日历页内直接改月份
+- [ ] 报表：按分类/账户的明细清单（统计页目前只有占比与趋势）
