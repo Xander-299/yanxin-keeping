@@ -85,10 +85,13 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 
 **提交历史（本地 master；远端 master 原停在 `13f3578`，本次合并后同步）**：
 本地为 zip 快照重建的独立历史：`0fa12fa`（初始导入：F1–F7.2 + 换机环境）→ `ef4b869`（文档）
-→ `7f0372e`（统计页刷新修复 + 构建链路）→ **`de67377`（F7.3 预算实装，当前 HEAD）**
+→ `7f0372e`（统计页刷新修复 + 构建链路）→ `de67377`（F7.3 预算实装）
+→ **`0b0ba90`（merge；其后还有一次文档回写，HEAD 以 git log 为准）**
 远端旧历史：`... → c17abfd`（F7.1）→ `caca7c0` → `13f3578`（文档）
 两者**无共同祖先**，用 `git merge origin/master --allow-unrelated-histories -X ours` 合并
 （冲突一律取我方，远端独有的 3 个 memory 日志保留），合并后即可 fast-forward 推送。
+⚠️ 注意：`-X ours` 对「我方删除 / 远端存在」的文件**不生效**，会把已删文件带回来
+（本次 `budget_card_placeholder.dart` 就被复活，已 amend 再删一次）。
 
 # 当前方案与关键决策
 
@@ -203,12 +206,13 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 
 # 当前状态
 
-- **当前 HEAD：本机 `git init` 后的首次提交（2026-09-12）**。远端 `origin` = HTTPS `github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`；
-  旧机器最后一次推送是 `c17abfd`（F7.1），本次换机环境的提交尚未推送（**需要 GitHub token**）。
-  已含 **F1–F7.2**；`env.sh` 重写、F7.2 代码、HANDOFF/README/CHANGELOG/todo 均已进提交。
-- **F7.2 门禁**：`flutter analyze` No issues found；`flutter test` **179/179**（166 + 新增 13）
-- **F7.2 未做真机冒烟**：本机**没有模拟器/真机**（旧机器的 MuMu 不在这台机器上）→ 只用 widget 测试覆盖；
-  装了模拟器后补一轮：`/stats` 圆环渲染、切收支、翻月、趋势柱。
+- **当前 HEAD：以 `git log --oneline -1` 为准**（截至合并提交 `0b0ba90` + 紧随其后的一次文档回写）。
+  远端 `origin` = HTTPS `github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`
+  （**待推送，需要一个有 repo 权限的 PAT**；本机无 SSH key 且 HTTPS 必须走 `http.sslBackend=openssl`）。
+  已含 **F1–F7.3**。
+- **F7.3 门禁**：`flutter analyze` No issues found；`flutter test` **199 通过 + 6 skip**（173 + 新增 26）
+- **F7.3 真机冒烟（MuMu 15，竖屏 1080×1920）**：✅ 全部通过，见「已完成工作」末节；
+  重点是**旧版本覆盖安装的 v1→v2 迁移**（老数据零丢失）与超支/删除/持久化/记一笔自动刷新。
 - **F7.1 门禁**：`flutter analyze` No issues found；`flutter test` **166/166**（提交前复跑，与实现时一致）
 - **F7.1 真机冒烟（MuMu 12，横屏 1600×900）**：日历 tab 渲染、点日期切换当日账单、空态「记一笔」按选中日期带入、
   月份选择子页跳月选日、日期选择器改日期后入账到该日 —— 全部通过（截图见 `.workbuddy/shots/f7-*.png`）
@@ -276,11 +280,14 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 2. 【P3】gradle wrapper 用 `gradle-9.3.1-all.zip`（230MB），换 `-bin.zip` 可提速
 3. 【P3 已解】`CHANGELOG.md` 已建；README「迁移进度」表已更新至 F5 完成，技术选型已补全并纠正 `excel` 包误记
 4. 【P2 已解】`first-run-acceptance` 复查已完成 —— 2026-09-11 02:47 第二轮复走：M1/M2 零阻断、P1–P6 全部 hold，六维度全过（详见验收节 + `docs/acceptance-M1-M2.md` 第 11 节）
-5. 【P3】首页搜索 / 资产页 /「我的」页数据导出仍为占位；预算卡为示例数据（**F7.3 待排期**）
+5. 【P3】**F7.4 待排期**：搜索流水 / 资产页 /「我的」页数据导出仍为占位；分类预算未做
+   （月度总预算已实装，见 F7.3）
 6. 【P3】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）；如需改可压缩格子高度或把月历改可折叠
 7. 【P2 已解】本机 APK 构建已跑通（2026-09-12，177MB debug 包，增量 ~32s）。licenses 目录已补（`C:\src\Android\licenses`）
 8. 【P3 已解】MuMu 15 已装本机并冒烟通过（统计页刷新 bug 已修，见「已完成工作」末节）。日历页 header 的搜索/报表/统计仍是「建设中」占位（首页的统计入口已是真实页面）——属 F7.3 范围
-9. 【P3 新】**推送需 token**：本机无 SSH key，远端走 HTTPS；`git push` 时让用户在弹窗/Git Credential Manager 里给 GitHub PAT
+9. 【P3 更新】**推送需 PAT**：本机无 SSH key（已生成一把 `~/.ssh/id_ed25519`，公钥还没加到 GitHub）；
+   远端走 HTTPS，且**必须 `git config --global http.sslBackend openssl`**（schannel 吊销检查脱机，
+   `http.schannelCheckRevoke=false` 无效）。有 PAT 后：`git push`（历史已合并，是 fast-forward）
 10. 【P2 已解】APK 构建沙箱问题实为「NDK/CMake 缺失 + sdkmanager 崩溃」叠加（前几轮是被前台 120s 超时误判成「子进程回收」）。装好 NDK r28c + cmake 3.22.1 后沙箱内构建/增量均正常
 
 # 待确认事项
@@ -339,23 +346,43 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
     `export PATH="/c/Users/Administrator/.workbuddy/binaries/PortableGit/versions/1.2.0/cmd:$PATH"`（`env.sh` 已加）
 21. **【本机新增】`cmd //c`  piping 不可靠**：`//c` 会被 Git Bash 吃掉、管道输入被当成命令执行。
     要跑 `.bat` 就直接 `./xxx.bat`（bash 可执行）；包名带 `;` 的参数会被 cmd 拆词
+22. **【本机新增】HTTPS git 必须切 openssl 后端**：本机 schannel 报
+    `CRYPT_E_REVOCATION_OFFLINE`，`http.schannelCheckRevoke=false` **无效**；
+    `git config --global http.sslBackend openssl` 立即可用（已配好）
+23. **【本机新增】两条无共同祖先的历史合并**：用
+    `git merge origin/master --allow-unrelated-histories -X ours`；但 `-X ours`
+    对「我方已删除、远端仍存在」的文件**不会**取我方 → 会把已删文件带回来
+    （本次 `budget_card_placeholder.dart` 复活），合并后必须 `git diff --stat <合并前HEAD> HEAD` 复核一遍
+24. **【新】drift 迁移只能在真机验**：内存库单测（`NativeDatabase.opened` 模拟 v1 库）能证明
+    `onUpgrade` 逻辑，但**证明不了覆盖安装路径**；发版前务必 `adb install -r` 覆盖旧包，
+    确认老数据还在 + 新表可用（本次 F7.3 就是这么验的）
+25. **【新】Riverpod 3.4.3 没有可用的 `AsyncNotifierProvider.family` 取参入口**
+    （`FamilyAsyncNotifier` 已移除，`build()` 拿不到 arg）→ 需要「按参数取数」的 provider 时，
+    改成 **watch 已有状态**（F7.3 的 `monthBudgetProvider` watch `ledgerProvider`）比硬上 family 稳
+26. **【新】别在一条消息里并行编辑同一个文件**：本次两次 Edit 同文件并发，结果只落了一次改动
+    （`home_page.dart` 的 `BudgetCard()` 替换被静默丢掉），analyze 才暴露。同文件编辑要串行
 
 # 新 Agent 接手指南
 
-1. **下一步：F7.3（预算实装 / 搜索 / 资产页 / 数据导出）**，用户 2026-09-12 已选「统计·报表页」先做（已交付），
-   剩下四项里**预算实装**优先级最高（首页预算卡还是「示例」假数据，与 hero 真实支出矛盾）。按老规矩：
-   先出小 SPEC → 用户点头 → 实现 → 门禁 → 文档。
+1. **下一步：F7.4（搜索流水 / 资产页 / 数据导出 / 分类预算）**。F7.1 日历、F7.2 统计、F7.3 预算均已交付。
+   建议顺序：**搜索流水**（入口已在首页 header，改动集中在查询 + 一个全屏页）→ 资产页 → 数据导出。
+   按老规矩：先出小 SPEC → 用户点头 → 实现 → 门禁 → 文档（可在 `docs/SPEC-F7.4-*.md` 起草）。
 2. **想跑 APK / 真机前先补两件事**：① `flutter doctor --android-licenses`（手装 SDK，licenses 可能缺）；
    ② 首次 `flutter build apk --debug` 要下 gradle 9.3.1（230MB）+ AGP，约 10–20min，走 `C:\src\gradle-home`。
    本机**没有模拟器**（旧机器的 MuMu 不在这台），要冒烟需先装一个。
-3. **占位项（未做功能，别当 bug）**：预算卡静态示例、header 搜索 / 报表图标、`全部账单 ›`、资产页、「我的」页数据导出。
+3. **占位项（未做功能，别当 bug）**：header 搜索 / 报表图标、`全部账单 ›`、资产页、「我的」页数据导出。
+   （**首页预算卡已是真实数据**，F7.3 已实装，不再是占位）
 4. **代码结构**（都已落库）：
    - `lib/core/providers/` — database / book_providers / category_providers（DI + 当前账本）
+   - `lib/core/db/` — `tables.dart`（5 张表 + **budgets**）+ `schema_v1.dart` / `schema_v2.dart`（索引原始 SQL）
+     + `database.dart`（**schemaVersion 2**，`onUpgrade` 只加 budgets）
    - `lib/features/nav/` — AppShell（抽屉+底栏+壳路由）+ PlaceholderPage
-   - `lib/features/ledger/` — 首页（LedgerController + MonthHero + BudgetCardPlaceholder + BookDrawer + TxGroupList）
+   - `lib/features/ledger/` — 首页（LedgerController + MonthHero + **BudgetCard(`widgets/budget_card.dart`)** +
+     **budget_metrics / budget_controller / budget_edit_sheet** + BookDrawer + TxGroupList）
    - `lib/features/calendar/` — 日历页（CalendarController + calendar_aggregate + MonthGrid + MonthPickerPage）
-   - **`lib/features/stats/`**（F7.2 新增）— `application/{stats_aggregate,stats_controller}.dart` +
+   - `lib/features/stats/` — `application/{stats_aggregate,stats_controller}.dart` +
      `presentation/stats_page.dart` + `presentation/widgets/{category_pie,trend_bars}.dart`
+   - `lib/data/repositories/` — book / account / category / transaction / **budget**
    - `lib/features/import/` — 五层解析（`data/{bill_decode,bill_csv,bill_profiles,bill_normalize,bill_xlsx,bill_parse,category_rules}.dart`）+ `application/bill_importer.dart` + `presentation/import_page.dart`
    - `lib/features/profile/` `record/` `book/` `category/` `shared/`
    - 路由：壳 `/` `/calendar` `/assets` `/profile`；全屏 `/record`（extra=流水 id，`?date=` 默认日期）`/books`
@@ -368,16 +395,19 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 
 # 极简版
 
-- 颜芯记账 uni-app → Flutter。当前工作区 `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master`（zip 解出后 `git init`）；
-  远端 HTTPS `github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`（旧机器走 SSH，本机无 key）。
-- **F1–F7.2 全部 ✅**：F7.1 日历页、F7.2 统计·报表页为最新两项；**F7.3（预算实装 / 搜索 / 资产 / 导出）待排期**。
-- 门禁：`flutter analyze` 0 issue；`flutter test` **179/179**。
+- 颜芯记账 uni-app → Flutter。当前工作区 `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master`；
+  远端 HTTPS `github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`（本机无 SSH key，且**必须 openssl 后端**）。
+- **F1–F7.3 全部 ✅**：F7.1 日历、F7.2 统计·报表、**F7.3 月度预算（schema v2）**；
+  **F7.4（搜索 / 资产 / 导出 / 分类预算）待排期**。
+- 门禁：`flutter analyze` 0 issue；`flutter test` **199 通过 + 6 skip**（skip=缺真实账单样本）。
 - **本机环境（旧文档里的 D: 路径全部失效）**：Flutter 3.47.2 → `C:\src\flutter`；JDK 17 → `M:\QQcache`；
-  Android SDK → `C:\src\Android`；Gradle 缓存 → `C:\src\gradle-home`；**sqlite3.dll → `C:\src\sqlite3`（必需）**。
+  Android SDK → `C:\src\Android`（含 **NDK r28c + cmake 3.22.1**）；Gradle 缓存 → `C:\src\gradle-home`；
+  **sqlite3.dll → `C:\src\sqlite3`（必需）**；模拟器 **MuMu 15**（`127.0.0.1:16384`，竖屏 1080×1920）。
   **开终端先 `source env.sh`**。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂且伪装成网络慢）；② **沙箱里 `env` 命令静默返回空** → `env.sh` 用 bash `unset`；
   ③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；
   ⑤ **【新】缺 `sqlite3.dll` → 60 条测试 `RETURNING` 报错**；**flutter 残留 lockfile → 命令卡死**。
-- drift 三坑：**索引走原始 SQL**（不支持 DESC/部分索引）、**数据类名 `TxRow`**、**`isNull` 要 `hide`**。
-- 下一步：**F7.3**（先做预算实装）→ 补 APK 首编 + 装模拟器冒烟。
+- drift 四坑：**索引走原始 SQL**（不支持 DESC/部分索引）、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、
+  **改表必重跑 `build_runner`，且迁移只能在真机覆盖安装上验**。
+- 下一步：**F7.4**（先做搜索流水）→ 有 PAT 后 `git push`（历史已合并，fast-forward）。
