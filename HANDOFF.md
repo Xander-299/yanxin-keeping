@@ -88,7 +88,7 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 本地为 zip 快照重建的独立历史：`0fa12fa`（初始导入：F1–F7.2 + 换机环境）→ `ef4b869`（文档）
 → `7f0372e`（统计页刷新修复 + 构建链路）→ `de67377`（F7.3 预算实装）
 → `0b0ba90`（merge 远端历史）→ `8f6979f`（F7.3 文档回写）→ `52fde16`（技能更新）
-→ `895483f`（F7.4 流水搜索 + 文档，当前 HEAD）
+→ `c6b616e`（F7.4 流水搜索 + 文档；**HEAD 以 `git log --oneline -1` 为准**，其后可能还有文档回写提交）
 远端旧历史：`... → c17abfd`（F7.1）→ `caca7c0` → `13f3578`（文档）
 两者**无共同祖先**，用 `git merge origin/master --allow-unrelated-histories -X ours` 合并
 （冲突一律取我方，远端独有的 3 个 memory 日志保留），合并后即可 fast-forward 推送。
