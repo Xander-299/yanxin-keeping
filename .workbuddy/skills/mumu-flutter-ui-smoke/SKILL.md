@@ -66,6 +66,31 @@ $PY .workbuddy/ui_dump.py
 6. **语义树的 bounds 是中心点**，直接 `input tap` 该中心即可（本项目 ui_dump.py 已算好）。
 7. 需要「某天有账」的日历数据时，最快是走 UI 记一笔（`记一笔 → 金额 → 分类 → 保存`），
    比导入 300+ 条样本快得多。
+8. **清空输入框**：`input keyevent 67`（DEL）按 n 次删干净，再 `input text "xxx"`。
+   弹窗里预填了旧值时直接用 `input text` 会变成拼接（`2000` + `100` = `2000100`）。
+9. **弹窗/对话框也是语义树的一部分**：`showModalBottomSheet` 的标题、`AlertDialog` 的按钮
+   都能 dump 到，走查「二次确认」类交互不用靠猜坐标。
+
+## 改 schema 时必做：覆盖安装验迁移
+
+内存库单测能证明 `onUpgrade` 的逻辑，**但证明不了 `adb install -r` 覆盖安装这条真实路径**。
+凡是动了数据库表结构（本项目如 F7.3 加 `budgets` 表、schema v1 → v2），走查必须包含：
+
+```bash
+# 1) 装旧包并造数据（或直接用已在跑的旧版本）
+# 2) 只覆盖安装、不 pm clear —— 这一步是关键，pm clear 就把老库删了
+"$ADB" -s 127.0.0.1:16384 install -r -t build/app/outputs/flutter-apk/app-debug.apk
+"$ADB" -s 127.0.0.1:16384 shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
+sleep 9
+
+# 3) 断言「老数据都在」+「新表可用（新功能能读能写）」
+"$PY" .workbuddy/ui_dump.py          # 首页支出/收入/结余应与升级前一致
+# 4) 再 force-stop 重启一次，确认新写入的数据也持久化
+"$ADB" -s 127.0.0.1:16384 shell am force-stop com.teacodeman.yanxin
+```
+
+判据：① 老数据分毫不少；② 新功能能读到「未设置」这类正确空态（不是崩溃/不是空屏）；
+③ 新写入的值 force-stop 后仍在。**升级路径崩了是线上事故，比新功能不好用严重得多。**
 
 ## 判定原则
 
