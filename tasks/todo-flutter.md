@@ -154,11 +154,27 @@
 > **坑**：Flutter 3.32+ 起 `SegmentedButton` 的回调叫 **`onSelectionChanged`**，旧的 `onSelected` 已移除。
 > **坑（本机）**：Windows 自带 `winsqlite3.dll` 不支持 `RETURNING` → 自带新版 `sqlite3.dll`（见 CHANGELOG 环境节）。
 
-### F7.3 待排期
+### F7.3 月度预算实装 ✅（2026-09-12）
 
-- [ ] 预算功能实装（接真实数据后移除 `budget_card_placeholder` 的「示例」标注）
+- [x] schema v2：新增 `budgets` 表 + 部分唯一索引 `idx_budget_book_period`；
+      `onUpgrade(from<2)` 只加表建索引（v1 五张表零改动）
+- [x] `BudgetRepository`（`lib/data/repositories/budget_repository.dart`）：先查后写、软删、跨账本隔离
+- [x] `budget_metrics.dart`（纯函数）：进度 / 剩余额度 / 本月日均 / 剩余每日可消费 / 超支
+- [x] `BudgetCard` 替换 `budget_card_placeholder`（占位卡删除，「示例」chip 与说明文案移除）
+- [x] 未设预算 → 空态引导；设置弹窗（快捷键 + 校验 + 删除二次确认）
+- [x] `MonthBudgetController`（`monthBudgetProvider`）：watch 首页状态，翻月/换账本自动重查
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **199 通过 + 6 skip**（新增 26 条）
+- [x] MuMu 15 真机：旧版本覆盖安装（v1→v2）不丢数据、设置/超支/删除/持久化/记一笔自动刷新全过
+
+### F7.4 待排期
+
 - [ ] 搜索流水（首页 header 搜索图标，当前占位）
 - [ ] 资产页（当前占位）
 - [ ] 数据导出（「我的」页占位）
+- [ ] 分类预算（每个分类单独额度）
 - [ ] 日历增强：农历 / 节假日、长按某天快速记一笔、日历页内直接改月份
 - [ ] 报表：按分类/账户的明细清单（统计页目前只有占比与趋势）
+
+> **F7.3 坑**：① drift 的数据库迁移必须在**真机覆盖安装**路径上验，内存库单测只能证明
+> `onUpgrade` 逻辑本身；② Riverpod 3.4.3 的 `AsyncNotifierProvider.family` 没有稳定的取参入口
+> （`FamilyAsyncNotifier` 已移除），需要「按月份取数」的 provider 时，改成 watch 首页状态更稳。

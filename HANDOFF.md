@@ -1,9 +1,10 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.2 ✅；F7.3 待排期）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.3 ✅；F7.4 待排期）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-12 05:10 · 更新人：AI 助手
-> **本次会话做了两件事**：① **换机环境重建**（新机器无 D 盘，Flutter/JDK/Android/Gradle/sqlite 全部重搭，
-> `env.sh` 路径重指向）；② **F7.2 统计·报表页**交付（`lib/features/stats/`，13 条新测试，门禁 **analyze 0 / test 179/179**）。
+> 最后更新：2026-09-12 07:20 · 更新人：AI 助手
+> **最近两次会话**：① **换机环境重建 + F7.2 统计·报表页交付**（13 条新测试）；
+> ② **MuMu 冒烟 → 修掉「统计页不随记账刷新」→ 构建链路补齐 → F7.3 月度预算实装（schema v2）**。
+> 当前门禁：**analyze 0 issue / test 199 通过 + 6 skip**（skip=缺真实账单样本）。
 
 ---
 
@@ -71,20 +72,23 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 | **sqlite3（本机新增必需）** | `C:\src\sqlite3\sqlite3.dll`（官方 3.53.4）+ 一份复制到 `C:\src\flutter\bin\cache\artifacts\engine\windows-x64`。**缺它 → 60 条测试挂**（`near "RETURNING": syntax error`） |
 | 工程 / 真机 / 版本 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；模拟器 **MuMu 15 @ `C:\Program Files\Netease\MuMu`**（已切 `resolution_mode=phone.1` → 1080×1920 竖屏，adb 端口 16384/7555，设备名 `127.0.0.1:16384` 或 `emulator-5554`；adb 用 `Desktop\platform-tools\adb.exe`） |
 | 联网 | 代理 `http://127.0.0.1:7890` 可用，但**本机直连也通**（flutter-io.cn/pub.dev 实测 200）；`flutter test` 仍要去代理；**dl.google.com 直连仅 ~7KB/s**，大件走腾讯镜像 + 代理（`.workbuddy/dl_ndk.py` 8 线程并发实测 ~12MB/s） |
-| 门禁（2026-09-12 复跑） | `flutter analyze` **No issues found**；`flutter test --no-pub` **173 通过 + 6 skip（skip=缺真实账单样本，基线如此）** |
-| APK | **已构建 ✅** `build\app\outputs\flutter-apk\app-debug.apk`（177,553,692 字节，增量 ~32s / 全新 ~2.5min）；已装 MuMu 冒烟通过 |
-| 源码规模 | `lib/` 50 个 `.dart`，`test/` 28 个 `.dart`；`lib/core/db/database.g.dart` 已生成入库 |
-| git | 本工作区原为 zip 解出、**无 `.git`** → 2026-09-12 `git init`（branch `master`）+ HTTPS 远端 `https://github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`；**推送需 token**（无 SSH key） |
+| 门禁（2026-09-12 复跑） | `flutter analyze` **No issues found**；`flutter test --no-pub` **199 通过 + 6 skip（skip=缺真实账单样本，基线如此）** |
+| APK | **已构建 ✅** `build\app\outputs\flutter-apk\app-debug.apk`（约 214 MB，增量 ~31s / 全新 ~2.5min）；MuMu 已装 |
+| 源码规模 | `lib/` 54 个 `.dart`，`test/` 29 个 `.dart`；`lib/core/db/database.g.dart` 已生成入库 |
+| git | 本地为 zip 解出后 `git init` 的**独立历史**（与远端无共同祖先）；远端 master 停在 `13f3578`（旧机器 F7.1 + 2 个文档提交）。已用「并入远端历史、冲突取我方」方式合并（**不重写远端提交**），推送需 GitHub PAT（见「当前状态」） |
+| git 远端 TLS | **HTTPS 走 `http.sslBackend=openssl`**：本机 schannel 吊销检查脱机（`CRYPT_E_REVOCATION_OFFLINE`），`git config --global http.schannelCheckRevoke false` **不管用**，必须切 openssl 后端（已写入全局配置） |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
 `flutter_riverpod ^3.4.3` / `go_router ^18.0.1` / `uuid ^4.6.0` / `path ^1.9.1` / `cupertino_icons ^1.0.8` /
 `crypto 3.0.7` / **`archive ^4.2.0`** / **`gbk_codec 0.4.0`（走 `dependency_overrides`）** / **`file_picker ^12.2.0`**
 
-**提交历史（master，已同步 origin；`git status -sb` 显示 `[gone]` 是沙箱已知假象）**：
-`ba45fba` → `eb6e004` → `4f5f1e1` → `9da1ed6` → `d15fefc` → `fcfd0d1` → `cbcf8e0` →
-`7a498d8`（F3 数据层）→ `c49d46c`（HANDOFF）→ `cf0580b`（F4 UI）→ `74f9d2c`（F4.5 首页改版+底栏）→
-`f060c88`（perf 记一笔卡顿）→ **`0c82620`（F5 账单导入，当前 HEAD）**
+**提交历史（本地 master；远端 master 原停在 `13f3578`，本次合并后同步）**：
+本地为 zip 快照重建的独立历史：`0fa12fa`（初始导入：F1–F7.2 + 换机环境）→ `ef4b869`（文档）
+→ `7f0372e`（统计页刷新修复 + 构建链路）→ **`de67377`（F7.3 预算实装，当前 HEAD）**
+远端旧历史：`... → c17abfd`（F7.1）→ `caca7c0` → `13f3578`（文档）
+两者**无共同祖先**，用 `git merge origin/master --allow-unrelated-histories -X ours` 合并
+（冲突一律取我方，远端独有的 3 个 memory 日志保留），合并后即可 fast-forward 推送。
 
 # 当前方案与关键决策
 
@@ -152,6 +156,23 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
   - **修复**：统计页数据不随新记账刷新——`statsProvider` 是常驻 Notifier，`refresh()` 从未被调用。
     补齐四处：`record_page`（保存后）、`import_page`（导入后）、`home_page`/`calendar_page`（删除后）。
     模拟器复验：记 20.00 后统计 88.88→108.88 ✅；门禁复跑 analyze 0 / test 173+6skip
+- **F7.3 月度预算实装** ✅（2026-09-12，schema **v2**）：
+  - **背景**：首页预算卡原是写死的示例数字（`1,000.00 / 101.52 / 10.2%`），与同屏 hero 真实支出矛盾
+    （首用验收 P2），「示例」chip 只是止损。
+  - **数据层**：新增 `budgets` 表（`book_id` + `period('YYYY-MM')` + `amount_cents` + 五件套元数据）
+    + 部分唯一索引 `idx_budget_book_period(book_id, period) WHERE deleted_at IS NULL`；
+    `onUpgrade(from < 2)` **只加表 + 建索引**，v1 五张表与 7 条索引一字未改 → 老库升级零数据风险。
+    新增 `BudgetRepository`（先查后写、软删、跨账本隔离）。
+  - **计算层**：`budget_metrics.dart`（纯函数）——进度（环形封顶 1.0，文案显示真实值可 >100%）、
+    剩余额度（可为负）、本月日均（复用日历页口径）、剩余每日可消费（当月含今天 / 历史月「—」/ 超支归 0）。
+  - **UI**：`BudgetCard` 替换占位卡（**「示例」chip 与说明文案移除**）；未设预算 → 可点空态引导，
+    页面不再出现任何假数字；底部弹窗就地设置（快捷键 + 校验 + 删除二次确认）；
+    已消费/日均取首页已加载流水 → **记一笔/删一笔随首页自动刷新，无需额外接线**。
+  - **门禁**：analyze 0 issue、`flutter test` **199 通过 + 6 skip**（新增 26 条：计算 10 + 仓储 8 + 卡片 5 + schema/迁移 3）
+  - **MuMu 15 真机冒烟（重点：升级路径）**：旧版本 `install -r` 覆盖 → **v1 库升 v2 数据零丢失**
+    （支出 108.88 / 收入 50.00 全在）、设置 2000 → 5.4% / 1891.12 / 每日 99.53、
+    改 100 → 超支态 108.9% / -8.88 /「已超支」/ 每日 0.00、删除 → 回未设置、
+    force-stop 重启后 3,000.00 仍在、记一笔 11.12 → 卡片自动 120.00 / 4.0%
 
 # 已尝试但失败/放弃的方案
 
