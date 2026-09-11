@@ -242,6 +242,10 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 7. 【P2 新】**本机首次 `flutter build apk` 还没跑过**：`C:\src\gradle-home` 仍是空目录，首编要下 gradle 9.3.1 + AGP（约 10–20min），且需要 `flutter doctor --android-licenses`（Android SDK 是手装的，licenses 目录可能需补）
 8. 【P3 新】**本机无模拟器**：F7.2 只有 widget 测试覆盖，未做真机/模拟器冒烟。要补可装 MuMu（旧机器在 `D:\Downloads\MuMu`，本机没有）
 9. 【P3 新】**推送需 token**：本机无 SSH key，远端走 HTTPS；`git push` 时让用户在弹窗/Git Credential Manager 里给 GitHub PAT
+10. 【P2 新】**APK 构建在本会话沙箱里跑不成**：`flutter build apk --debug` 启动后子进程被回收（日志停在
+    「Flutter assets will be downloaded from…」、`gradle-home` 零写入、无 java 进程），前台/后台都试过。
+    → 需要在**普通终端**（非沙箱）里跑 `source env.sh && flutter build apk --debug`；首编约 10–20min。
+    若仍卡：先查 `bin/cache/lockfile`（见盲区防护 19），再 `flutter doctor -v` 看 Android toolchain 是否绿。
 
 # 待确认事项
 
