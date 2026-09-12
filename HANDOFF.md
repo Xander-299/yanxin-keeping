@@ -1,10 +1,10 @@
 # HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.4 ✅；F7.5 待排期）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-12 07:55 · 更新人：AI 助手
-> **最近三次会话**：① **换机环境重建 + F7.2 统计·报表页交付**（13 条新测试）；
-> ② **MuMu 冒烟 → 修掉「统计页不随记账刷新」→ 构建链路补齐 → F7.3 月度预算实装（schema v2）**；
-> ③ **F7.4 流水搜索**（分类 / 备注 / 金额 + 一键清空，27 条新测试）。
+> 最后更新：2026-09-12 08:00 · 更新人：AI 助手
+> **最近三次会话**：① **MuMu 冒烟 → 修掉「统计页不随记账刷新」→ 构建链路补齐 → F7.3 月度预算实装（schema v2）**；
+> ② **F7.4 流水搜索**（分类 / 备注 / 金额 + 一键清空，27 条新测试）；
+> ③ **推送链路打通（远端改走 SSH，9 个提交全部推上）→ 搜索页无结果态 UI 优化**（占屏高 1/5）。
 > 当前门禁：**analyze 0 issue / test 226 通过 + 6 skip**（skip=缺真实账单样本）。
 
 ---
@@ -47,7 +47,8 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 - 【已确认】数据库用 **drift**（编译期参数绑定，根治旧栈 ADR-5 手写 SQL 拼接）
 - 【已确认】新仓库全新起步、逐模块移植；旧仓库只读归档
 - 【已确认】不做旧 App 数据迁移工具，手工重建账本
-- 【已确认】远端 `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`，本地 `master` = **`0c82620`**（已推送）
+- 【已确认】**SSH** 远端 `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`（2026-09-12 起，公钥已加 GitHub）；
+  本地 `master` = 远端 `master` = **`78065a7`**（F1–F7.4 共 9 个提交已推送，无待推送项）
 - 【默认处理】旧栈 T2.8 真机复验：不做，旧栈直接归档（用户未答复，按「不做」）
 
 # 背景知识
@@ -76,7 +77,7 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 | 门禁（2026-09-12 复跑） | `flutter analyze` **No issues found**；`flutter test --no-pub` **226 通过 + 6 skip（skip=缺真实账单样本，基线如此）** |
 | APK | **已构建 ✅** `build\app\outputs\flutter-apk\app-debug.apk`（约 214 MB，增量 ~30s / 全新 ~2.5min）；MuMu 已装 |
 | 源码规模 | `lib/` 57 个 `.dart`，`test/` 31 个 `.dart`；`lib/core/db/database.g.dart` 已生成入库 |
-| git | 本地为 zip 解出后 `git init` 的**独立历史**（与远端无共同祖先）；远端 master 停在 `13f3578`（旧机器 F7.1 + 2 个文档提交）。已用「并入远端历史、冲突取我方」方式合并（**不重写远端提交**），推送需 GitHub PAT（见「当前状态」） |
+| git | 本地为 zip 解出后 `git init` 的**独立历史**（与远端无共同祖先）；已用「并入远端历史、冲突取我方」方式合并（**不重写远端提交**），远端 master 曾停在 `13f3578`。**2026-09-12 已全部推送**：本地 = 远端 = `78065a7`（9 个提交），推送走 **SSH**，**不再需要 PAT** |
 | git 远端 TLS | **HTTPS 走 `http.sslBackend=openssl`**：本机 schannel 吊销检查脱机（`CRYPT_E_REVOCATION_OFFLINE`），`git config --global http.schannelCheckRevoke false` **不管用**，必须切 openssl 后端（已写入全局配置） |
 
 **依赖版本锁死（不能随意升级）**：
@@ -135,7 +136,7 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
   Android SDK → `C:\src\Android`（cmdline-tools + platform-tools + platforms 35/36 + build-tools 36.0.0）；
   **sqlite3.dll 3.53.4** → `C:\src\sqlite3`；Gradle 缓存目录 → `C:\src\gradle-home`（空）。
   `env.sh` 全量重写（旧 D: 路径失效）+ 补两条本机坑（sqlite3 / bash PATH 兜底 / git 路径）。
-  `git init` + HTTPS 远端（本机无 SSH key，推送需 token）。
+  `git init` + 远端（先 HTTPS，**2026-09-12 起改为 SSH**，推送无需再输凭据）。
 - **F7.2 统计·报表页** ✅（2026-09-12，`lib/features/stats/`）：
   - 页面 `StatsPage`（`/stats` 全屏路由）+ 首页 header「统计」图标接真入口（原来只有「建设中」SnackBar）
   - `stats_aggregate.dart`（纯函数）：`categoryBreakdown`（按分类汇总、降序、占比；transfer 不计；无分类归「未分类」）、
@@ -196,6 +197,17 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
   - **MuMu 15 真机冒烟**：搜「餐饮」→ 共 2 笔（-88.88 / -11.12，支出 100.00）、搜 `88.88` → 共 1 笔、
     搜「午餐」（无此备注）→ 无结果态、**一键清空**回引导态、记一笔 1.23 + 备注 `coffee` → 搜「coffee」
     → 共 1 笔、点结果进编辑页数据正确、长按删除 → 无结果态且**首页/预算卡回滚到 120.00 支出** ✅
+- **推送链路打通（SSH）+ 搜索页无结果态 UI 优化** ✅（2026-09-12，F7.4 之后）：
+  - **推送**：诊断出「推不动」的真因是**写权限凭据从未配过**（公开仓库读操作免认证，`ls-remote`/`fetch`
+    一直成功，造成「已经连上了」的错觉；只有写操作才验凭据）。远端由 HTTPS 改为 **SSH**
+    （本机 `~/.ssh/id_ed25519` 公钥加入 GitHub 账号 `Tea-Codeman`，**22 端口可直连**），
+    `git push -u origin master` 把 **9 个提交全部推上**（`13f3578..78065a7`），本地 = 远端，master 已建 tracking。
+  - **UI**：搜索页无结果提示由 `Center` 垂直居中改为**顶部对齐 + 占屏高 1/5**（`_NoResult`）。
+    高度 `MediaQuery.sizeOf(context).height / 5` 按**整屏**而非 body 算 —— 本页输入框 autofocus，
+    键盘弹起会压扁 body，按 body 算提示块会跟着缩。内容同步紧凑化（图标 40→32、间距 12→6/4、
+    按钮 `visualDensity.compact`），极小屏由 `SingleChildScrollView` 兜底防 RenderFlex 溢出。
+  - **验证**：analyze 0 issue / test 226 + 6 skip（`_NoResult` 断言文案未变，测试无需改）；
+    MuMu 15 搜 `zzz` → 提示块紧贴输入框下方、占屏高约 1/5、下方留白；搜 `11` → 有命中态（共 1 笔 · 支出 11.12）正常。
 
 # 已尝试但失败/放弃的方案
 
@@ -226,10 +238,13 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 
 # 当前状态
 
-- **当前 HEAD：以 `git log --oneline -1` 为准**（截至合并提交 `0b0ba90` + 文档回写 + F7.4 搜索）。
-  远端 `origin` = HTTPS `github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`
-  （**待推送，需要一个有 repo 权限的 PAT**；本机无 SSH key 且 HTTPS 必须走 `http.sslBackend=openssl`）。
+- **当前 HEAD：以 `git log --oneline -1` 为准**（截至 F7.4 搜索 + 文档回写）。
+  远端 `origin` = **SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`；
+  **2026-09-12 已全部推送**（本地 = 远端 = `78065a7`，9 个提交），推送不再需要 PAT。
   已含 **F1–F7.4**。
+- **搜索页 UI 微调（2026-09-12，最新）**：无结果提示由 `Center` 居中改为**顶部对齐 + 占屏高 1/5**
+  （`search_page.dart` 的 `_NoResult`；高度按**整屏**而非 body 计算，避免键盘弹起时被压扁）。
+  门禁复跑通过、MuMu 走查通过（搜 `zzz` 无结果态 / 搜 `11` 有命中态）。
 - **F7.4 门禁**：`flutter analyze` No issues found；`flutter test` **226 通过 + 6 skip**（199 + 新增 27）
 - **F7.4 真机冒烟（MuMu 15，竖屏 1080×1920）**：✅ 全部通过，见「已完成工作」末节；
   重点是分类 / 备注 / 金额三条命中路径、一键清空、无结果态、点开编辑、长按删除 + 跨页刷新。
@@ -309,9 +324,10 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 7. 【P2 已解】本机 APK 构建已跑通（2026-09-12，214MB debug 包，增量 ~30s）。licenses 目录已补（`C:\src\Android\licenses`）
 8. 【P3 更新】日历页 header 的「报表」图标仍是「建设中」占位（日历页无搜索图标；首页的搜索/统计已是真实页面）；
    「全部账单 ›」也是占位 —— 属后续迭代
-9. 【P3 更新】**推送需 PAT**：本机无 SSH key（已生成一把 `~/.ssh/id_ed25519`，公钥还没加到 GitHub）；
-   远端走 HTTPS，且**必须 `git config --global http.sslBackend openssl`**（schannel 吊销检查脱机，
-   `http.schannelCheckRevoke=false` 无效）。有 PAT 后：`git push`（历史已合并，是 fast-forward）
+9. 【P3 已解】**推送已打通（2026-09-12）**：远端改走 **SSH**（`~/.ssh/id_ed25519` 公钥已加到 GitHub 账号
+   `Tea-Codeman`，**22 端口可直连**，不必绕 `ssh.github.com:443`），`git push` 无需再输凭据。
+   9 个提交已推上（本地 = 远端 = `78065a7`）。备用 HTTPS 路线仍可用，但**必须 `git config --global
+   http.sslBackend openssl`**（schannel 吊销检查脱机，`http.schannelCheckRevoke=false` 无效）
 10. 【P2 已解】APK 构建沙箱问题实为「NDK/CMake 缺失 + sdkmanager 崩溃」叠加（前几轮是被前台 120s 超时误判成「子进程回收」）。装好 NDK r28c + cmake 3.22.1 后沙箱内构建/增量均正常
 
 # 待确认事项
@@ -416,14 +432,15 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
      `/categories` `/import` `/month-picker` `/stats` **`/search`**
 5. **不要重复**：不要重装 Flutter/JDK/SDK；不要升 drift/sqlite3/build_runner；不要用 `pub add`；不要复制 gradle 缓存；
    不要回头做旧栈 T2.8；不要把 `env.sh` 改回 `env -u` 写法；**不要删 `C:\src\sqlite3`（删了 60 条测试会挂）**
-6. **信息不足先问用户**：要推远端时找用户要 GitHub token（本机无 SSH key）；真机冒烟需要用户给设备或装模拟器
+6. **信息不足先问用户**：真机冒烟需要用户给设备或装模拟器（**推送已配好 SSH，不必再向用户要 token**）
 
 ---
 
 # 极简版
 
 - 颜芯记账 uni-app → Flutter。当前工作区 `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master`；
-  远端 HTTPS `github.com/Tea-Codeman/yanxin-bookkeeping-flutter.git`（本机无 SSH key，且**必须 openssl 后端**）。
+  远端 **SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`（公钥已加 GitHub，`git push` 直接可用；
+  历史已合并并全部推送，本地 = 远端 = `78065a7`）。
 - **F1–F7.4 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（schema v2）、**F7.4 流水搜索**；
   **F7.5（资产页 / 数据导出 / 分类预算）待排期**。
 - 门禁：`flutter analyze` 0 issue；`flutter test` **226 通过 + 6 skip**（skip=缺真实账单样本）。
@@ -439,4 +456,4 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
   **改表必重跑 `build_runner`，且迁移只能在真机覆盖安装上验**。
 - F7.4 搜索口径：**当前账本全量**（`listByBook`）+ **内存过滤**（万级行，无需防抖）；
   命中 = 分类名 / 备注 / 金额「元.分」文本的**子串并集**；空查询不列全部流水。
-- 下一步：**F7.5**（先做资产页）→ 有 PAT 后 `git push`（历史已合并，fast-forward）。
+- 下一步：**F7.5**（先做资产页）；推送已打通（SSH），改完直接 `git push` 即可。

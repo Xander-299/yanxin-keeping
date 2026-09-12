@@ -7,6 +7,21 @@
 
 ## [Unreleased]
 
+### 优化 — 搜索页无结果态改为「顶部对齐 + 占屏高 1/5」（2026-09-12）
+
+- **问题**：无结果提示原用 `Center` 垂直居中，四周留大片空白；且提示与输入框离得太远
+  ——用户刚敲完词、视线还在输入框附近，提示却飘在屏幕正中。
+- **改法**（`lib/features/search/presentation/search_page.dart` 的 `_NoResult`）：
+  - 外层改 `Align(topCenter)` + `SizedBox(height: MediaQuery.sizeOf(context).height / 5)`：
+    提示块紧贴输入框下方，高度固定占**整屏** 1/5；
+  - 高度按整屏而非 body 计算——本页输入框 `autofocus`，键盘弹起会压扁 body，
+    按 body 算的话提示块会跟着一起缩；
+  - 内容同步紧凑化（图标 40→32、间距 12→6/4、按钮 `visualDensity.compact` + `tapTargetSize.shrinkWrap`），
+    保证塞得进 1/5 高度；极小屏（逻辑高 < 约 550）由 `SingleChildScrollView` 兜底，不会 RenderFlex 溢出。
+- **验证**：门禁 analyze 0 issue / test 226 通过 + 6 skip（`_NoResult` 的断言文案未改，测试无需调整）；
+  MuMu 15 走查：搜 `zzz` → 提示块落在输入框下方、占屏高约 1/5、下方留白；
+  搜 `11` → 有命中态（共 1 笔 · 支出 11.12）不受影响。
+
 ### 新增 — F7.4 流水搜索（2026-09-12）
 
 - **背景**：首页 header 的搜索图标一直是占位（点了弹「功能建设中」）；账记得越多，找一笔旧账越难
