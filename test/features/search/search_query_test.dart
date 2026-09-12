@@ -172,4 +172,111 @@ void main() {
       expect(both.map((t) => t.note), <String>['午餐', '咖啡']);
     });
   });
+
+  group('parsePlan（F7.5 类型指令）', () {
+    test('单个类型词 → 只筛类型，无剩余关键词', () {
+      final p = parsePlan('仅支出');
+      expect(p.type, 'expense');
+      expect(p.text, isEmpty);
+      expect(p.isEmpty, isFalse); // 有类型条件 → 不是引导态
+      expect(p.typeWord, '仅支出');
+    });
+
+    test('三个类型词各自映射到 Transactions.type', () {
+      expect(parsePlan('仅支出').type, 'expense');
+      expect(parsePlan('仅收入').type, 'income');
+      expect(parsePlan('转账').type, 'transfer');
+    });
+
+    test('类型词 + 关键词：类型生效，关键词剥离后保留', () {
+      final p = parsePlan('仅支出 午餐');
+      expect(p.type, 'expense');
+      expect(p.text, '午餐');
+    });
+
+    test('多个类型词以「最后出现」的为准，且全部被剥离（Q2）', () {
+      final p = parsePlan('仅支出 转账');
+      expect(p.type, 'transfer');
+      expect(p.text, isEmpty);
+    });
+
+    test('类型词必须独立成词：转账手续费不被误判成指令', () {
+      final p = parsePlan('转账手续费');
+      expect(p.type, isNull);
+      expect(p.text, '转账手续费');
+    });
+
+    test('空 / 纯空白 / 只有金额符号 → isEmpty（显示引导态）', () {
+      expect(parsePlan('').isEmpty, isTrue);
+      expect(parsePlan('   ').isEmpty, isTrue);
+      expect(parsePlan(' ¥ ').isEmpty, isTrue);
+    });
+
+    test('普通关键词不受影响', () {
+      final p = parsePlan('午餐');
+      expect(p.type, isNull);
+      expect(p.text, '午餐');
+      expect(p.typeWord, isNull);
+    });
+
+    test('stripTypeWords 保留原文，不 normalize 掉 ¥ / 千分位', () {
+      expect(stripTypeWords('仅支出 ¥200'), '¥200');
+      expect(stripTypeWords('仅收入 1,234.56'), '1,234.56');
+      expect(stripTypeWords('仅支出'), isEmpty);
+    });
+  });
+
+  group('filterTx 类型筛选（F7.5）', () {
+    /// 三种类型各一笔，备注互不相同。
+    List<TxRow> threeTypes() => <TxRow>[
+      _tx(note: '午餐'),
+      _tx(note: '工资', type: 'income'),
+      _tx(note: '转存', type: 'transfer'),
+    ];
+
+    test('只输类型词 → 返回该类型全部流水（不再走文本匹配）', () {
+      String nameOf(String? _) => '餐饮';
+      expect(
+        filterTx(items: threeTypes(), categoryNameOf: nameOf, query: '仅支出')
+            .map((t) => t.note),
+        <String>['午餐'],
+      );
+      expect(
+        filterTx(items: threeTypes(), categoryNameOf: nameOf, query: '仅收入')
+            .map((t) => t.note),
+        <String>['工资'],
+      );
+      expect(
+        filterTx(items: threeTypes(), categoryNameOf: nameOf, query: '转账')
+            .map((t) => t.note),
+        <String>['转存'],
+      );
+    });
+
+    test('类型词 + 关键词 = 交集（先筛类型，再走原口径）', () {
+      final items = <TxRow>[
+        _tx(note: '午餐'),
+        _tx(note: '打车'),
+        _tx(note: '午餐补贴', type: 'income'),
+      ];
+      final hit = filterTx(
+        items: items,
+        categoryNameOf: (_) => '餐饮',
+        query: '仅支出 午餐',
+      );
+      // 打车被关键词排除，午餐补贴被类型排除
+      expect(hit.map((t) => t.note), <String>['午餐']);
+    });
+
+    test('该类型没有数据 → 空列表（如转账）', () {
+      expect(
+        filterTx(
+          items: <TxRow>[_tx(note: '午餐')],
+          categoryNameOf: (_) => '餐饮',
+          query: '转账',
+        ),
+        isEmpty,
+      );
+    });
+  });
 }

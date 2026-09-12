@@ -14,6 +14,7 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
+import 'package:yanxin/features/search/presentation/search_overlay.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/ledger_controller.dart';
@@ -152,7 +153,8 @@ class _Header extends StatelessWidget {
           _HeaderIcon(
             icon: Icons.search_rounded,
             tooltip: '搜索',
-            onPressed: () => context.push('/search'),
+            // F7.5：不再是独立路由，改为覆盖在首页之上的浮层（首页留在底下当背景）
+            onPressed: () => unawaited(showSearchOverlay(context)),
           ),
           const _HeaderIcon(
             icon: Icons.receipt_long_rounded,

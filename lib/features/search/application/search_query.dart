@@ -5,6 +5,10 @@
 /// - 备注与分类名：子串包含（大小写不敏感）
 /// - 金额：格式化为「元.分」文本（无千分位）后子串包含
 ///   —— 查 `88` 命中 `88.00` / `188.00` / `88.88`；查 `88.8` 命中 `88.80`；查 `0.5` 命中 `10.50`
+///
+/// F7.5 追加**类型筛选词**（`docs/SPEC-F7.5-search-overlay.md` §4.3）：
+/// 「仅支出 / 仅收入 / 转账」这几个字**不在业务字段里**（备注 / 分类名 / 金额都匹配不到），
+/// 直接当关键词搜恒为空，因此改为解析成 `Transactions.type` 的筛选条件。
 library;
 
 import '../../../core/db/database.dart';
@@ -12,6 +16,13 @@ import '../../../core/utils/money.dart';
 
 /// 关键词长度上限（超出截断，避免超长串进匹配）。
 const int kSearchKeywordMaxLength = 50;
+
+/// 类型筛选词 → 数据库 `Transactions.type` 取值。
+const Map<String, String> kTypeDirectives = <String, String>{
+  '仅支出': 'expense',
+  '仅收入': 'income',
+  '转账': 'transfer',
+};
 
 /// 查询串预处理：去首尾空白、去金额符号与千分位、英文转小写、限长。
 ///
@@ -31,6 +42,65 @@ String normalizeQuery(String raw) {
 
 /// 金额的「元.分」文本（无千分位），搜索比较用。
 String amountTextOf(int cents) => centsToYuan(cents);
+
+/// 一次搜索的执行计划：类型筛选 + 剩余文本关键词。
+///
+/// 由 [parsePlan] 从输入框原文解析得出；两个字段均为空表示「未输入」（引导态）。
+class SearchPlan {
+  const SearchPlan({required this.type, required this.text});
+
+  /// `expense` / `income` / `transfer`；null 表示不限类型。
+  final String? type;
+
+  /// 剥离类型词后的剩余关键词（已 [normalizeQuery]）。
+  final String text;
+
+  /// 什么都没输（既无类型词也无文本）→ 调用方显示引导态而非「全部流水」。
+  bool get isEmpty => type == null && text.isEmpty;
+
+  /// 当前生效的类型词（供 chip 高亮：高亮态与输入框同源，不会出现「chip 亮着但输入框空」）。
+  String? get typeWord {
+    for (final MapEntry<String, String> e in kTypeDirectives.entries) {
+      if (e.value == type) return e.key;
+    }
+    return null;
+  }
+}
+
+/// 按空白切词，丢掉空串。
+List<String> _tokens(String raw) => raw
+    .trim()
+    .split(RegExp(r'\s+'))
+    .where((String t) => t.isNotEmpty)
+    .toList();
+
+/// 去掉所有**独立成词**的类型词，其余按空格拼回（保留原文，不做 normalize）。
+String _strip(List<String> toks) => toks
+    .where((String t) => !kTypeDirectives.containsKey(t))
+    .join(' ');
+
+/// 从**原文**剥离类型词，供 chip 切换时回填输入框用。
+///
+/// 与 [parsePlan] 不同，这里不 normalize——避免把用户输入的 `¥200` 显示成 `200`。
+String stripTypeWords(String raw) => _strip(_tokens(raw));
+
+/// 解析输入框原文 → 执行计划。
+///
+/// - 类型词须**独立成词**（前后为空白 / 串首尾）：`转账手续费` 不会被误判成指令，
+///   仍按普通关键词搜（能搜到备注里含这五个字的流水）。
+/// - 同时出现多个类型词时**以最后出现的为准**（SPEC Q2），且所有类型词都会被剥离。
+SearchPlan parsePlan(String raw) {
+  final List<String> toks = _tokens(raw);
+  String? type;
+  for (final String t in toks) {
+    final String? hit = kTypeDirectives[t];
+    if (hit != null) type = hit; // 顺序遍历，后者覆盖前者 = 以最后出现的为准
+  }
+  final String text = normalizeQuery(
+    _strip(toks),
+  );
+  return SearchPlan(type: type, text: text);
+}
 
 /// 单笔流水是否命中关键词。
 ///
@@ -55,20 +125,34 @@ final RegExp _hasDigit = RegExp(r'\d');
 
 /// 过滤一批流水，保持入参顺序（入参已是时间倒序 → 结果也是时间倒序）。
 ///
-/// 空关键词返回**空列表**：搜索页在未输入时应显示引导，不该列出全部流水。
+/// F7.5 起按 [parsePlan] 执行：先按类型筛（若输入含类型词），剩余文本再走 F7.4 原口径。
+/// - 只输类型词（如「仅支出」）→ 返回该类型**全部**流水（这正是筛选的意义）
+/// - 什么都没输 → 返回**空列表**（搜索页未输入时显示引导，不该列出全部流水）
 List<TxRow> filterTx({
   required List<TxRow> items,
   required String Function(String? categoryId) categoryNameOf,
   required String query,
 }) {
-  if (normalizeQuery(query).isEmpty) return const <TxRow>[];
+  final SearchPlan plan = parsePlan(query);
+  if (plan.isEmpty) return const <TxRow>[];
   return <TxRow>[
-    for (final tx in items)
-      if (matchesQuery(
+    for (final TxRow tx in items)
+      if (_matchesPlan(
         tx: tx,
         categoryName: categoryNameOf(tx.categoryId),
-        query: query,
+        plan: plan,
       ))
         tx,
   ];
+}
+
+bool _matchesPlan({
+  required TxRow tx,
+  required String categoryName,
+  required SearchPlan plan,
+}) {
+  final String? type = plan.type;
+  if (type != null && tx.type != type) return false;
+  if (plan.text.isEmpty) return true; // 只按类型筛（或空查询，已被上层拦掉）
+  return matchesQuery(tx: tx, categoryName: categoryName, query: plan.text);
 }
