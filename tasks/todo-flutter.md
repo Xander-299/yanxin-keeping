@@ -182,7 +182,26 @@
 - [x] **UI 微调**（2026-09-12 追加）：无结果态由 `Center` 居中改为**顶部对齐 + 占屏高 1/5**
       （`_NoResult`，高度按整屏算避开键盘压扁；内容紧凑化 + 滚动兜底）
 
-### F7.5 待排期
+### F7.5-a 搜索浮层化 + 类型筛选建议 ✅（2026-09-12）
+
+- [x] `/search` 路由与 `SearchPage` 删除，改 `showGeneralDialog` 打开 `SearchOverlay`
+      （首页留在页面栈里当背景，毛玻璃透出；文件改名 `search_page.dart` → `search_overlay.dart`）
+- [x] 毛玻璃：`BackdropFilter(sigma 12)` 铺满全屏 + 半透明遮罩；**不透明**提示块盖住上半部分
+- [x] 提示块：关闭按钮 + 输入框 + 一键清空 + 三个类型 chips（仅支出 / 仅收入 / 转账）
+- [x] `search_query.dart` 新增 `SearchPlan` / `parsePlan` / `stripTypeWords`：类型词解析成
+      `Transactions.type` 条件（**独立成词**才生效，多词**以最后出现为准**）；`filterTx` 改按 plan 过滤
+- [x] chip 点击把词**填进输入框**（补尾随空格）+ 高亮由输入框内容推导；再点同一 chip = 取消
+- [x] 三种关闭方式：关闭按钮 / 点玻璃空白区 / 系统返回键
+- [x] 门禁：`flutter analyze` No issues found；`flutter test` **247 通过 + 6 skip**（新增 21 条）
+- [x] MuMu 15 真机：SPEC §6 十条全过（老数据零丢失）；另修掉 3 个真机才暴露的问题
+      （引导态空白点击关不掉 / chip 对勾致位移 / chip 后接着敲字失配），①③ 已补 widget 回归
+
+> **坑（真机才暴露）**：① `SingleChildScrollView` 的 Scrollable 以 `HitTestBehavior.opaque` 命中
+> 整块区域 → 盖在底层的「点空白关闭」手势收不到点击，改用 `Align` 只占内容高度；
+> ② `ChoiceChip` 默认 `showCheckmark: true`，选中时会变宽把后面的 chip 挤位移 → `showCheckmark: false`；
+> ③ 填入词与用户后续输入之间必须有**空格分隔**，否则类型指令不识别。
+
+### F7.5 剩余项（待排期）
 
 - [ ] 资产页（当前占位）
 - [ ] 数据导出（「我的」页占位）

@@ -1,11 +1,11 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.4 ✅；F7.5 待排期）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.5a ✅；F7.5 剩余项待排期）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-12 08:00 · 更新人：AI 助手
-> **最近三次会话**：① **MuMu 冒烟 → 修掉「统计页不随记账刷新」→ 构建链路补齐 → F7.3 月度预算实装（schema v2）**；
-> ② **F7.4 流水搜索**（分类 / 备注 / 金额 + 一键清空，27 条新测试）；
-> ③ **推送链路打通（远端改走 SSH，9 个提交全部推上）→ 搜索页无结果态 UI 优化**（占屏高 1/5）。
-> 当前门禁：**analyze 0 issue / test 226 通过 + 6 skip**（skip=缺真实账单样本）。
+> 最后更新：2026-09-12 08:35 · 更新人：AI 助手
+> **最近三次会话**：① **F7.4 流水搜索**（分类 / 备注 / 金额 + 一键清空，27 条新测试）；
+> ② **推送链路打通（远端改走 SSH，9 个提交全部推上）→ 搜索页无结果态 UI 优化**（占屏高 1/5）；
+> ③ **F7.5-a 搜索浮层化**（覆盖首页 + 毛玻璃 + 「仅支出 / 仅收入 / 转账」类型筛选，21 条新测试）。
+> 当前门禁：**analyze 0 issue / test 247 通过 + 6 skip**（skip=缺真实账单样本）。
 
 ---
 
@@ -48,7 +48,7 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 - 【已确认】新仓库全新起步、逐模块移植；旧仓库只读归档
 - 【已确认】不做旧 App 数据迁移工具，手工重建账本
 - 【已确认】**SSH** 远端 `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`（2026-09-12 起，公钥已加 GitHub）；
-  本地 `master` = 远端 `master` = **`78065a7`**（F1–F7.4 共 9 个提交已推送，无待推送项）
+  本地 `master` = 远端 `master`（F1–F7.5a；**最新提交以 `git log --oneline -1` 为准**，无待推送项）
 - 【默认处理】旧栈 T2.8 真机复验：不做，旧栈直接归档（用户未答复，按「不做」）
 
 # 背景知识
@@ -89,7 +89,8 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 本地为 zip 快照重建的独立历史：`0fa12fa`（初始导入：F1–F7.2 + 换机环境）→ `ef4b869`（文档）
 → `7f0372e`（统计页刷新修复 + 构建链路）→ `de67377`（F7.3 预算实装）
 → `0b0ba90`（merge 远端历史）→ `8f6979f`（F7.3 文档回写）→ `52fde16`（技能更新）
-→ `c6b616e`（F7.4 流水搜索 + 文档；**HEAD 以 `git log --oneline -1` 为准**，其后可能还有文档回写提交）
+→ `c6b616e`（F7.4 流水搜索）→ 文档回写 → `6319796`（搜索无结果态 UI 优化）→ `e0cf8fd`（文档）
+→ F7.5-a 搜索浮层化 + 文档（**HEAD 以 `git log --oneline -1` 为准**）
 远端旧历史：`... → c17abfd`（F7.1）→ `caca7c0` → `13f3578`（文档）
 两者**无共同祖先**，用 `git merge origin/master --allow-unrelated-histories -X ours` 合并
 （冲突一律取我方，远端独有的 3 个 memory 日志保留），合并后即可 fast-forward 推送。
@@ -208,6 +209,28 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
     按钮 `visualDensity.compact`），极小屏由 `SingleChildScrollView` 兜底防 RenderFlex 溢出。
   - **验证**：analyze 0 issue / test 226 + 6 skip（`_NoResult` 断言文案未变，测试无需改）；
     MuMu 15 搜 `zzz` → 提示块紧贴输入框下方、占屏高约 1/5、下方留白；搜 `11` → 有命中态（共 1 笔 · 支出 11.12）正常。
+- **F7.5-a 搜索浮层化 + 类型筛选建议** ✅（2026-09-12，SPEC `docs/SPEC-F7.5-search-overlay.md` 已签字）：
+  - **用户需求（原话）**：「提示块提供搜索建议，比如仅支出，仅收入，转账等，不用提供历史记录，
+    然后搜索功能是显示在首页的上层，提示块以下的区域做透明玻璃效果，使其能看见首页」。
+  - **浮层化**：`/search` 路由 + `SearchPage` **一并删除**（不留两条路 → 两份 UI + 两套刷新链路）；
+    `home_page.dart` 搜索图标改 `showSearchOverlay(context)`（`showGeneralDialog`，barrier 透明 + 150ms 淡入）。
+    文件改名 `search_page.dart` → `search_overlay.dart`（`SearchPage` → `SearchOverlay`）。
+    DialogRoute 非 opaque → **首页留在页面栈里当背景**（下面仍是活的，毛玻璃可透出），不再像「换了个 App」。
+  - **毛玻璃**：`BackdropFilter(blur sigma 12)` 铺满全屏 + 半透明遮罩；**不透明提示块**盖住上半部分
+    （视觉等价「提示块以下才是玻璃」，且提示块边缘无接缝）。结果列表浮在玻璃之上（条目自带 `Card` 背景）。
+  - **类型筛选（核心）**：`仅支出 / 仅收入 / 转账` 这些字**不在业务字段里**（直接当关键词恒为空）→
+    `search_query.dart` 新增纯函数 `parsePlan` / `stripTypeWords`，解析成 `Transactions.type` 条件；
+    `仅支出 餐饮` = **类型 ∩ 关键词**。类型词须**独立成词**（`转账手续费` 不误判）；
+    多个类型词**以最后出现的为准**。词填进输入框（可见 / 可编辑 / 一键清空），chip 高亮由输入框推导；
+    填入时补**尾随空格**（否则接着敲字会拼成 `仅支出11`）。
+  - **门禁**：analyze 0 issue；`flutter test` **247 通过 + 6 skip**（新增 21 条：类型指令解析 11 + 浮层 widget 10）。
+  - **真机走查（MuMu 15，覆盖安装老数据零丢失：支出 120.00 / 收入 50.00 / 预算 3,000）**：
+    SPEC §6 十条全过。**抓到 3 个只有真机才暴露的问题并当场修掉**：
+    ① **引导态点提示块以外的空白关不掉浮层**（无结果态却可以）——`_Intro` 当时用 `SingleChildScrollView`，
+    Scrollable 的 `RawGestureDetector` 以 `HitTestBehavior.opaque` 命中整块下方区域 → 改 `Align(topCenter)`；
+    ② 选中 chip 的对勾让 chip 变宽 → 后面几个整排位移 → `showCheckmark: false`；
+    ③ 点 chip 后接着敲字拼成 `仅支出11`、类型指令失效 → 填入时补尾随空格。
+    ①③ 已补 widget 回归测试。**教训：涉及手势命中与「点完再敲字」这类连续操作，widget 测试会绿，必须上真机。**
 
 # 已尝试但失败/放弃的方案
 
@@ -238,13 +261,15 @@ F0 环境 ✅ → F1 空壳 ✅ → F2 utils ✅ → F3 数据层（drift）✅ 
 
 # 当前状态
 
-- **当前 HEAD：以 `git log --oneline -1` 为准**（截至 F7.4 搜索 + 文档回写）。
-  远端 `origin` = **SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`；
-  **2026-09-12 已全部推送**（本地 = 远端 = `78065a7`，9 个提交），推送不再需要 PAT。
-  已含 **F1–F7.4**。
-- **搜索页 UI 微调（2026-09-12，最新）**：无结果提示由 `Center` 居中改为**顶部对齐 + 占屏高 1/5**
-  （`search_page.dart` 的 `_NoResult`；高度按**整屏**而非 body 计算，避免键盘弹起时被压扁）。
-  门禁复跑通过、MuMu 走查通过（搜 `zzz` 无结果态 / 搜 `11` 有命中态）。
+- **当前 HEAD：以 `git log --oneline -1` 为准**（截至 F7.5-a 搜索浮层化 + 文档回写）。
+  远端 `origin` = **SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`；推送不再需要 PAT，
+  改完直接 `git push`。已含 **F1–F7.5a**。
+- **F7.5-a 门禁（最新）**：`flutter analyze` No issues found；`flutter test` **247 通过 + 6 skip**（226 + 新增 21）
+- **F7.5-a 真机走查（MuMu 15）**：✅ SPEC §6 十条全过（浮层覆盖首页 / 毛玻璃 / 三个类型 chip /
+  类型∩关键词交集 / 一键清空 / 三种关闭方式 / 无结果态 / 点开编辑 / 长按删除），覆盖安装老数据零丢失；
+  另修掉 3 个真机才暴露的问题（引导态空白点击关闭、chip 对勾导致位移、chip 后接着敲字失配）。
+- **搜索页 UI 微调（2026-09-12）**：无结果提示由 `Center` 居中改为**顶部对齐 + 占屏高 1/5**
+  （`search_overlay.dart` 的 `_NoResult`；高度按**整屏**而非 body 计算，避免键盘弹起时被压扁）。
 - **F7.4 门禁**：`flutter analyze` No issues found；`flutter test` **226 通过 + 6 skip**（199 + 新增 27）
 - **F7.4 真机冒烟（MuMu 15，竖屏 1080×1920）**：✅ 全部通过，见「已完成工作」末节；
   重点是分类 / 备注 / 金额三条命中路径、一键清空、无结果态、点开编辑、长按删除 + 跨页刷新。
@@ -318,8 +343,9 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 2. 【P3】gradle wrapper 用 `gradle-9.3.1-all.zip`（230MB），换 `-bin.zip` 可提速
 3. 【P3 已解】`CHANGELOG.md` 已建；README「迁移进度」表已更新至 F5 完成，技术选型已补全并纠正 `excel` 包误记
 4. 【P2 已解】`first-run-acceptance` 复查已完成 —— 2026-09-11 02:47 第二轮复走：M1/M2 零阻断、P1–P6 全部 hold，六维度全过（详见验收节 + `docs/acceptance-M1-M2.md` 第 11 节）
-5. 【P3】**F7.5 待排期**：资产页 /「我的」页数据导出仍为占位；分类预算未做
-   （月度总预算已实装，见 F7.3；搜索已交付，见 F7.4）
+5. 【P3】**F7.5 剩余项待排期**：资产页 /「我的」页数据导出仍为占位；分类预算未做
+   （月度总预算已实装，见 F7.3；搜索已交付 F7.4，其**浮层化 + 类型筛选**见 F7.5-a；
+   搜索的后续增强——关键词高亮 / 账户名匹配 / 搜索历史 / 日期区间筛选 / 拼音首字母——仍在 todo）
 6. 【P3】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）；如需改可压缩格子高度或把月历改可折叠
 7. 【P2 已解】本机 APK 构建已跑通（2026-09-12，214MB debug 包，增量 ~30s）。licenses 目录已补（`C:\src\Android\licenses`）
 8. 【P3 更新】日历页 header 的「报表」图标仍是「建设中」占位（日历页无搜索图标；首页的搜索/统计已是真实页面）；
@@ -338,7 +364,7 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 # 关键资料
 
 - `SPEC-flutter-migration.md` — 已签字 SPEC（§4 目录结构、§5.1 环境基线+踩坑表、§6 F0–F6 分解、§7 验收 8 项）
-- `tasks/todo-flutter.md` — 任务清单（F0–F7.4 已勾选，F7.5 待排期）
+- `tasks/todo-flutter.md` — 任务清单（F0–F7.5a 已勾选，F7.5 剩余项待排期）
 - `env.sh` — **每次开终端必 `source env.sh`**（2026-09-12 已按本机路径重写：C:\src\flutter / M:\QQcache / C:\src\Android / C:\src\sqlite3）
 - `.workbuddy/bootstrap_env.py` — 换机一键装 Flutter SDK + Android cmdline-tools（`--step flutter|android`）
 - `.workbuddy/bootstrap_android.py` — 直下 platforms / build-tools（绕开 sdkmanager 的 `;` 拆词问题）
@@ -404,15 +430,16 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 
 # 新 Agent 接手指南
 
-1. **下一步：F7.5（资产页 / 数据导出 / 分类预算）**。F7.1 日历、F7.2 统计、F7.3 预算、F7.4 搜索均已交付。
+1. **下一步：F7.5 剩余项（资产页 / 数据导出 / 分类预算）**。F7.1 日历、F7.2 统计、F7.3 预算、
+   F7.4 搜索、**F7.5-a 搜索浮层化** 均已交付。
    建议顺序：**资产页**（账户已入库，缺页面）→ 数据导出（「我的」页占位）→ 分类预算。
    按老规矩：先出小 SPEC → 用户点头 → 实现 → 门禁 → 文档（在 `docs/SPEC-F7.5-*.md` 起草）。
-   搜索的后续增强（关键词高亮 / 账户名匹配 / 搜索历史 / 拼音首字母）已进 `tasks/todo-flutter.md` F7.5。
+   搜索的后续增强（关键词高亮 / 账户名匹配 / 搜索历史 / 日期区间筛选 / 拼音首字母）已进 `tasks/todo-flutter.md` F7.5。
 2. **想跑 APK / 真机**：① licenses 已补（`C:\src\Android\licenses`）；② 构建走增量，`flutter build apk --debug`
    约 30s（全新 ~2.5min）；③ **MuMu 15 已装本机**（`C:\Program Files\Netease\MuMu`，adb `127.0.0.1:16384`），
    冒烟照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走。
 3. **占位项（未做功能，别当 bug）**：首页 header 的「报表」图标、`全部账单 ›`、日历页 header 的「报表」图标、
-   资产页、「我的」页数据导出。（**首页预算卡已是真实数据**、**首页搜索图标已接真实搜索页**，不再占位）
+   资产页、「我的」页数据导出。（**首页预算卡已是真实数据**、**首页搜索图标已接真实搜索浮层**，不再占位）
 4. **代码结构**（都已落库）：
    - `lib/core/providers/` — database / book_providers / category_providers（DI + 当前账本）
    - `lib/core/db/` — `tables.dart`（5 张表 + **budgets**）+ `schema_v1.dart` / `schema_v2.dart`（索引原始 SQL）
@@ -423,13 +450,15 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
    - `lib/features/calendar/` — 日历页（CalendarController + calendar_aggregate + MonthGrid + MonthPickerPage）
    - `lib/features/stats/` — `application/{stats_aggregate,stats_controller}.dart` +
      `presentation/stats_page.dart` + `presentation/widgets/{category_pie,trend_bars}.dart`
-   - **`lib/features/search/`**（F7.4 新增）— `application/{search_query,search_controller}.dart` +
-     `presentation/search_page.dart`
+   - **`lib/features/search/`**（F7.4 新增；**F7.5-a 从独立路由改为浮层**）—
+     `application/{search_query,search_controller}.dart` + `presentation/search_overlay.dart`
+     （`showSearchOverlay` 打开，**不是路由**；`search_query.dart` 内含类型指令解析 `parsePlan`）
    - `lib/data/repositories/` — book / account / category / transaction / **budget**
    - `lib/features/import/` — 五层解析（`data/{bill_decode,bill_csv,bill_profiles,bill_normalize,bill_xlsx,bill_parse,category_rules}.dart`）+ `application/bill_importer.dart` + `presentation/import_page.dart`
    - `lib/features/profile/` `record/` `book/` `category/` `shared/`
    - 路由：壳 `/` `/calendar` `/assets` `/profile`；全屏 `/record`（extra=流水 id，`?date=` 默认日期）`/books`
-     `/categories` `/import` `/month-picker` `/stats` **`/search`**
+     `/categories` `/import` `/month-picker` `/stats`
+     （**F7.5-a 起搜索无路由**：首页搜索图标 `showGeneralDialog` 打开浮层，原 `/search` 已删除）
 5. **不要重复**：不要重装 Flutter/JDK/SDK；不要升 drift/sqlite3/build_runner；不要用 `pub add`；不要复制 gradle 缓存；
    不要回头做旧栈 T2.8；不要把 `env.sh` 改回 `env -u` 写法；**不要删 `C:\src\sqlite3`（删了 60 条测试会挂）**
 6. **信息不足先问用户**：真机冒烟需要用户给设备或装模拟器（**推送已配好 SSH，不必再向用户要 token**）
@@ -440,10 +469,10 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
 
 - 颜芯记账 uni-app → Flutter。当前工作区 `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master`；
   远端 **SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`（公钥已加 GitHub，`git push` 直接可用；
-  历史已合并并全部推送，本地 = 远端 = `78065a7`）。
-- **F1–F7.4 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（schema v2）、**F7.4 流水搜索**；
-  **F7.5（资产页 / 数据导出 / 分类预算）待排期**。
-- 门禁：`flutter analyze` 0 issue；`flutter test` **226 通过 + 6 skip**（skip=缺真实账单样本）。
+  历史已合并并全部推送，本地 = 远端）。
+- **F1–F7.5a 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（schema v2）、F7.4 流水搜索、
+  **F7.5-a 搜索浮层化 + 类型筛选**；**F7.5 剩余项（资产页 / 数据导出 / 分类预算）待排期**。
+- 门禁：`flutter analyze` 0 issue；`flutter test` **247 通过 + 6 skip**（skip=缺真实账单样本）。
 - **本机环境（旧文档里的 D: 路径全部失效）**：Flutter 3.47.2 → `C:\src\flutter`；JDK 17 → `M:\QQcache`；
   Android SDK → `C:\src\Android`（含 **NDK r28c + cmake 3.22.1**）；Gradle 缓存 → `C:\src\gradle-home`；
   **sqlite3.dll → `C:\src\sqlite3`（必需）**；模拟器 **MuMu 15**（`127.0.0.1:16384`，竖屏 1080×1920）。
@@ -454,6 +483,7 @@ P1–P6 全部 hold、M1/M2 均 **0 阻断**，六维度全过（入口可懂 / 
   ⑤ **【新】缺 `sqlite3.dll` → 60 条测试 `RETURNING` 报错**；**flutter 残留 lockfile → 命令卡死**。
 - drift 四坑：**索引走原始 SQL**（不支持 DESC/部分索引）、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、
   **改表必重跑 `build_runner`，且迁移只能在真机覆盖安装上验**。
-- F7.4 搜索口径：**当前账本全量**（`listByBook`）+ **内存过滤**（万级行，无需防抖）；
-  命中 = 分类名 / 备注 / 金额「元.分」文本的**子串并集**；空查询不列全部流水。
-- 下一步：**F7.5**（先做资产页）；推送已打通（SSH），改完直接 `git push` 即可。
+- 搜索：入口是**覆盖首页的浮层**（`showSearchOverlay`，**不是路由**）；口径 = **当前账本全量**（`listByBook`）
+  + **内存过滤**（万级行，无需防抖）；命中 = 分类名 / 备注 / 金额「元.分」文本的**子串并集**；
+  另有**类型指令**「仅支出 / 仅收入 / 转账」（`parsePlan`，须独立成词，可与关键词取交集）。
+- 下一步：**F7.5 剩余项**（先做资产页）；推送已打通（SSH），改完直接 `git push` 即可。

@@ -7,11 +7,47 @@
 
 ## [Unreleased]
 
+### 新增 — F7.5-a 搜索浮层化 + 类型筛选建议（2026-09-12）
+
+- **背景**：F7.4 的搜索是**全屏独立路由**（`/search`），进去后首页被完全遮住、像换了个 App；
+  且没有任何筛选入口——想「只看支出」只能靠关键词碰运气。用户需求（原话）：
+  **「提示块提供搜索建议，比如仅支出，仅收入，转账等，不用提供历史记录，然后搜索功能是显示在
+  首页的上层，提示块以下的区域做透明玻璃效果，使其能看见首页」**。
+- **浮层化**：`/search` 路由与 `SearchPage` **一并删除**，改为 `showGeneralDialog` 打开
+  `SearchOverlay`（`lib/features/search/presentation/search_overlay.dart`，原 `search_page.dart` 改名）——
+  首页留在页面栈里当背景（DialogRoute 非 opaque，下层路由不会被 Offstage）。
+  **不给同一功能留两条路**：那会变成两份 UI + 两套刷新链路（本项目已因「同一个东西两份状态」踩过坑）。
+- **毛玻璃**：`BackdropFilter(blur sigma 12)` 铺满全屏 + 半透明遮罩；**不透明提示块**盖住上半部分
+  ——视觉上「提示块以下才是玻璃」，且提示块边缘不会出现接缝。结果列表浮在玻璃之上（条目自带 `Card` 背景）。
+- **类型筛选（本次核心）**：「仅支出 / 仅收入 / 转账」这几个字**不在业务字段里**
+  （备注 / 分类名 / 金额都匹配不到），直接当关键词搜恒为空 → 改为解析成 `Transactions.type` 条件：
+  - `仅支出` → 该账本全部支出；`仅收入` / `转账` 同理。`仅支出 餐饮` → **类型 ∩ 关键词**。
+  - 纯函数实现（`search_query.dart` 的 `parsePlan` / `stripTypeWords`）；类型词**须独立成词**
+    —— `转账手续费` 不会被误判成指令，仍走普通关键词匹配。
+  - 同时出现多个类型词时**以最后出现的为准**。
+  - 词是**真的填进输入框**（可见 / 可编辑 / 可一键清空），chip 高亮**由输入框内容推导**
+    → 不会出现「chip 亮着但输入框空着」这种双份状态。填入时补**尾随空格**，方便接着敲关键词。
+- **交互**：三种关闭方式（关闭按钮 / 点玻璃空白区 / 系统返回键）；无结果态沿用 F7.4 的
+  「顶部对齐 + 占屏高 1/5」；结果条目**点=编辑、长按=删除**，删改后浮层内 + 首页 / 日历 / 统计 /
+  `yearDayIndex` 全刷。
+- **门禁**：`flutter analyze` No issues found；`flutter test` **247 通过 + 6 skip**
+  （新增 21 条：类型指令解析 11 + 浮层 widget 10）。
+- **真机走查（MuMu 15，覆盖安装老数据零丢失：支出 120.00 / 收入 50.00 / 预算 3,000）**：
+  SPEC §6 十条全过。另抓到 **3 个只有真机才暴露**的问题并修掉：
+  ① **引导态点提示块以外的空白关不掉浮层**（无结果态却可以）——`_Intro` 当时用
+  `SingleChildScrollView`，Scrollable 的 `RawGestureDetector` 以 `HitTestBehavior.opaque`
+  命中了整块下方区域，点击传不到底层玻璃的关闭手势 → 改用 `Align(topCenter)`，只占内容高度、空白可穿透；
+  ② **选中 chip 的对勾让 chip 变宽，把后面几个整排挤位移** → `showCheckmark: false`；
+  ③ **点 chip 后接着敲字拼成 `仅支出11`，指令失效、结果恒为空** → 填入时补尾随空格。
+  ①②③ 中 ①③ 已补 widget 回归测试。
+- **转账说明**：`Transactions.type` 支持 `transfer`（此时 `categoryId` 为 NULL），但**记账页没有转账入口**，
+  现有数据基本为空 —— 该 chip 仍保留：点了走类型筛选，命中为空则显示无结果态。
+
 ### 优化 — 搜索页无结果态改为「顶部对齐 + 占屏高 1/5」（2026-09-12）
 
 - **问题**：无结果提示原用 `Center` 垂直居中，四周留大片空白；且提示与输入框离得太远
   ——用户刚敲完词、视线还在输入框附近，提示却飘在屏幕正中。
-- **改法**（`lib/features/search/presentation/search_page.dart` 的 `_NoResult`）：
+- **改法**（`lib/features/search/presentation/search_overlay.dart` 的 `_NoResult`；F7.5 已由 `search_page.dart` 改名）：
   - 外层改 `Align(topCenter)` + `SizedBox(height: MediaQuery.sizeOf(context).height / 5)`：
     提示块紧贴输入框下方，高度固定占**整屏** 1/5；
   - 高度按整屏而非 body 计算——本页输入框 `autofocus`，键盘弹起会压扁 body，
