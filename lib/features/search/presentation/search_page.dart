@@ -303,36 +303,61 @@ class _Intro extends StatelessWidget {
 }
 
 /// 有输入但没有命中。
+///
+/// 提示块**顶部对齐**且高度固定为屏高 × 1/5 —— 不再 `Center` 撑满整屏
+/// （那样四周会留下大片空白，整页显得比实际更"空"）。
 class _NoResult extends StatelessWidget {
   const _NoResult({required this.keyword, required this.onClear});
 
   final String keyword;
   final VoidCallback onClear;
 
+  /// 提示块高度占整屏的比例。
+  static const double _heightFraction = 1 / 5;
+
   @override
   Widget build(BuildContext context) {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(Icons.search_off_rounded, size: 40, color: muted),
-            const SizedBox(height: 12),
-            Text(
-              '没有匹配「$keyword」的账单',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14),
+    // 用整屏高度而非 body 高度：本页输入框 autofocus，键盘弹起会压扁 body，
+    // 按 body 算的话提示块会跟着一起缩。
+    final double blockHeight =
+        MediaQuery.sizeOf(context).height * _heightFraction;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        height: blockHeight,
+        child: Center(
+          // 兜底：极小屏（逻辑高 < 约 550）放不下时可滚，不会 RenderFlex 溢出
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(Icons.search_off_rounded, size: 32, color: muted),
+                const SizedBox(height: 6),
+                Text(
+                  '没有匹配「$keyword」的账单',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 13),
+                ),
+                Text(
+                  '换个分类名、备注里的字，或金额里的数字试试',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 11, color: muted),
+                ),
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: onClear,
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  child: const Text('清空'),
+                ),
+              ],
             ),
-            Text(
-              '换个分类名、备注里的字，或金额里的数字试试',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: muted),
-            ),
-            const SizedBox(height: 12),
-            TextButton(onPressed: onClear, child: const Text('清空')),
-          ],
+          ),
         ),
       ),
     );
