@@ -9,40 +9,62 @@ agent_created: true
 用语义树（uiautomator dump）代替截图来做判读：Flutter 的文本/按钮都会出现在语义树里，
 读得到文案就等价于「用户看得到」，而且比看图更适合脚本化断言。
 
-## 前置：环境常量（2026-09-12 换机后实测，Administrator 机器）
+## 前置：环境常量（**双机器项目，先判机器再取常量**）
 
-- adb：`C:\Users\Administrator\Desktop\platform-tools\adb.exe`
-- MuMu 15 安装位置：`C:\Program Files\Netease\MuMu`（管理器 `nx_main\MuMuManager.exe`）
-- MuMu adb 端口：`16384`（另有 `7555`，等价）；设备名 `127.0.0.1:16384`
-- 包名：`com.teacodeman.yanxin`
-- python：`/c/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe`
-- 项目里已有抓取脚本：`.workbuddy/ui_dump.py`（打印「[可点] 文案 @(x,y)」列表）
-- 装包前先有 APK：`flutter build apk --debug`（本机需 NDK r28c + cmake 3.22.1，已装于 `C:\src\Android`）
+本项目两台机器在用，路径不同（判据与 `env.sh` 一致：哪台机器的 Flutter SDK 目录存在）：
+
+| | A 机（panda / D:） | B 机（Administrator / C:） |
+|---|---|---|
+| adb | `D:\Download\Java\Android\platform-tools\adb.exe` | `C:\Users\Administrator\Desktop\platform-tools\adb.exe` |
+| MuMu | **12** @ `D:\Downloads\MuMu\MuMuPlayer` | **15** @ `C:\Program Files\Netease\MuMu` |
+| MuMuManager | `…\MuMuPlayer\nx_main\MuMuManager.exe` | `…\Netease\MuMu\nx_main\MuMuManager.exe` |
+| 项目目录 | `D:\Tencent\yanxin-flutter` | `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master` |
+
+公共：包名 `com.teacodeman.yanxin`；adb 端口 `16384`（另有 `7555`，等价），设备名 `127.0.0.1:16384`；
+抓取脚本 `.workbuddy/ui_dump.py`；装包前先有 APK：`flutter build apk --debug`。
+
+```bash
+export PATH="/usr/bin:/bin:$PATH"          # 本环境 bash 偶尔丢 PATH，先补
+if [ -d /d/Download/Flutter/flutter ]; then            # A 机
+  PROJ=/d/Tencent/yanxin-flutter
+  ADB=/d/Download/Java/Android/platform-tools/adb.exe
+  MUMU=/d/Downloads/MuMu/MuMuPlayer/nx_main/MuMuManager.exe
+  PY=/c/Users/panda/.workbuddy/binaries/python/versions/3.13.12/python.exe
+else                                                    # B 机
+  PROJ=/c/Users/Administrator/Desktop/yanxin-bookkeeping-flutter-master
+  ADB=/c/Users/Administrator/Desktop/platform-tools/adb.exe
+  MUMU="/c/Program Files/Netease/MuMu/nx_main/MuMuManager.exe"
+  PY=/c/Users/Administrator/.workbuddy/binaries/python/versions/3.13.12/python.exe
+fi
+DEV=127.0.0.1:16384
+cd "$PROJ"
+```
+
+- A 机（MuMu 12）默认是**横屏 1600×900**（逻辑视口约 1067×600）；B 机（MuMu 15）默认**平板横屏 2560×1440**。
+- NDK/cmake：A 机已含（`D:\Download\Java\Android` 内有 ndk 28.2.13676358 + cmake 3.22.1）；B 机需另装于 `C:\src\Android`。
 
 ## 标准动作序列
 
 ```bash
-export PATH="/usr/bin:/bin:$PATH"          # 本环境 bash 偶尔丢 PATH，先补
-cd /c/Users/Administrator/Desktop/yanxin-bookkeeping-flutter-master
-ADB="/c/Users/Administrator/Desktop/platform-tools/adb.exe"
+# 常量见上一节（先判机器，得到 $PROJ / $ADB / $PY / $DEV）
 
 # 1) 连接（adbd 会被沙箱按调用回收，每次调用都要重连 + 操作放在同一次调用里）
-"$ADB" connect 127.0.0.1:16384 >/dev/null 2>&1
+"$ADB" connect "$DEV" >/dev/null 2>&1
 
 # 2) 装 debug 包（必须 -t，debug 包带 testOnly）
-"$ADB" -s 127.0.0.1:16384 install -r -t build/app/outputs/flutter-apk/app-debug.apk
+"$ADB" -s "$DEV" install -r -t build/app/outputs/flutter-apk/app-debug.apk
 
 # 3) 归零 + 冷启动（做「首次使用」类验收必须 pm clear）
-"$ADB" -s 127.0.0.1:16384 shell pm clear com.teacodeman.yanxin
-"$ADB" -s 127.0.0.1:16384 shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
+"$ADB" -s "$DEV" shell pm clear com.teacodeman.yanxin
+"$ADB" -s "$DEV" shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
 sleep 7
 
 # 4) 抓语义树拿坐标 → 点击
-$PY .workbuddy/ui_dump.py
-"$ADB" -s 127.0.0.1:16384 shell input tap <x> <y>
+"$PY" .workbuddy/ui_dump.py
+"$ADB" -s "$DEV" shell input tap <x> <y>
 
 # 5) 截图留证
-"$ADB" -s 127.0.0.1:16384 exec-out screencap -p > .workbuddy/shots/xx.png
+"$ADB" -s "$DEV" exec-out screencap -p > .workbuddy/shots/xx.png
 ```
 
 ## 关键坑（都踩过）
@@ -50,11 +72,11 @@ $PY .workbuddy/ui_dump.py
 1. **每次 bash 调用结束 adbd 会被回收** → 命令必须「connect + 操作」同一次调用完成，否则 `device offline`。
 2. **坐标会随屏幕方向整批失效**。先确认当前渲染尺寸：
    `dumpsys window displays | grep -m1 "cur="`（`cur=1920x1080` 就是横屏）。
-   **MuMu 转屏的正确姿势（2026-09-12 实测）**：用官方 CLI——
-   `MuMuManager.exe setting -v 0 -k resolution_mode -val phone.1`（竖屏手机 1080×1920@480dpi，
-   视口 360×640dp）→ `control -v 0 restart` → 等 `info -v 0` 里 `is_android_started=true`。
+   **MuMu 转屏的正确姿势（实测）**：用官方 CLI——
+   `"$MUMU" setting -v 0 -k resolution_mode -val phone.1`（竖屏手机 1080×1920@480dpi，
+   视口 360×640dp）→ `"$MUMU" control -v 0 restart` → 等 `"$MUMU" info -v 0` 里 `is_android_started=true`。
    `adb shell settings put system user_rotation` / `wm user-rotation` 都无效，别浪费时间。
-   平板横屏对应 `tablet.1`（2560×1440），默认就是它。
+   平板横屏对应 `tablet.1`；MuMu 15 默认就是 `tablet.1`（2560×1440），MuMu 12 默认横屏 1600×900（未必是 tablet.1）。
 3. **横屏逻辑视口只有约 1067×600**（dpr≈1.5）→ 日历/长表单类页面必然滚动。
    走查前先 `input swipe` 滚到目标，再 dump 取坐标；不要假设 dump 出的 y 一定在首屏可点。
 4. **Material 日期选择器在矮窗口里下半屏点不动**：`showDatePicker` 的日期网格被压成可滚动，
@@ -87,14 +109,14 @@ $PY .workbuddy/ui_dump.py
 ```bash
 # 1) 装旧包并造数据（或直接用已在跑的旧版本）
 # 2) 只覆盖安装、不 pm clear —— 这一步是关键，pm clear 就把老库删了
-"$ADB" -s 127.0.0.1:16384 install -r -t build/app/outputs/flutter-apk/app-debug.apk
-"$ADB" -s 127.0.0.1:16384 shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
+"$ADB" -s "$DEV" install -r -t build/app/outputs/flutter-apk/app-debug.apk
+"$ADB" -s "$DEV" shell monkey -p com.teacodeman.yanxin -c android.intent.category.LAUNCHER 1
 sleep 9
 
 # 3) 断言「老数据都在」+「新表可用（新功能能读能写）」
 "$PY" .workbuddy/ui_dump.py          # 首页支出/收入/结余应与升级前一致
 # 4) 再 force-stop 重启一次，确认新写入的数据也持久化
-"$ADB" -s 127.0.0.1:16384 shell am force-stop com.teacodeman.yanxin
+"$ADB" -s "$DEV" shell am force-stop com.teacodeman.yanxin
 ```
 
 判据：① 老数据分毫不少；② 新功能能读到「未设置」这类正确空态（不是崩溃/不是空屏）；

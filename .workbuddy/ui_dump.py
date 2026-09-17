@@ -2,13 +2,20 @@
 用法: python .workbuddy/ui_dump.py [--raw]
 每次运行自带 adb connect（沙箱会杀 daemon）。
 """
+import os
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
-# 2026-09-12 换机：adb 移到桌面 platform-tools（C:\src\Android 未装 platform-tools 也行）
-ADB = r"C:\Users\Administrator\Desktop\platform-tools\adb.exe"
-SERIAL = "127.0.0.1:16384"
+# adb 按机器自动挑（可用环境变量 ADB 覆盖）：A 机在 Android SDK 里，B 机在桌面 platform-tools
+_ADB_CANDIDATES = [
+    r"D:\Download\Java\Android\platform-tools\adb.exe",        # A 机（panda / D:）
+    r"C:\Users\Administrator\Desktop\platform-tools\adb.exe",  # B 机（Administrator）
+]
+ADB = os.environ.get("ADB") or next(
+    (p for p in _ADB_CANDIDATES if os.path.exists(p)), _ADB_CANDIDATES[0]
+)
+SERIAL = os.environ.get("MUMU_SERIAL", "127.0.0.1:16384")
 
 
 def sh(args, **kw):
