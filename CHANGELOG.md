@@ -7,6 +7,16 @@
 
 ## [Unreleased]
 
+### 文档 — 汇总一份《功能需求文档》（2026-09-18）
+
+- 新增 **`docs/PRD-yanxin-flutter.md`**：把散落在迁移 SPEC、4 份小 SPEC、HANDOFF / CHANGELOG 里的
+  **已签字需求**合并成按模块分组的 FR 清单（FR-NAV / LEDGER / RECORD / BOOK / CAT / CAL / STATS /
+  BUDGET / ASSET / SEARCH / IMPORT / PROFILE 共 12 组），每条带**口径规则 + 状态图例**（✅已真机 /
+  🟡仅门禁 / ⛔占位或待排期），另附数据模型、非功能需求 NFR-01–08、累计验收结果与 pending backlog。
+- **性质是汇总稿，不是签字件**：不改变任何口径，也不新增需求；新需求仍按「小 SPEC → 签字 → 实现」流程走。
+- 同步修正 `HANDOFF.md` 里的过期状态（HEAD `f95ba97` → `e06d23a`、门禁 253/266 → **269**、接手指南补一句
+  「资产页已真机走查」），并在「关键资料」「极简版」两处登记本文档入口。
+
 ### 新增 — F7.5-b 资产页（2026-09-17）
 
 - **背景**：底栏「资产」tab 一直是 `PlaceholderPage`，但**账户数据早已入库**

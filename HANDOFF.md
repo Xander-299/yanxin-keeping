@@ -72,7 +72,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-18 F7.5-b 走查后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`；基线 253 + 新增 16） |
-| git | 本机 HEAD = `f95ba97` = `origin/master`；工作区干净 |
+| git | 本机 HEAD = `e06d23a` = `origin/master`；工作区干净 |
 | 源码规模 | `lib/` 57 个 `.dart`，`test/` 31 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -151,9 +151,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **本机（A 机）HEAD = `f95ba97` = `origin/master`，工作区干净**（本次仅 `env.sh` 有改动待提交）。
-- 已含 **F1–F7.5a**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层。
-- **本机门禁（2026-09-17 复跑）**：`flutter analyze` No issues found；`flutter test` **253 passed, 0 skipped**。
+- **本机（A 机）HEAD = `e06d23a` = `origin/master`，工作区干净**（F7.5-b 资产页 + 走查报告已入库）。
+- 已含 **F1–F7.5b**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页。
+- **本机门禁（2026-09-18 F7.5-b 走查后复跑）**：`flutter analyze` No issues found；`flutter test` **269 passed, 0 skipped**。
 - `lib/core/db/database.g.dart` 已入库；**改表结构必须重跑 `dart run build_runner build`**。
 - APK：A 机的 release APK 是 **F7.1 时期**产物，代码已到 F7.5a → **需要重新构建**。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）。
@@ -179,7 +179,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 关键资料
 
-- `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`
+- **「功能需求文档」在哪**：`docs/PRD-yanxin-flutter.md` —— 汇总稿（FR 编号 + 状态图例 + 口径 + backlog），
+  **只看这一份就能知道 App 现在该有哪些行为**。注意它是**汇总不是签字件**，新需求仍要另出小 SPEC。
+- `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`
 - `tasks/todo-flutter.md`（F0–F7.5a 已勾选，F7.5 剩余项待排期）、`CHANGELOG.md`、`README.md`
 - `docs/acceptance-M1-M2.md`（首用验收 M1/M2 报告）
 - `env.sh` — **每次开终端必 `source env.sh`**（自动识别 A/B 机）
@@ -242,9 +244,11 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：F7.5-b 资产页已交付（门禁绿、未真机走查），**下一步是 F7.5 剩余项**。
+1. **当前最重要的事**：F7.5-b 资产页已交付（门禁绿、**MuMu 12 真机走查 15 步全过，阻断 0**），**下一步是 F7.5 剩余项**。
    建议顺序：**数据导出**（「我的」页占位）→ **分类预算**（按分类额度）→ **报表明细清单**。
-   按老规矩：先出小 SPEC（`docs/SPEC-F7.5-*.md`）→ 用户点头 → 实现 → 门禁 → 文档。
+   （走查遗留的**账户图标选择**改动最小，可随时插队。）
+   按老规矩：先出小 SPEC（`docs/SPEC-F7.5-*.md`）→ 用户点头 → 实现 → 门禁 → 文档
+   （**动工前先读 `docs/PRD-yanxin-flutter.md` 对齐现有口径**）。
 2. **要真机走查**：先 `source env.sh && flutter build apk --debug`（A 机增量构建快），再
    `adb -s emulator-5554 install -r -t <apk>` 装到 MuMu 12，然后照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走。
 3. **占位项（未做功能，别当 bug）**：首页 / 日历页 header 的「报表」图标、`全部账单 ›`、「我的」页数据导出
@@ -274,8 +278,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F1–F7.5b 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（**schema v2**）、F7.4 流水搜索、
   F7.5-a 搜索浮层化 + 类型筛选、**F7.5-b 资产页**（净资产 + 账户 CRUD + 账户余额）。
   **F7.5 剩余项（数据导出 / 分类预算 / 报表明细）待排期。**
-- **HEAD = `f95ba97`（本机 = 远端；2026-09-17 已同步 13 个提交，工作区干净）**。
-- 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 266 全过 0 skip**（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
+- **HEAD = `e06d23a`（本机 = 远端；2026-09-17 已同步 commits，工作区干净）**。
+- 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 269 全过 0 skip**
+- 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。
