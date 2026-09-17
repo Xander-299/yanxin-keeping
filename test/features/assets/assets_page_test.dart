@@ -1,4 +1,6 @@
 /// 资产页关键路径（UI 层）：新增账户 → 列表/净资产更新；有流水的账户删不掉。
+///
+/// 真机（MuMu 12）已实走验收，见 `docs/acceptance-F7.5b-assets.md`。
 library;
 
 import 'package:flutter/material.dart';
@@ -118,5 +120,69 @@ void main() {
     }
     await tester.pumpAndSettle();
     expect(find.text('支付宝'), findsNothing);
+  });
+
+  testWidgets('金额格式非法时拦截保存，且不丢已填内容', (WidgetTester tester) async {
+    final db = openTestDatabase();
+    await BookRepository(db).ensureDefaultBook();
+    addTearDown(db.close);
+
+    await pumpApp(tester, database: db);
+    await goAssetsTab(tester);
+
+    await tester.tap(find.byTooltip('新增账户'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'TestBank');
+    // 三位小数：yuanToCents 的正则不放行
+    await tester.enterText(find.byType(TextField).at(1), '12.345');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await pumpUntil(tester, find.text('初始余额格式不对，最多两位小数'));
+
+    // 弹窗没关、已填的名称与金额都还在（状态保留）
+    expect(find.text('新增账户'), findsOneWidget);
+    expect(find.text('TestBank'), findsWidgets);
+    expect(find.text('12.345'), findsWidgets);
+  });
+
+  testWidgets('为空名称拦截保存', (WidgetTester tester) async {
+    final db = openTestDatabase();
+    await BookRepository(db).ensureDefaultBook();
+    addTearDown(db.close);
+
+    await pumpApp(tester, database: db);
+    await goAssetsTab(tester);
+
+    await tester.tap(find.byTooltip('新增账户'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await pumpUntil(tester, find.text('请输入账户名称'));
+
+    expect(find.text('新增账户'), findsOneWidget);
+    // 没建出账户：仍然只有默认的「现金」
+    expect(find.text('1 个账户 · 全时间累计'), findsOneWidget);
+  });
+
+  testWidgets('点编辑弹窗外（遮罩）关闭弹窗，账户不变', (WidgetTester tester) async {
+    final db = openTestDatabase();
+    await BookRepository(db).ensureDefaultBook();
+    addTearDown(db.close);
+
+    await pumpApp(tester, database: db);
+    await goAssetsTab(tester);
+
+    await tester.tap(find.text('现金'));
+    await tester.pumpAndSettle();
+    await pumpUntil(tester, find.text('编辑账户'));
+
+    // 遮罩在弹窗上方，点它应关闭弹窗（真机同样行为，不是 bug）
+    await tester.tapAt(const Offset(400, 80));
+    await tester.pumpAndSettle();
+    expect(find.text('编辑账户'), findsNothing);
+    expect(find.text('现金'), findsWidgets);
   });
 }

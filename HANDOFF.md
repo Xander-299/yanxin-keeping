@@ -5,8 +5,9 @@
 > **上一次做的事**：本机仓库从 F7.1（`13f3578`）快进 **13 个提交**到远端最新 `f95ba97`（含 F7.2–F7.5a）；
 > `env.sh` 改为**双机器自动识别**。
 > **本次（F7.5-b 资产页）**：SPEC `docs/SPEC-F7.5-assets.md` 签字 → 实现 → 门禁
-> **analyze 0 issue / test 266 全过 0 skip**（基线 253，新增 13）。`/assets` 不再是占位页。
-> **未做真机走查**（需先 `flutter build apk --debug`）。
+> **analyze 0 issue / test 269 全过 0 skip**（基线 253，新增 16）。`/assets` 不再是占位页。
+> **MuMu 12 真机走查已做**：15 步全过，**阻断 0 / 卡住 0 / 状态丢失 0**，
+> 报告 `docs/acceptance-F7.5b-assets.md`（遗留体验摩擦 1 条：账户图标不可选）。
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
 ---
@@ -70,7 +71,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 2** |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（2026-09-17 F7.5-b 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **266 passed / 0 skipped**（`All tests passed!`；基线 253 + 新增 13） |
+| **门禁（2026-09-18 F7.5-b 走查后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`；基线 253 + 新增 16） |
 | git | 本机 HEAD = `f95ba97` = `origin/master`；工作区干净 |
 | 源码规模 | `lib/` 57 个 `.dart`，`test/` 31 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
@@ -120,6 +121,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.3 月度预算实装** ✅（**schema v2**）：新增 `budgets` 表（`book_id` + `period('YYYY-MM')` + `amount_cents`）+ 部分唯一索引 `idx_budget_book_period`；`onUpgrade(from<2)` **只加表建索引**，v1 五张表零改动（老库升级零风险）；`BudgetRepository`；`budget_metrics.dart`（进度 / 剩余 / 本月日均 / 剩余每日可消费 / 超支）；`BudgetCard` 替换占位卡（**「示例」chip 与假数字全部移除**）；`monthBudgetProvider` watch 首页状态
 - **F7.4 流水搜索** ✅：`TransactionRepository.listByBook()`（全时间倒序）；`search_query.dart` 纯函数（`normalizeQuery` / `matchesQuery` / `filterTx` / `amountTextOf`，三类并集，空查询不返回全量）；搜索页 AppBar 即输入框（autofocus）+ **一键清空**；结果复用 `TxGroupList`；超 200 条截断
 - **搜索页 UI 微调** ✅：无结果提示由 `Center` 居中改为**顶部对齐 + 占屏高 1/5**（高度按**整屏**算，避开键盘压扁 body）
+- **F7.5-b 资产页真机走查** ✅（2026-09-18，MuMu 12 / 竖屏 900×1600）：15 步全过，**阻断 0 / 卡住 0 / 状态丢失 0**；覆盖新增/编辑/删除/拦截/负值红字/冷启动持久化/有流水禁删；报告 `docs/acceptance-F7.5b-assets.md`。**AI 隔离环境实走，未经真实用户测试**
 - **F7.5-b 资产页** ✅（`lib/features/assets/`）：净资产卡（≥0 琥珀橙 / <0 红）+ 账户列表（类型图标 / 名称 /「类型 · 收 X / 支 Y」/ 余额）+ 空态；底部 sheet 做账户增 / 改 / 软删，**有流水的账户禁止删除**；口径 = **初始余额 + Σ收入 − Σ支出，transfer 不计**；**不改 schema**（仍 v2）。新增 `dataEpochProvider`（数据版本号），5 个写操作点 bump 代替逐个 `refresh()`
 - **F7.5-a 搜索浮层化 + 类型筛选** ✅：`/search` 路由与 `SearchPage` **删除**，改 `showGeneralDialog` 打开 `SearchOverlay`（首页留在页面栈当背景）；`BackdropFilter(sigma 12)` 毛玻璃；**类型 chips「仅支出 / 仅收入 / 转账」** → `parsePlan` 解析成 `Transactions.type` 条件（独立成词才生效，多词取最后）；chip 填入输入框并补**尾随空格**；三种关闭方式（按钮 / 点玻璃空白 / 系统返回）
 - **本机（A 机）重新接入 + env 双机器化** ✅（2026-09-17）：仓库快进 13 提交到 `f95ba97`；`env.sh` 改自动识别；本机门禁 analyze 0 / test **253 全过 0 skip**
@@ -158,7 +160,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 未解决问题
 
-1. 【P3】**F7.5 剩余项待排期**（资产页已交付）：数据导出（「我的」页占位）、分类预算（按分类额度）、报表明细清单；
+1. 【P3】**F7.5 剩余项待排期**（资产页已交付并走查）：数据导出（「我的」页占位）、分类预算（按分类额度）、报表明细清单；
+   **账户图标选择**（走查遗留 F1：`accounts.icon` / `color` 列已存在，仅界面未暴露，改动很小）；
    搜索增强（关键词高亮 / 账户名匹配 / 搜索历史 / 日期区间 / 拼音首字母）；日历增强（农历 / 节假日、长按快速记账、页内翻月）
 2. 【P3】首页 header「报表」图标、`全部账单 ›`、日历页 header「报表」图标 —— 仍是「建设中」占位
    （**首页搜索图标已接真实搜索浮层、首页预算卡已是真实数据、资产 tab 已是真实资产页**，不再占位）
@@ -183,6 +186,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - `android/gradle.properties` — 含 **`kotlin.incremental=false`**（修跨盘 Kotlin 崩溃，**勿删**）与 `android.builder.sdkDownload=false`
 - 参考图 `app_template/*.jpg`；旧栈资产 `D:\Tencent\yanxin\src\{db,repositories,modules/bill-import,utils}`
 - 真机走查：`.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md`；`uiautomator` 语义树脚本 `.workbuddy/ui_dump.py`
+- 验收报告：`docs/acceptance-M1-M2.md`（首用验收 M1/M2）、`docs/acceptance-F7.5b-assets.md`（资产页真机走查）
 - **常用命令**：
   - 门禁：`source env.sh && fx-qa`（analyze + 去代理 test）
   - 仅测试：`source env.sh && fx-test`

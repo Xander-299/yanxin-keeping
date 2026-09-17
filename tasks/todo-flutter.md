@@ -215,8 +215,10 @@
 - [x] `data_epoch.dart`：数据版本号 provider，5 个写操作点（记一笔 / 导入 / 首页删除 /
       日历删除 / 搜索删除）bump，替代「逐个 provider 手工 refresh」
 - [x] `/assets` 分支的 `PlaceholderPage('资产')` → `AssetsPage`
-- [x] 门禁：analyze 0 issue；test **266 通过 0 skip**（新增 13：聚合 10 + 资产页 widget 3）
-- [ ] MuMu 真机走查（待做：需先 `flutter build apk --debug`）
+- [x] 门禁：analyze 0 issue；test **269 通过 0 skip**（新增 16：聚合 10 + 资产页 widget 6）
+- [x] **MuMu 12 真机走查（首次使用验收规范）**：15 步全过，阻断 0 / 卡住 0 / 状态丢失 0；
+      报告 `docs/acceptance-F7.5b-assets.md`
+- [ ] 账户图标选择（体验摩擦 F1：`accounts.icon` / `color` 列已存在，界面未暴露）
 
 ### F7.5 剩余项（待排期）
 
