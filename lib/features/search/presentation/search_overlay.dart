@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
@@ -126,6 +127,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     unawaited(ref.read(calendarProvider.notifier).refresh());
     unawaited(ref.read(statsProvider.notifier).refresh());
     ref.invalidate(yearDayIndexProvider);
+    // 资产页 watch 数据版本号，bump 即重算
+    ref.read(dataEpochProvider.notifier).bump();
     if (mounted) setState(() {});
   }
 

@@ -1,9 +1,12 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.5a ✅；F7.5 剩余项待排期）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.5b ✅；F7.5 剩余项待排期）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-17 22:50 · 更新人：AI 助手（**本机 = A 机**）
-> **本次做的事**：本机仓库从 F7.1（`13f3578`）快进 **13 个提交**到远端最新 `f95ba97`（含 F7.2–F7.5a）；
-> `env.sh` 改为**双机器自动识别**；本机复跑门禁 **analyze 0 issue / test 253 全过 0 skip**。
+> 最后更新：2026-09-17 23:20 · 更新人：AI 助手（**本机 = A 机**）
+> **上一次做的事**：本机仓库从 F7.1（`13f3578`）快进 **13 个提交**到远端最新 `f95ba97`（含 F7.2–F7.5a）；
+> `env.sh` 改为**双机器自动识别**。
+> **本次（F7.5-b 资产页）**：SPEC `docs/SPEC-F7.5-assets.md` 签字 → 实现 → 门禁
+> **analyze 0 issue / test 266 全过 0 skip**（基线 253，新增 13）。`/assets` 不再是占位页。
+> **未做真机走查**（需先 `flutter build apk --debug`）。
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
 ---
@@ -67,7 +70,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 2** |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（2026-09-17 本机复跑）** | `flutter analyze` **No issues found (84.5s)**；`flutter test` **253 passed / 0 skipped**（`All tests passed!`） |
+| **门禁（2026-09-17 F7.5-b 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **266 passed / 0 skipped**（`All tests passed!`；基线 253 + 新增 13） |
 | git | 本机 HEAD = `f95ba97` = `origin/master`；工作区干净 |
 | 源码规模 | `lib/` 57 个 `.dart`，`test/` 31 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
@@ -117,6 +120,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.3 月度预算实装** ✅（**schema v2**）：新增 `budgets` 表（`book_id` + `period('YYYY-MM')` + `amount_cents`）+ 部分唯一索引 `idx_budget_book_period`；`onUpgrade(from<2)` **只加表建索引**，v1 五张表零改动（老库升级零风险）；`BudgetRepository`；`budget_metrics.dart`（进度 / 剩余 / 本月日均 / 剩余每日可消费 / 超支）；`BudgetCard` 替换占位卡（**「示例」chip 与假数字全部移除**）；`monthBudgetProvider` watch 首页状态
 - **F7.4 流水搜索** ✅：`TransactionRepository.listByBook()`（全时间倒序）；`search_query.dart` 纯函数（`normalizeQuery` / `matchesQuery` / `filterTx` / `amountTextOf`，三类并集，空查询不返回全量）；搜索页 AppBar 即输入框（autofocus）+ **一键清空**；结果复用 `TxGroupList`；超 200 条截断
 - **搜索页 UI 微调** ✅：无结果提示由 `Center` 居中改为**顶部对齐 + 占屏高 1/5**（高度按**整屏**算，避开键盘压扁 body）
+- **F7.5-b 资产页** ✅（`lib/features/assets/`）：净资产卡（≥0 琥珀橙 / <0 红）+ 账户列表（类型图标 / 名称 /「类型 · 收 X / 支 Y」/ 余额）+ 空态；底部 sheet 做账户增 / 改 / 软删，**有流水的账户禁止删除**；口径 = **初始余额 + Σ收入 − Σ支出，transfer 不计**；**不改 schema**（仍 v2）。新增 `dataEpochProvider`（数据版本号），5 个写操作点 bump 代替逐个 `refresh()`
 - **F7.5-a 搜索浮层化 + 类型筛选** ✅：`/search` 路由与 `SearchPage` **删除**，改 `showGeneralDialog` 打开 `SearchOverlay`（首页留在页面栈当背景）；`BackdropFilter(sigma 12)` 毛玻璃；**类型 chips「仅支出 / 仅收入 / 转账」** → `parsePlan` 解析成 `Transactions.type` 条件（独立成词才生效，多词取最后）；chip 填入输入框并补**尾随空格**；三种关闭方式（按钮 / 点玻璃空白 / 系统返回）
 - **本机（A 机）重新接入 + env 双机器化** ✅（2026-09-17）：仓库快进 13 提交到 `f95ba97`；`env.sh` 改自动识别；本机门禁 analyze 0 / test **253 全过 0 skip**
 - **打包** ✅：A 机曾打出 release APK（**63.7 MB**，`build\app\outputs\flutter-apk\app-release.apk`）；B 机 debug APK（~214 MB）。
@@ -154,10 +158,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 未解决问题
 
-1. 【P3】**F7.5 剩余项待排期**：资产页（占位）、数据导出（「我的」页占位）、分类预算（按分类额度）、报表明细清单；
+1. 【P3】**F7.5 剩余项待排期**（资产页已交付）：数据导出（「我的」页占位）、分类预算（按分类额度）、报表明细清单；
    搜索增强（关键词高亮 / 账户名匹配 / 搜索历史 / 日期区间 / 拼音首字母）；日历增强（农历 / 节假日、长按快速记账、页内翻月）
 2. 【P3】首页 header「报表」图标、`全部账单 ›`、日历页 header「报表」图标 —— 仍是「建设中」占位
-   （**首页搜索图标已接真实搜索浮层、首页预算卡已是真实数据**，不再占位）
+   （**首页搜索图标已接真实搜索浮层、首页预算卡已是真实数据、资产 tab 已是真实资产页**，不再占位）
 3. 【P3】`gradle wrapper` 用 `gradle-9.3.1-all.zip`（230MB），换 `-bin.zip` 可提速
 4. 【P3】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）
 5. 【P2】**A 机上的 APK 尚未用 F7.5a 代码重建** —— 要真机走查新功能，需先 `flutter build apk --debug`
@@ -225,15 +229,22 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 24. **两条无共同祖先的历史合并**：`git merge origin/master --allow-unrelated-histories -X ours`；但 `-X ours` 对「我方已删、远端仍在」的文件**不生效**（会复活，如 `budget_card_placeholder.dart`）→ 合并后必须 `git diff --stat <合并前HEAD> HEAD` 复核
 25. **A 机特有**：`D:\Download\Java\Android` 曾于 2026-09-11 被磁盘清理误删进回收站 → **别把 `D:\Download\Java\` 当垃圾目录**
 26. **B 机特有**：缺 `C:\src\sqlite3\sqlite3.dll` → 60 条测试报 `near "RETURNING": syntax error`；A 机实测不需要
+27. **资产页口径**：账户余额 = **初始余额 + Σ收入 − Σ支出**，**transfer 不计**（方向语义未落库）；
+    净资产 = 各未删账户余额之和，**全时间累计**；初始余额**不允许负数**
+28. **widget 测试开 bottom sheet 后要先 `pumpAndSettle` 再找按钮**：滑入动画途中调 `ensureVisible`
+    会按「还没到位」的视口算滚动，把按钮顶到屏幕外 → tap 报 offset 越界（像「按钮不存在」，极具误导性）
+29. **写操作刷新优先用 `dataEpochProvider`**（`ref.read(dataEpochProvider.notifier).bump()`），
+    别再逐个 provider 手工 `refresh()` —— 已因漏刷 `statsProvider` 出过 bug
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：仓库已同步到最新（F1–F7.5a），**下一步是 F7.5 剩余项**。
-   建议顺序：**资产页**（账户已入库，缺页面）→ **数据导出**（「我的」页占位）→ **分类预算**。
+1. **当前最重要的事**：F7.5-b 资产页已交付（门禁绿、未真机走查），**下一步是 F7.5 剩余项**。
+   建议顺序：**数据导出**（「我的」页占位）→ **分类预算**（按分类额度）→ **报表明细清单**。
    按老规矩：先出小 SPEC（`docs/SPEC-F7.5-*.md`）→ 用户点头 → 实现 → 门禁 → 文档。
 2. **要真机走查**：先 `source env.sh && flutter build apk --debug`（A 机增量构建快），再
    `adb -s emulator-5554 install -r -t <apk>` 装到 MuMu 12，然后照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走。
-3. **占位项（未做功能，别当 bug）**：首页 / 日历页 header 的「报表」图标、`全部账单 ›`、资产页、「我的」页数据导出。
+3. **占位项（未做功能，别当 bug）**：首页 / 日历页 header 的「报表」图标、`全部账单 ›`、「我的」页数据导出
+   （**资产 tab 已是真实资产页**，不再是占位）。
 4. **代码结构**（都已落库）：
    - `lib/core/providers/` — database / book_providers / category_providers（DI + 当前账本）
    - `lib/core/db/` — `tables.dart`（5 张表 + **budgets**）、`schema_v1.dart` / `schema_v2.dart`（索引原始 SQL）、`database.dart`（**schemaVersion 2**，`onUpgrade` 只加 budgets）
@@ -241,6 +252,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    - `lib/features/ledger/` — 首页（`LedgerController` + `MonthHero` + **`BudgetCard`** + `budget_metrics` / `budget_controller` / `budget_edit_sheet` + `BookDrawer` + `TxGroupList`）
    - `lib/features/calendar/` — `CalendarController` + `calendar_aggregate` + `MonthGrid` + `MonthPickerPage`
    - `lib/features/stats/` — `application/{stats_aggregate,stats_controller}.dart` + `presentation/stats_page.dart` + `widgets/{category_pie,trend_bars}.dart`
+   - `lib/features/assets/` — `application/{asset_aggregate,account_meta,assets_controller}.dart` + `presentation/assets_page.dart` + `widgets/account_form_sheet.dart`
    - `lib/features/search/` — `application/{search_query,search_controller}.dart` + `presentation/search_overlay.dart`（**`showSearchOverlay` 打开，不是路由**；`search_query.dart` 内含 `parsePlan` 类型指令解析）
    - `lib/features/import/` — 解析五层 + `bill_importer.dart` + `import_page.dart`
    - `lib/data/repositories/` — book / account / category / transaction / **budget**
@@ -255,10 +267,11 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 颜芯记账 uni-app → Flutter。**两台机器共用一个远端**（**SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`，`git push` 免凭据）：
   **A 机（本机）** = 用户 `panda`、`D:` 盘、仓库 `D:\Tencent\yanxin-flutter`、MuMu 12；**B 机** = `Administrator`、`C:/M:` 盘、MuMu 15。
   `env.sh` **自动识别机器**，开终端先 `source env.sh`。
-- **F1–F7.5a 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（**schema v2**）、F7.4 流水搜索、**F7.5-a 搜索浮层化 + 类型筛选**。
-  **F7.5 剩余项（资产页 / 数据导出 / 分类预算 / 报表明细）待排期。**
+- **F1–F7.5b 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（**schema v2**）、F7.4 流水搜索、
+  F7.5-a 搜索浮层化 + 类型筛选、**F7.5-b 资产页**（净资产 + 账户 CRUD + 账户余额）。
+  **F7.5 剩余项（数据导出 / 分类预算 / 报表明细）待排期。**
 - **HEAD = `f95ba97`（本机 = 远端；2026-09-17 已同步 13 个提交，工作区干净）**。
-- 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 253 全过 0 skip**（B 机 247 + 6 skip，差在**真实账单样本只在本机**）。
+- 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 266 全过 0 skip**（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。

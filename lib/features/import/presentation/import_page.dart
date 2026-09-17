@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers/book_providers.dart';
+import '../../../core/providers/data_epoch.dart';
 import '../../../core/providers/database.dart';
 import '../../../core/utils/money.dart';
 import '../../../data/repositories/account_repository.dart';
@@ -104,6 +105,8 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       await ref.read(ledgerProvider.notifier).refresh();
       // 统计页是常驻 Notifier，也要跟着刷新（导入常落历史月，翻回去才看得到）
       unawaited(ref.read(statsProvider.notifier).refresh());
+      // 资产页 watch 数据版本号，bump 即重算
+      ref.read(dataEpochProvider.notifier).bump();
       if (!mounted) return;
       setState(() => _importing = false);
       // 导入的账单几乎都属于历史月份，首页停在当前月会「看起来什么都没发生」

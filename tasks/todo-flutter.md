@@ -201,9 +201,26 @@
 > ② `ChoiceChip` 默认 `showCheckmark: true`，选中时会变宽把后面的 chip 挤位移 → `showCheckmark: false`；
 > ③ 填入词与用户后续输入之间必须有**空格分隔**，否则类型指令不识别。
 
+### F7.5-b 资产页（2026-09-17 交付，SPEC 已签字）
+
+- [x] 小 SPEC `docs/SPEC-F7.5-assets.md`（已签字：范围全量、初始余额不允许负数）
+- [x] `asset_aggregate.dart` 纯函数：`AssetItem` / `AssetSummary` / `buildAssetSummary`
+      （余额 = 初始 + Σ收入 − Σ支出，**transfer 不计**；含 `txCount` 用于删除拦截）
+- [x] `account_meta.dart`：账户类型 → 中文名 + 图标（cash / bank / credit / alipay / wechat / other）
+- [x] `assets_controller.dart`：`AsyncNotifier<AssetSummary>`，watch 当前账本 + **数据版本号**；
+      账户增 / 改 / 软删
+- [x] `assets_page.dart`：净资产卡（≥0 琥珀橙 / <0 红）+ 账户列表（图标 / 名称 / 类型 + 累计收支 / 余额）+ 空态
+- [x] `account_form_sheet.dart`：新增 / 编辑底部弹窗（名称 + 类型下拉 + 初始余额）；
+      **有流水的账户禁止删除**（提示「还有 N 笔流水」）
+- [x] `data_epoch.dart`：数据版本号 provider，5 个写操作点（记一笔 / 导入 / 首页删除 /
+      日历删除 / 搜索删除）bump，替代「逐个 provider 手工 refresh」
+- [x] `/assets` 分支的 `PlaceholderPage('资产')` → `AssetsPage`
+- [x] 门禁：analyze 0 issue；test **266 通过 0 skip**（新增 13：聚合 10 + 资产页 widget 3）
+- [ ] MuMu 真机走查（待做：需先 `flutter build apk --debug`）
+
 ### F7.5 剩余项（待排期）
 
-- [ ] 资产页（当前占位）
+- [x] 资产页（F7.5-b 已交付）
 - [ ] 数据导出（「我的」页占位）
 - [ ] 分类预算（每个分类单独额度）
 - [ ] 搜索增强：关键词高亮、账户名匹配、搜索历史、日期区间筛选、拼音 / 首字母匹配

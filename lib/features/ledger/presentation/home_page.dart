@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
+import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
@@ -112,6 +113,8 @@ class HomePage extends ConsumerWidget {
     unawaited(ref.read(calendarProvider.notifier).refresh());
     // 统计页同理（常驻 Notifier，不会自己感知删除）
     unawaited(ref.read(statsProvider.notifier).refresh());
+    // 资产页 watch 数据版本号，bump 即重算
+    ref.read(dataEpochProvider.notifier).bump();
   }
 }
 

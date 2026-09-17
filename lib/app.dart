@@ -13,6 +13,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:yanxin/features/assets/presentation/assets_page.dart';
 import 'package:yanxin/features/book/presentation/book_manage_page.dart';
 import 'package:yanxin/features/calendar/presentation/calendar_page.dart';
 import 'package:yanxin/features/calendar/presentation/month_picker_page.dart';
@@ -20,7 +21,6 @@ import 'package:yanxin/features/category/presentation/category_manage_page.dart'
 import 'package:yanxin/features/import/presentation/import_page.dart';
 import 'package:yanxin/features/ledger/presentation/home_page.dart';
 import 'package:yanxin/features/nav/presentation/app_shell.dart';
-import 'package:yanxin/features/nav/presentation/placeholder_page.dart';
 import 'package:yanxin/features/profile/presentation/profile_page.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 import 'package:yanxin/features/stats/presentation/stats_page.dart';
@@ -58,7 +58,7 @@ class _YanxinAppState extends State<YanxinApp> {
             routes: <RouteBase>[
               GoRoute(
                 path: '/assets',
-                builder: (_, _) => const PlaceholderPage(title: '资产'),
+                builder: (_, _) => const AssetsPage(),
               ),
             ],
           ),
