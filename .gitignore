@@ -71,6 +71,8 @@ test/fixtures/*-real.*
 
 # 走查截图（二进制，只留本机）
 /.workbuddy/shots/
+# 兜底：.workbuddy 根下散落的截图同样不入库
+/.workbuddy/*.png
 
 # 会话记忆（逐日工作日志，只留本机）
 /.workbuddy/memory/
