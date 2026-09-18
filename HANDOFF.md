@@ -73,7 +73,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-19 F7.6 P2 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`） |
-| git | 本机 HEAD = `e06d23a` = `origin/master`；工作区干净 |
+| git | 本机 HEAD = `3d4e749` = `origin/master`；工作区干净 |
 | 源码规模 | `lib/` 57 个 `.dart`，`test/` 31 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -161,7 +161,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **本机（A 机）HEAD 见下方「关键资料」里的 git 行**（F7.6 P1 + P2 已入库）。
+- **本机（A 机）HEAD = `3d4e749` = `origin/master`，工作区干净**（F7.6 P1 + P2 已入库）。
 - 已含 **F1–F7.6 P2**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**。
 - **本机门禁（2026-09-19 F7.6 P2 后复跑）**：`flutter analyze` No issues found；`flutter test` **269 passed, 0 skipped**。
 - `lib/core/db/database.g.dart` 已入库；**改表结构必须重跑 `dart run build_runner build`**。
