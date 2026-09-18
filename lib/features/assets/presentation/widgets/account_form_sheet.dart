@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/constants/preset.dart';
 import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/account_meta.dart';
@@ -25,9 +26,10 @@ Future<void> showAccountFormSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1B1B1D),
+    backgroundColor: Tok.paper,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: Tok.ink, width: Tok.bw),
     ),
     builder: (BuildContext _) => _AccountFormSheet(account: account),
   );

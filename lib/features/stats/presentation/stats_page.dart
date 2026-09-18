@@ -6,6 +6,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/ledger/application/month_summary.dart';
@@ -123,7 +124,7 @@ class _SummaryCard extends StatelessWidget {
               child: _StatCell(
                 label: '结余',
                 value: summary.balanceYuan,
-                color: const Color(0xFFFFAF38),
+                color: Tok.brandDeep,
               ),
             ),
           ],

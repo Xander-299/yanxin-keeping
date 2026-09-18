@@ -7,21 +7,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/stats_aggregate.dart';
 
-/// 分类配色（按顺序循环取用）。
-const List<Color> kCategoryColors = <Color>[
-  Color(0xFFFFAF38), // 品牌琥珀
-  Color(0xFFFF6B6B),
-  Color(0xFF4ECDC4),
-  Color(0xFF6C8EFF),
-  Color(0xFFB57BFF),
-  Color(0xFF7BD389),
-  Color(0xFFFFA45B),
-  Color(0xFFFF7EB6),
-];
+/// 分类配色（按顺序循环取用，取自原型 `PIE_COLORS`）。
+const List<Color> kCategoryColors = Tok.pie;
 
 /// 第 [index] 个分类的颜色。
 Color categoryColor(int index) =>
@@ -96,7 +88,7 @@ class _DonutPainter extends CustomPainter {
         2 * math.pi,
         true,
         Paint()
-          ..color = const Color(0xFF2A2A2D)
+          ..color = Tok.track
           ..style = PaintingStyle.stroke
           ..strokeWidth = thickness,
       );

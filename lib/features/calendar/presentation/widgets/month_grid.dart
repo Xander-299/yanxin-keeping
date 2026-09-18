@@ -6,15 +6,16 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/features/calendar/application/calendar_aggregate.dart';
 
 /// 支出红 / 收入绿（与中国习惯一致的配色，与流水列表同源）。
-const Color kExpenseRed = Color(0xFFEF5350);
-const Color kIncomeGreen = Color(0xFF66BB6A);
+const Color kExpenseRed = Tok.red;
+const Color kIncomeGreen = Tok.green;
 
 /// 品牌琥珀（选中 / 今天）。
-const Color kCalendarAccent = Color(0xFFFFAF38);
+const Color kCalendarAccent = Tok.brand;
 
 /// 月历网格。
 class MonthGrid extends StatelessWidget {
@@ -109,10 +110,14 @@ class MonthGrid extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          color: agg != null && agg.hasExpense
-              ? kExpenseRed.withValues(alpha: 0.14)
+          color: agg == null
+              ? Colors.transparent
+              : agg.hasExpense
+              ? Tok.redTint
+              : agg.hasIncome
+              ? Tok.greenTint
               : Colors.transparent,
-          border: selected ? Border.all(color: kCalendarAccent, width: 1.5) : null,
+          border: selected ? Border.all(color: Tok.ink, width: 2) : null,
         ),
         child: Column(
           children: <Widget>[
@@ -125,10 +130,10 @@ class MonthGrid extends StatelessWidget {
                     ? FontWeight.w700
                     : FontWeight.w500,
                 color: !inMonth
-                    ? Colors.white24
+                    ? Tok.ink3
                     : isToday
-                    ? kCalendarAccent
-                    : Colors.white,
+                    ? Tok.brandDeep
+                    : Tok.ink,
               ),
             ),
             const Spacer(),

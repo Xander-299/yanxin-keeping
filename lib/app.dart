@@ -7,12 +7,13 @@
 ///
 /// 搜索不是路由：F7.5 起改为覆盖在首页之上的浮层（`showSearchOverlay`）。
 ///
-/// 主题对齐 app_template/home_ui.jpg：深黑底 + 琥珀橙强调。
+/// 主题对齐页面原型（F7.6）：卡通浅色 —— 暖白画布 + 白卡 + 2.5px 墨色描边 + 硬阴影。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/features/assets/presentation/assets_page.dart';
 import 'package:yanxin/features/book/presentation/book_manage_page.dart';
 import 'package:yanxin/features/calendar/presentation/calendar_page.dart';
@@ -25,8 +26,8 @@ import 'package:yanxin/features/profile/presentation/profile_page.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 import 'package:yanxin/features/stats/presentation/stats_page.dart';
 
-/// 品牌橙（底栏中央按钮 / 选中态）。
-const Color kBrandOrange = Color(0xFFFFAF38);
+/// 品牌琥珀（底栏中央按钮 / 选中态）。
+const Color kBrandOrange = Tok.brand;
 
 class YanxinApp extends StatefulWidget {
   const YanxinApp({super.key});
@@ -95,29 +96,8 @@ class _YanxinAppState extends State<YanxinApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: '颜芯记账',
-      theme: _buildTheme(),
+      theme: buildToonTheme(),
       routerConfig: _router,
     );
   }
-}
-
-/// 深色主题：近黑背景 + 深灰卡片 + 琥珀橙强调。
-ThemeData _buildTheme() {
-  final ColorScheme scheme = ColorScheme.fromSeed(
-    seedColor: kBrandOrange,
-    brightness: Brightness.dark,
-  );
-  return ThemeData(
-    colorScheme: scheme,
-    useMaterial3: true,
-    scaffoldBackgroundColor: const Color(0xFF0C0C0C),
-    cardTheme: CardThemeData(
-      color: const Color(0xFF1B1B1D),
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: EdgeInsets.zero,
-    ),
-    appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF0C0C0C)),
-    dividerColor: Colors.white12,
-  );
 }

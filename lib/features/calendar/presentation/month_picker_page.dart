@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/date.dart';
 
 import '../application/calendar_controller.dart';
@@ -147,7 +148,7 @@ class _MiniMonth extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: isSelectedMonth ? kCalendarAccent : Colors.white,
+              color: isSelectedMonth ? Tok.brandDeep : Tok.ink,
             ),
           ),
           const SizedBox(height: 4),
@@ -205,10 +206,10 @@ class _MiniMonth extends StatelessWidget {
             fontSize: 9,
             height: 1,
             color: isSelected
-                ? const Color(0xFF241503)
+                ? Tok.brandInk
                 : hasTx
-                ? kCalendarAccent
-                : Colors.white54,
+                ? Tok.brandDeep
+                : Tok.ink3,
             fontWeight: isSelected || hasTx ? FontWeight.w700 : FontWeight.w400,
           ),
         ),
@@ -253,7 +254,7 @@ class _PillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFF1B1B1D),
+      color: Tok.paper,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,

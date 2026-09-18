@@ -14,6 +14,8 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
@@ -118,7 +120,7 @@ class HomePage extends ConsumerWidget {
   }
 }
 
-/// 顶部栏：左侧账本名（点开抽屉）+ 右侧三个占位图标。
+/// 顶部栏：左侧账本名（点开抽屉）+ 右侧搜索 / 报表（占位）/ 统计。
 class _Header extends StatelessWidget {
   const _Header({required this.bookName});
 
@@ -127,13 +129,14 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 4, 4),
+      padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
       child: Row(
         children: <Widget>[
           Expanded(
-            child: InkResponse(
+            child: ToonPress(
+              dx: 0,
+              dy: 0,
               onTap: Scaffold.maybeOf(context)?.openDrawer,
-              radius: 28,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
@@ -144,61 +147,39 @@ class _Header extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.4,
+                        color: Tok.ink,
                       ),
                     ),
                   ),
-                  const Icon(Icons.chevron_right, size: 24),
+                  const Icon(Icons.expand_more, size: 24, color: Tok.ink),
                 ],
               ),
             ),
           ),
-          _HeaderIcon(
+          ToonIconButton(
             icon: Icons.search_rounded,
             tooltip: '搜索',
+            boxed: true,
             // F7.5：不再是独立路由，改为覆盖在首页之上的浮层（首页留在底下当背景）
             onPressed: () => unawaited(showSearchOverlay(context)),
           ),
-          const _HeaderIcon(
+          ToonIconButton(
             icon: Icons.receipt_long_rounded,
             tooltip: '报表（建设中）',
+            boxed: true,
+            muted: true,
+            onPressed: () => _toast(context, '报表 · 建设中'),
           ),
-          _HeaderIcon(
-            icon: Icons.pie_chart_outline_rounded,
+          ToonIconButton(
+            icon: Icons.bar_chart_rounded,
             tooltip: '统计',
+            boxed: true,
             onPressed: () => context.push('/stats'),
           ),
         ],
       ),
-    );
-  }
-}
-
-/// header 图标：默认提示「建设中」，给了 [onPressed] 则执行真实动作。
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon, required this.tooltip, this.onPressed});
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed:
-          onPressed ??
-          () {
-            ScaffoldMessenger.of(context)
-              ..hideCurrentSnackBar()
-              ..showSnackBar(
-                const SnackBar(
-                  content: Text('功能建设中，敬请期待'),
-                  duration: Duration(seconds: 1),
-                ),
-              );
-          },
-      icon: Icon(icon, size: 22),
     );
   }
 }
@@ -209,53 +190,43 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 12, 4),
-      child: Row(
-        children: <Widget>[
-          const Text(
-            '本月账单',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+    return ToonSectionTitle(
+      title: '本月账单',
+      trailing: ToonPress(
+        dx: 2,
+        dy: 2,
+        onTap: () => _toast(context, '全部账单 · 建设中'),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: Tok.paper,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Tok.ink, width: 2),
+            boxShadow: Tok.hard(d: 2.5),
           ),
-          const Spacer(),
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text('全部账单 · 建设中'),
-                    duration: Duration(seconds: 1),
-                  ),
-                );
-            },
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Text(
-                  '全部账单',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                '全部账单',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+              ),
+              Icon(Icons.chevron_right, size: 15, color: Tok.ink),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
+}
+
+/// 统一的占位提示。
+void _toast(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+    );
 }
 
 /// 空态：必须「不用滚动就能看到」。
@@ -270,33 +241,39 @@ class _EmptyMonth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 6, 16, 12),
+      padding: const EdgeInsets.fromLTRB(18, 6, 16, 16),
       child: Row(
         children: <Widget>[
-          Icon(Icons.receipt_long_rounded, size: 20, color: muted),
-          const SizedBox(width: 8),
+          const Icon(Icons.receipt_long_rounded, size: 22, color: Tok.ink),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   '$year年$month月还没有记账',
-                  style: const TextStyle(fontSize: 14),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                 ),
-                Text(
+                const SizedBox(height: 2),
+                const Text(
                   '已有微信 / 支付宝账单？到「我的 → 导入账单」一键导入',
-                  style: TextStyle(fontSize: 11, color: muted),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: Tok.ink2,
+                  ),
                 ),
               ],
             ),
           ),
           TextButton.icon(
             onPressed: () => context.push('/record'),
-            icon: const Icon(Icons.add_rounded, size: 16),
+            icon: const Icon(Icons.add, size: 15),
             label: const Text('记一笔'),
             style: TextButton.styleFrom(
+              foregroundColor: Tok.brandDeep,
+              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,

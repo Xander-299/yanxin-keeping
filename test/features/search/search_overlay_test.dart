@@ -395,7 +395,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('删除这笔'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, '删除'));
+    // F7.6 起删除确认框用 ToonButton（胶囊按钮），不再是 TextButton
+    await tester.tap(find.text('删除'));
     await tester.pumpAndSettle();
 
     expect(_inOverlay(find.text('没有匹配「打车」的账单')), findsOneWidget);

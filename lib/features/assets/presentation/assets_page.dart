@@ -7,6 +7,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../application/account_meta.dart';
@@ -80,7 +81,7 @@ class _NetWorthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool negative = summary.netCents < 0;
-    final Color color = negative ? const Color(0xFFFF6B6B) : const Color(0xFFFFAF38);
+    final Color color = negative ? Tok.red : Tok.brandDeep;
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
@@ -146,13 +147,13 @@ class _AccountTile extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFAF38).withValues(alpha: 0.14),
+                  color: Tok.brandTint,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   accountTypeIcon(item.account.type),
                   size: 20,
-                  color: const Color(0xFFFFAF38),
+                  color: Tok.brandDeep,
                 ),
               ),
               const SizedBox(width: 12),

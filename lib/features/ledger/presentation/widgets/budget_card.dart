@@ -7,11 +7,16 @@
 ///
 /// 与旧占位卡的差别：**移除「示例」chip 与说明文案**，未设预算时给可点的引导
 /// 而不是假数字（首用验收 P2 的根因就是假数据与真实 hero 自相矛盾）。
+///
+/// 视觉对齐页面原型 `.budget`：白卡描边 + 58 环形（墨色外描边）+ 指标两列 +
+/// 虚线分割 + 圆点日均行。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/budget_controller.dart';
@@ -20,19 +25,16 @@ import '../../application/ledger_controller.dart';
 import 'budget_edit_sheet.dart';
 
 /// 正常（未超支）时的强调色。
-const Color kBudgetOk = Color(0xFF66BB6A);
+const Color kBudgetOk = Tok.green;
 
 /// 超支时的警示色。
-const Color kBudgetOver = Color(0xFFEF5350);
+const Color kBudgetOver = Tok.red;
 
-/// 日均消费的圆点色（与日历页的点色系一致）。
-const Color kDotAmber = Color(0xFFFFC978);
+/// 日均消费的圆点色（品牌琥珀）。
+const Color kDotAmber = Tok.brand;
 
 /// 剩余可消费的圆点色。
-const Color kDotPurple = Color(0xFFB39DDB);
-
-/// 卡片底色（与全局 cardTheme 一致，卡片自带圆角与内边距）。
-const Color kBudgetCardBg = Color(0xFF1B1B1D);
+const Color kDotPurple = Tok.purple;
 
 /// 预算卡。
 class BudgetCard extends ConsumerWidget {
@@ -90,13 +92,9 @@ class _BudgetShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+    return ToonCard(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-      decoration: BoxDecoration(
-        color: kBudgetCardBg,
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: child,
     );
   }
@@ -122,33 +120,14 @@ class _FilledBody extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: <Widget>[
-            SizedBox(
-              width: 60,
-              height: 60,
-              child: Stack(
-                alignment: Alignment.center,
-                children: <Widget>[
-                  SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: CircularProgressIndicator(
-                      value: view.progress,
-                      strokeWidth: 5,
-                      strokeCap: StrokeCap.round,
-                      color: accent,
-                      backgroundColor: Colors.white12,
-                    ),
-                  ),
-                  Text(
-                    view.percentText,
-                    style: TextStyle(fontSize: 12, color: accent),
-                  ),
-                ],
-              ),
+            ToonRing(
+              progress: view.progress,
+              color: accent,
+              text: view.percentText,
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 18),
             _Metric(value: centsToYuan(view.spentCents), label: '已消费'),
-            const SizedBox(width: 20),
+            const SizedBox(width: 14),
             _Metric(
               value: centsToYuan(view.remainingCents),
               label: '剩余额度',
@@ -156,13 +135,16 @@ class _FilledBody extends StatelessWidget {
             ),
           ],
         ),
-        const Divider(height: 20),
+        const Padding(
+          padding: EdgeInsets.only(top: 13, bottom: 11),
+          child: ToonDashedLine(),
+        ),
         _DayRow(
           dotColor: kDotAmber,
           label: '本月日均消费',
           value: centsToYuan(view.dailyAvgCents),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 9),
         _DayRow(
           dotColor: kDotPurple,
           label: '剩余每日可消费',
@@ -191,37 +173,39 @@ class _EmptyBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color muted = Colors.white.withValues(alpha: 0.55);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         _TitleRow(
           budgetYuan: '未设置',
-          budgetColor: muted,
+          budgetColor: Tok.ink3,
           onEdit: onEdit,
         ),
         const SizedBox(height: 10),
         Row(
           children: <Widget>[
-            Expanded(
+            const Expanded(
               child: Text(
                 '设一个月度预算，随时看到花销进度',
-                style: TextStyle(fontSize: 12, color: muted),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            FilledButton.tonal(
+            const SizedBox(width: 10),
+            ToonButton(
+              label: '设置$month月预算',
+              kind: ToonButtonKind.tonal,
+              small: true,
               onPressed: onEdit,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                minimumSize: const Size(0, 32),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text('设置$month月预算'),
             ),
           ],
         ),
-        const Divider(height: 20),
+        const Padding(
+          padding: EdgeInsets.only(top: 13, bottom: 11),
+          child: ToonDashedLine(),
+        ),
         _DayRow(
           dotColor: kDotAmber,
           label: '本月日均消费',
@@ -248,25 +232,34 @@ class _TitleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return ToonPress(
+      dx: 0,
+      dy: 0,
       onTap: onEdit,
-      borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
         child: Row(
           children: <Widget>[
-            const Text('本月预算', style: TextStyle(fontSize: 14)),
+            const Text(
+              '本月预算',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
             if (overspent) ...<Widget>[
-              const SizedBox(width: 6),
+              const SizedBox(width: 7),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: kBudgetOver.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(4),
+                  color: Tok.redTint,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Tok.ink, width: 2),
                 ),
                 child: const Text(
                   '已超支',
-                  style: TextStyle(fontSize: 10, color: kBudgetOver),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: Tok.red,
+                  ),
                 ),
               ),
             ],
@@ -275,15 +268,12 @@ class _TitleRow extends StatelessWidget {
               budgetYuan,
               style: TextStyle(
                 fontSize: 13,
-                color: budgetColor ?? Colors.white.withValues(alpha: 0.85),
+                fontWeight: FontWeight.w600,
+                color: budgetColor ?? Tok.ink2,
               ),
             ),
-            const SizedBox(width: 4),
-            Icon(
-              Icons.edit_note_rounded,
-              size: 18,
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
+            const SizedBox(width: 6),
+            const Icon(Icons.edit_outlined, size: 17, color: Tok.ink2),
           ],
         ),
       ),
@@ -300,26 +290,33 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: valueColor ?? Colors.white,
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: valueColor ?? Tok.ink,
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.white.withValues(alpha: 0.55),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Tok.ink2,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -342,25 +339,30 @@ class _DayRow extends StatelessWidget {
     return Row(
       children: <Widget>[
         Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: dotColor,
+            border: Border.all(color: Tok.ink, width: 2),
+          ),
         ),
         const SizedBox(width: 8),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.7),
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: Tok.ink2,
           ),
         ),
         const Spacer(),
         Text(
           value,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: valueColor ?? Colors.white,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w900,
+            color: valueColor ?? Tok.ink,
           ),
         ),
       ],
@@ -374,23 +376,22 @@ class _LoadingBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       children: <Widget>[
-        const Text('本月预算', style: TextStyle(fontSize: 14)),
-        const Spacer(),
+        Text(
+          '本月预算',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
+        Spacer(),
         SizedBox(
           width: 14,
           height: 14,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white.withValues(alpha: 0.4),
-          ),
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ],
     );
   }
 }
-
 /// 读取失败：如实告知 + 重试，而不是伪装成「未设置预算」。
 class _ErrorBody extends StatelessWidget {
   const _ErrorBody({required this.onRetry});
@@ -401,24 +402,32 @@ class _ErrorBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: <Widget>[
-        const Text('本月预算', style: TextStyle(fontSize: 14)),
+        const Text(
+          '本月预算',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+        ),
         const SizedBox(width: 8),
-        Text(
+        const Text(
           '读取失败',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.55),
+            fontWeight: FontWeight.w600,
+            color: Tok.ink2,
           ),
         ),
         const Spacer(),
         TextButton(
           onPressed: onRetry,
           style: TextButton.styleFrom(
+            foregroundColor: Tok.brandDeep,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          child: const Text('重试', style: TextStyle(fontSize: 12)),
+          child: const Text(
+            '重试',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          ),
         ),
       ],
     );

@@ -18,6 +18,8 @@ import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
@@ -119,11 +121,19 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     return null;
   }
 
-  Future<void> _pickCategory(List<Category> visible) async {
-    final picked = await showCategoryPicker(context, categories: visible);
-    if (picked != null) {
-      setState(() => _categoryId = picked.id);
-    }
+  /// 选分类。弹层内部可切支出/收入，故传全量分类，并以选中项的 kind 回写类型。
+  Future<void> _pickCategory(List<Category> all) async {
+    final picked = await showCategoryPicker(
+      context,
+      categories: all,
+      kind: _type,
+      selectedId: _categoryId,
+    );
+    if (picked == null) return;
+    setState(() {
+      _categoryId = picked.id;
+      _type = picked.kind;
+    });
   }
 
   Future<void> _save() async {
@@ -197,9 +207,6 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     // 编辑模式的极端情况），这一帧退化为轻量占位，provider 完成后自动重渲染
     final categories =
         ref.watch(categoriesProvider).value ?? const <Category>[];
-    final visible = categories
-        .where((Category c) => c.kind == _type)
-        .toList(growable: false);
     final selected = _selectedCategory(categories);
 
     return Scaffold(
@@ -210,110 +217,115 @@ class _RecordPageState extends ConsumerState<RecordPage> {
         actions: <Widget>[
           TextButton(
             onPressed: _saving ? null : _save,
+            style: TextButton.styleFrom(
+              foregroundColor: Tok.brandDeep,
+              textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+            ),
             child: const Text('保存'),
           ),
         ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
           child: Column(
             children: <Widget>[
-              SegmentedButton<String>(
-                segments: const <ButtonSegment<String>>[
-                  ButtonSegment<String>(value: 'expense', label: Text('支出')),
-                  ButtonSegment<String>(value: 'income', label: Text('收入')),
-                ],
-                selected: <String>{_type},
-                onSelectionChanged: (Set<String> next) {
-                  setState(() {
-                    _type = next.first;
-                    // 切类型后原分类不再适用，清空让用户重选
-                    final stillValid = categories.any(
-                      (Category c) => c.id == _categoryId && c.kind == _type,
-                    );
-                    if (!stillValid) _categoryId = null;
-                  });
-                },
+              Center(
+                child: ToonSeg(
+                  labels: const <String>['支出', '收入'],
+                  index: _type == 'income' ? 1 : 0,
+                  onChanged: (int i) {
+                    setState(() {
+                      _type = i == 1 ? 'income' : 'expense';
+                      // 切类型后原分类不再适用，清空让用户重选
+                      final bool stillValid = categories.any(
+                        (Category c) => c.id == _categoryId && c.kind == _type,
+                      );
+                      if (!stillValid) _categoryId = null;
+                    });
+                  },
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               AmountKeyboard(
                 value: _amount,
                 onKey: (String key) => setState(
                   () => _amount = applyAmountKey(_amount, key),
                 ),
               ),
-              const SizedBox(height: 16),
-              _FieldTile(
+              const SizedBox(height: 6),
+              ToonField(
                 label: '分类',
-                value: selected?.name,
-                placeholder: '请选择分类',
-                onTap: () => _pickCategory(visible),
+                value: selected?.name ?? '请选择分类',
+                placeholder: selected == null,
+                onTap: () => _pickCategory(categories),
+                trailing: selected == null
+                    ? null
+                    : ToonAvatar(
+                        text: selected.name.isEmpty
+                            ? '?'
+                            : selected.name.substring(0, 1),
+                        small: true,
+                        bg: _type == 'income' ? Tok.greenTint : Tok.redTint,
+                        fg: _type == 'income' ? Tok.green : Tok.red,
+                      ),
               ),
-              _FieldTile(
+              ToonField(
                 label: '日期',
                 value: formatFullDay(
                   DateTime.fromMillisecondsSinceEpoch(_occurredAtMs),
                 ),
-                placeholder: '',
                 onTap: _pickDate,
+                dashedTop: true,
               ),
-              TextField(
-                controller: _noteController,
-                decoration: const InputDecoration(
-                  labelText: '备注',
-                  hintText: '选填',
+              ToonField(
+                label: '备注',
+                dashedTop: true,
+                child: TextField(
+                  controller: _noteController,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  // 原型这里是裸 input（`style="border:0"`）：必须逐项关掉主题的
+                  // 填充 + 描边，否则 `InputDecoration.collapsed` 仍会吃到
+                  // `inputDecorationTheme.filled` 渲染出一个白框。
+                  decoration: const InputDecoration(
+                    hintText: '选填',
+                    hintStyle: TextStyle(
+                      color: Tok.ink3,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    filled: false,
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: Text(_isEdit ? '保存修改' : '记一笔'),
+              ToonButton(
+                label: _isEdit ? '保存修改' : '记一笔',
+                block: true,
+                onPressed: _saving ? null : _save,
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '保存后首页 / 日历 / 统计 / 资产同步刷新',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _FieldTile extends StatelessWidget {
-  const _FieldTile({
-    required this.label,
-    required this.value,
-    required this.placeholder,
-    required this.onTap,
-  });
-
-  final String label;
-  final String? value;
-  final String placeholder;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(label),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            value ?? placeholder,
-            style: TextStyle(
-              color: value == null
-                  ? Theme.of(context).colorScheme.onSurfaceVariant
-                  : null,
-            ),
-          ),
-          const Icon(Icons.chevron_right),
-        ],
-      ),
-      onTap: onTap,
     );
   }
 }

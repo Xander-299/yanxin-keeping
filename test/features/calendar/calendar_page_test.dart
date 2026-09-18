@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
@@ -223,9 +224,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(cat.name).last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byType(FilledButton));
+    // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton
+    await tester.ensureVisible(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
 
     final rows = await TransactionRepository(db).listByMonth(book.id, 2026, 3);

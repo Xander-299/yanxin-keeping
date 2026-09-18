@@ -1,14 +1,21 @@
-/// 首页结余主卡：琥珀渐变 + 本月支出大数字 + 收入/结余 + 月份切换 ‹ ›。
+/// 首页结余主卡：品牌色 hero + 本月支出大数字 + 收入/结余 + 月份切换 ‹ ›。
 ///
-/// 视觉对齐 app_template/home_ui.jpg 的 hero 卡（浅琥珀底、深色字）。
+/// 视觉对齐页面原型 `.hero`：实心琥珀底 + 3px 墨色描边 + 6px 硬阴影 +
+/// 右上角装饰圆 + 小猪存钱罐 + 四角星贴纸。
+///
+/// 原型的 hero 上还有「小猪摇摆」循环动画，这里**故意不做**：
+/// 无限动画会让 widget 测试里的 `pumpAndSettle` 永不收敛。
 library;
 
 import 'package:flutter/material.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
+
 import '../../application/month_summary.dart';
 
 /// hero 卡深色文字基色（琥珀底上的深棕）。
-const Color kHeroInk = Color(0xFF241503);
+const Color kHeroInk = Tok.heroInk;
 
 /// 结余主卡。
 class MonthHero extends StatelessWidget {
@@ -38,56 +45,114 @@ class MonthHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFFFFE8C2), Color(0xFFFFC978)],
-        ),
+        color: Tok.brand,
+        borderRadius: BorderRadius.circular(Tok.rXl),
+        border: Border.all(color: Tok.ink, width: 3),
+        boxShadow: Tok.hard(d: 6),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              Text(
-                '$month月 · 支出',
-                style: TextStyle(
-                  color: kHeroInk.withValues(alpha: 0.65),
-                  fontSize: 13,
-                ),
+          // 右上角装饰圆（原型 `.hero::after`）
+          Positioned(
+            right: -80,
+            top: -110,
+            child: Container(
+              width: 210,
+              height: 210,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Tok.paper.withValues(alpha: 0.32),
+                border: Border.all(color: Tok.ink.withValues(alpha: 0.16), width: 3),
               ),
-              const Spacer(),
-              _RoundButton(label: '‹', onTap: onPrevMonth),
-              const SizedBox(width: 8),
-              _RoundButton(
-                label: '›',
-                enabled: canNext,
-                onTap: canNext ? onNextMonth : null,
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            summary.expenseYuan,
-            style: const TextStyle(
-              color: kHeroInk,
-              fontSize: 38,
-              height: 1.15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              _HeroCell(label: '收入', value: summary.incomeYuan),
-              const SizedBox(width: 28),
-              _HeroCell(label: '结余', value: summary.balanceYuan),
-            ],
+          // 星贴纸 + 小猪（歪 6°）。**画在内容之前** —— 原型里也是内容压住小猪，
+          // 否则 64px 的小猪会盖掉右上角的翻月按钮。
+          const Positioned(right: 86, top: 12, child: Sparkle(size: 21)),
+          const Positioned(
+            right: 24,
+            bottom: 14,
+            child: Sparkle(size: 15, opacity: 0.9),
+          ),
+          const Positioned(
+            right: 2,
+            top: 22,
+            child: PigMascot(size: 64, rotate: true),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 18, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Text(
+                      '$month月 · 支出',
+                      style: TextStyle(
+                        color: kHeroInk.withValues(alpha: 0.78),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const Spacer(),
+                    _RoundButton(label: '‹', onTap: onPrevMonth),
+                    const SizedBox(width: 8),
+                    _RoundButton(
+                      label: '›',
+                      enabled: canNext,
+                      onTap: canNext ? onNextMonth : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: <Widget>[
+                    const Text(
+                      '¥',
+                      style: TextStyle(
+                        color: kHeroInk,
+                        fontSize: 23,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(
+                        summary.expenseYuan,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: kHeroInk,
+                          fontSize: 40,
+                          height: 1.1,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                          shadows: <Shadow>[
+                            Shadow(
+                              color: Color(0xD9FFFFFF),
+                              offset: Offset(2.5, 2.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    _HeroCell(label: '收入', value: summary.incomeYuan),
+                    const SizedBox(width: 14),
+                    _HeroCell(label: '结余', value: summary.balanceYuan),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -95,6 +160,7 @@ class MonthHero extends StatelessWidget {
   }
 }
 
+/// hero 上的翻月圆钮（原型 `.h-nav button`）。
 class _RoundButton extends StatelessWidget {
   const _RoundButton({
     required this.label,
@@ -108,24 +174,33 @@ class _RoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkResponse(
-      onTap: onTap,
-      radius: 20,
+    return ToonPress(
+      dx: 2,
+      dy: 2,
+      onTap: enabled ? onTap : null,
       child: Container(
-        width: 30,
-        height: 30,
+        width: 32,
+        height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
+          color: enabled ? Tok.paper : Tok.paper.withValues(alpha: 0.45),
           shape: BoxShape.circle,
-          color: Colors.black.withValues(alpha: enabled ? 0.08 : 0.04),
+          border: Border.all(
+            color: enabled ? Tok.ink : Tok.ink.withValues(alpha: 0.3),
+            width: 2.5,
+          ),
+          boxShadow: Tok.hard(
+            d: 2.5,
+            color: enabled ? Tok.ink : Tok.ink.withValues(alpha: 0.3),
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: kHeroInk.withValues(alpha: enabled ? 0.9 : 0.35),
-            fontSize: 18,
+            color: enabled ? Tok.ink : Tok.ink.withValues(alpha: 0.35),
+            fontSize: 17,
             height: 1,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
@@ -133,6 +208,7 @@ class _RoundButton extends StatelessWidget {
   }
 }
 
+/// 收入 / 结余气泡（原型 `.h-sub .c`）。
 class _HeroCell extends StatelessWidget {
   const _HeroCell({required this.label, required this.value});
 
@@ -141,27 +217,41 @@ class _HeroCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: <Widget>[
-        Text(
-          label,
-          style: TextStyle(
-            color: kHeroInk.withValues(alpha: 0.65),
-            fontSize: 12,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
+      decoration: BoxDecoration(
+        color: Tok.paper.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Tok.ink.withValues(alpha: 0.55), width: 2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: TextStyle(
+              color: kHeroInk.withValues(alpha: 0.8),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          value,
-          style: const TextStyle(
-            color: kHeroInk,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
+          const SizedBox(width: 7),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: kHeroInk,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

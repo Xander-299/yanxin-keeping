@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/providers/book_providers.dart';
+import 'package:yanxin/core/theme/tokens.dart';
 
 /// 我的。
 class ProfilePage extends ConsumerWidget {
@@ -23,8 +24,11 @@ class ProfilePage extends ConsumerWidget {
               children: <Widget>[
                 const CircleAvatar(
                   radius: 28,
-                  backgroundColor: Color(0xFF2A2A2E),
-                  child: Text('颜', style: TextStyle(fontSize: 22)),
+                  backgroundColor: Tok.brandTint,
+                  child: Text(
+                    '颜',
+                    style: TextStyle(fontSize: 22, color: Tok.brandInk),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Column(

@@ -1,12 +1,12 @@
-/// 底部导航壳：4 tab + 中央橙色「记一笔」按钮。
+/// 底部导航壳：4 tab + 中央「记一笔」按钮（卡通风，对齐页面原型 `.tabbar`）。
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:yanxin/app.dart'
-    show kBrandOrange;
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/book_drawer.dart';
 
 /// 导航壳：持有抽屉（账本列表）+ 底栏。
@@ -50,7 +50,7 @@ class _BottomNav extends StatelessWidget {
   static const List<String> _labels = <String>['首页', '日历', '', '资产', '我的'];
   static const List<IconData> _icons = <IconData>[
     Icons.home_rounded,
-    Icons.calendar_month_rounded,
+    Icons.calendar_today_rounded,
     Icons.add,
     Icons.account_balance_wallet_rounded,
     Icons.person_rounded,
@@ -58,31 +58,30 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color inactive = Colors.white54;
-    return SafeArea(
-      top: false,
-      child: Container(
-        height: 64,
-        decoration: const BoxDecoration(
-          color: Color(0xFF121214),
-          border: Border(top: BorderSide(color: Colors.white10)),
-        ),
-        child: Row(
-          children: <Widget>[
-            for (int slot = 0; slot < 5; slot++)
-              Expanded(
-                child: slot == 2
-                    ? _CenterAddButton(onTap: () => onTap(2))
-                    : _NavItem(
-                        icon: _icons[slot],
-                        label: _labels[slot],
-                        selected: _branchIndex(slot) == currentIndex,
-                        color: kBrandOrange,
-                        inactive: inactive,
-                        onTap: () => onTap(slot),
-                      ),
-              ),
-          ],
+    return Container(
+      decoration: const BoxDecoration(
+        color: Tok.paper,
+        border: Border(top: BorderSide(color: Tok.ink, width: Tok.bw)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 68,
+          child: Row(
+            children: <Widget>[
+              for (int slot = 0; slot < 5; slot++)
+                Expanded(
+                  child: slot == 2
+                      ? _CenterAddButton(onTap: () => onTap(2))
+                      : _NavItem(
+                          icon: _icons[slot],
+                          label: _labels[slot],
+                          selected: _branchIndex(slot) == currentIndex,
+                          onTap: () => onTap(slot),
+                        ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -92,37 +91,49 @@ class _BottomNav extends StatelessWidget {
   static int _branchIndex(int slot) => slot < 2 ? slot : slot - 1;
 }
 
+/// 单个 tab：选中时图标变成一颗「品牌色 + 描边 + 硬阴影」的圆角方块。
 class _NavItem extends StatelessWidget {
   const _NavItem({
     required this.icon,
     required this.label,
     required this.selected,
-    required this.color,
-    required this.inactive,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
-  final Color color;
-  final Color inactive;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final Color c = selected ? color : inactive;
-    return InkResponse(
+    final Color fg = selected ? Tok.brandInk : Tok.ink3;
+    return ToonPress(
+      dx: 0,
+      dy: 0,
       onTap: onTap,
-      radius: 32,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          Icon(icon, size: 24, color: c),
-          const SizedBox(height: 2),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: selected
+                ? BoxDecoration(
+                    color: Tok.brand,
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: Tok.ink, width: 2),
+                    boxShadow: Tok.hard(d: 2),
+                  )
+                : BoxDecoration(
+                    borderRadius: BorderRadius.circular(11),
+                    border: Border.all(color: Colors.transparent, width: 2),
+                  ),
+            child: Icon(icon, size: 22, color: fg),
+          ),
+          const SizedBox(height: 3),
           Text(
             label,
-            style: TextStyle(fontSize: 11, height: 1, color: c),
+            style: TextStyle(fontSize: 11, height: 1, fontWeight: FontWeight.w700, color: fg),
           ),
         ],
       ),
@@ -130,7 +141,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// 中央橙色 + 按钮（对齐参考图：圆角方块）。
+/// 中央「记一笔」：品牌色圆角方块 + 描边 + 硬阴影，默认歪 4°（原型 `.tab.mid .fab`）。
 class _CenterAddButton extends StatelessWidget {
   const _CenterAddButton({required this.onTap});
 
@@ -141,16 +152,21 @@ class _CenterAddButton extends StatelessWidget {
     return Center(
       child: Tooltip(
         message: '记一笔',
-        child: Material(
-          color: kBrandOrange,
-          borderRadius: BorderRadius.circular(16),
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(16),
-            child: const SizedBox(
-              width: 46,
-              height: 40,
-              child: Icon(Icons.add, size: 26, color: Color(0xFF241503)),
+        child: ToonPress(
+          onTap: onTap,
+          child: Transform.rotate(
+            angle: -4 * 3.1415926535 / 180,
+            child: Container(
+              width: 54,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Tok.brand,
+                borderRadius: BorderRadius.circular(17),
+                border: Tok.inkBorder(),
+                boxShadow: Tok.hard(d: 4),
+              ),
+              child: const Icon(Icons.add, size: 27, color: Tok.brandInk),
             ),
           ),
         ),

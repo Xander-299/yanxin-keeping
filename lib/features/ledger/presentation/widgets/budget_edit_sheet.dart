@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/budget_controller.dart';
@@ -26,9 +27,10 @@ Future<void> showBudgetEditSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: const Color(0xFF1B1B1D),
+    backgroundColor: Tok.paper,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: Tok.ink, width: Tok.bw),
     ),
     builder: (BuildContext _) => _BudgetEditSheet(initialCents: view.budgetCents),
   );
@@ -179,11 +181,12 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
-              Text(
+              const Text(
                 '用于在首页看到本月花销进度与剩余额度',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.55),
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
                 ),
               ),
               const SizedBox(height: 16),

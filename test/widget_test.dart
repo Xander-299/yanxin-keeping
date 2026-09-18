@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
@@ -50,9 +51,10 @@ void main() {
     await tester.tap(find.text(cat.name).last);
     await tester.pumpAndSettle();
     // 保存（内容可能超出测试视口，先滚到可见）
-    await tester.ensureVisible(find.byType(FilledButton));
+    // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton
+    await tester.ensureVisible(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
 
     // 回到首页：hero 结余 -12.00、支出 12.00，列表出现 -12.00
@@ -78,9 +80,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(cat.name).last);
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byType(FilledButton));
+    await tester.ensureVisible(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
     expect(find.text('-1.00'), findsNWidgets(2)); // hero 结余 + 列表金额
 
@@ -91,7 +93,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.longPress(find.text(cat.name));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, '删除'));
+    // F7.6 起删除确认框用 ToonButton（胶囊按钮），不再是 TextButton
+    await tester.tap(find.text('删除'));
     await tester.pumpAndSettle();
     await pumpUntil(tester, find.textContaining('还没有记账'));
 

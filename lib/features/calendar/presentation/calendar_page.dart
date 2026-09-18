@@ -13,6 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
@@ -197,14 +199,11 @@ class _SummaryBar extends StatelessWidget {
         ? kExpenseRed
         : balance > 0
         ? kIncomeGreen
-        : Colors.white;
+        : Tok.ink;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1B1B1D),
-        borderRadius: BorderRadius.circular(14),
-      ),
+      decoration: Tok.cardDeco(radius: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
@@ -356,17 +355,19 @@ class _EmptyDay extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
       child: Column(
         children: <Widget>[
-          const Icon(Icons.event_note_rounded, size: 48, color: Colors.white12),
+          const Icon(Icons.event_note_rounded, size: 48, color: Tok.ink3),
           const SizedBox(height: 10),
           Text(
             '这天没有账单哦，赶紧记一笔吧~',
             style: TextStyle(fontSize: 13, color: muted),
           ),
           const SizedBox(height: 14),
-          FilledButton.tonalIcon(
+          ToonButton(
+            label: '记一笔',
+            icon: Icons.add,
+            kind: ToonButtonKind.tonal,
+            small: true,
             onPressed: () => context.push('/record?date=$dayMs'),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('记一笔'),
           ),
         ],
       ),

@@ -7,6 +7,34 @@
 
 ## [Unreleased]
 
+### 新增 — F7.6 P1 卡通浅色视觉改版（2026-09-18）
+
+- **背景**：页面原型（`modao/yanxin/`，卡通风格）与本 App 的深色视觉是**两套体系**；
+  且配色散在 15 个文件里硬编码，没有令牌层。用户确认：**全站硬替换为原型浅色 / 分 3 批交付 / 零新依赖**。
+  小 SPEC：`docs/SPEC-F7.6-cartoon-ui.md`（已签字）。
+- **新增主题底座**：
+  - `lib/core/theme/tokens.dart` —— 令牌 1:1 取自原型 `:root`（暖白画布 `#FFF7EA`、
+    白卡、墨色 `#2A2A35` 描边 2.5px、硬阴影 `4px 4px 0`、四档圆角 28/22/16/12、
+    糖果色 `#FF5D5D`/`#2FC98A`、九色分类调色板）；`buildToonTheme()` 并把
+    `onSurfaceVariant` 映射到次级灰 —— 旧页面「次要文字用 onSurfaceVariant」的写法自动跟随。
+  - `lib/core/theme/toon.dart` —— 通用控件：`ToonCard / ToonButton（primary/tonal/ghost/danger）/
+    ToonIconButton / ToonChip / ToonSeg / ToonField / ToonAvatar / ToonDashedLine / ToonRing /
+    ToonSectionTitle`，按下「陷进去」的统一反馈 `ToonPress`。
+  - **小猪存钱罐 + 四角星**用 `CustomPainter` 按原型坐标（64 / 24 网格）手绘，**未引任何新依赖**。
+- **P1 页面**：底栏（选中 tab 变品牌色描边方块、中央「记一笔」歪 4°）、首页（header 三图标描边方块、
+  hero 实心琥珀 + 装饰圆 + 小猪 + 双星贴纸 + 收入/结余气泡、预算卡环形进度加上墨色外描边技法、
+  分组气泡「今天 · 2 笔」、空态单行）、记一笔（`ToonSeg` + 金额框 + 卡通键盘 + 三个 `ToonField` +
+  胶囊主按钮，分类弹层改抓手 + 4 列宫格）、删除确认框、账本抽屉。
+- **全站取色清剿**：日历 / 月份选择 / 统计 / 资产 / 我的 / 预算与账户 sheet 的写死深色值全部换成令牌
+  （换浅色后这些文件原本是「白底白字」不可见）。
+- **顺带修文案**：删除确认框原写「删除后在回收站保留」——实际没有回收站 UI，改为
+  「删除后为软删除（deleted_at），不再出现在任何统计里」。
+- **验证**：`flutter analyze` 0 issue；`flutter test` **269 通过 0 skip**。
+  测试同步改 3 处（删除按钮 `TextButton`→`ToonButton`、主按钮 `FilledButton`→`ToonButton`）。
+- **与原型的有意偏离**：hero 小猪**不做摇摆循环动画**（无限动画会让 `pumpAndSettle` 永不收敛）；
+  分类弹层不放收支 seg；图标用 Material 近似；原型顶部状态栏不实现。
+- **待排期**：P2（日历 / 月份选择 / 统计 / 资产）、P3（我的 / 账本 / 分类 / 导入 / 搜索浮层）。
+
 ### 文档 — 汇总一份《功能需求文档》（2026-09-18）
 
 - 新增 **`docs/PRD-yanxin-flutter.md`**：把散落在迁移 SPEC、4 份小 SPEC、HANDOFF / CHANGELOG 里的

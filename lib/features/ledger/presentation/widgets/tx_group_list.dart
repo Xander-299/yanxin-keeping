@@ -1,9 +1,14 @@
 /// 流水列表：按本地日期分组，倒序展示。
+///
+/// 视觉对齐页面原型 `.list` + `.group-label`：分组是贴着的小气泡贴纸，
+/// 列表是白卡描边 + 硬阴影，组内条目之间用虚线分隔。
 library;
 
 import 'package:flutter/material.dart';
 
 import '../../../../core/db/database.dart';
+import '../../../../core/theme/tokens.dart';
+import '../../../../core/theme/toon.dart';
 import '../../../../core/utils/date.dart';
 import '../../../../core/utils/money.dart';
 
@@ -41,26 +46,26 @@ class TxGroupList extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                group.label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
+              padding: const EdgeInsets.fromLTRB(18, 14, 18, 8),
+              child: _GroupChip(label: group.label, count: group.items.length),
             ),
-            Card(
+            Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               clipBehavior: Clip.antiAlias,
+              decoration: Tok.cardDeco(),
               child: Column(
                 children: <Widget>[
-                  for (final tx in group.items)
-                    TxTile(
-                      tx: tx,
-                      categoryName: categoryNameOf(tx.categoryId),
-                      onTap: () => onEdit(tx),
-                      onLongPress: () => onDelete(tx),
+                  for (int i = 0; i < group.items.length; i++)
+                    Column(
+                      children: <Widget>[
+                        if (i > 0) const ToonDashedLine(),
+                        TxTile(
+                          tx: group.items[i],
+                          categoryName: categoryNameOf(group.items[i].categoryId),
+                          onTap: () => onEdit(group.items[i]),
+                          onLongPress: () => onDelete(group.items[i]),
+                        ),
+                      ],
                     ),
                 ],
               ),
@@ -68,6 +73,47 @@ class TxGroupList extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// 日期分组气泡：`今天` / `今天 · 2 笔`。
+class _GroupChip extends StatelessWidget {
+  const _GroupChip({required this.label, required this.count});
+
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: Tok.paper,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Tok.ink, width: 2),
+        boxShadow: Tok.hard(d: 2.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          ),
+          if (count > 1) ...<Widget>[
+            const SizedBox(width: 4),
+            Text(
+              '· $count 笔',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Tok.ink2,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -89,51 +135,66 @@ class TxTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isIncome = tx.type == 'income';
-    final initial = categoryName.isEmpty ? '?' : categoryName.substring(0, 1);
-    // 深色主题下的收支配色（中国习惯：支出红 / 收入绿）
-    final amountColor = isIncome ? const Color(0xFF66BB6A) : const Color(0xFFEF5350);
-    final sign = isIncome ? '+' : '-';
-    return InkWell(
+    final bool isIncome = tx.type == 'income';
+    final String initial = categoryName.isEmpty ? '?' : categoryName.substring(0, 1);
+    // 中国习惯：支出红 / 收入绿（糖果色，对齐原型）
+    final Color amountColor = isIncome ? Tok.green : Tok.red;
+    final String sign = isIncome ? '+' : '-';
+    return ToonPress(
+      dx: 0,
+      dy: 0,
       onTap: onTap,
       onLongPress: onLongPress,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
           children: <Widget>[
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: amountColor.withValues(alpha: 0.12),
-              child: Text(
-                initial,
-                style: TextStyle(color: amountColor, fontSize: 14),
-              ),
+            ToonAvatar(
+              text: initial,
+              bg: isIncome ? Tok.greenTint : Tok.redTint,
+              fg: amountColor,
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              // 分类名与备注同排（原型 `.tx-name` + `.tx-note` 一行）
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: <Widget>[
-                  Text(categoryName, style: const TextStyle(fontSize: 15)),
-                  if (tx.note.isNotEmpty)
-                    Text(
-                      tx.note,
+                  Flexible(
+                    child: Text(
+                      categoryName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (tx.note.isNotEmpty) ...<Widget>[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      flex: 2,
+                      child: Text(
+                        tx.note,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Tok.ink2,
+                        ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             Text(
               '$sign${centsToYuan(tx.amountCents)}',
               style: TextStyle(
                 color: amountColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontSize: 15.5,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
