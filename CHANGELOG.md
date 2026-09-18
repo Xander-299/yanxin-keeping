@@ -7,6 +7,28 @@
 
 ## [Unreleased]
 
+### 新增 — F7.6 P2 卡通视觉改版（日历 / 统计 / 资产）（2026-09-19）
+
+- **范围**：`docs/SPEC-F7.6-cartoon-ui.md` 第 2 批。日历页、月份选择页、统计页、资产页 + 3 个共用件。
+- **共用件**：`ToonIconButton` 补 muted 变体（虚线灰 → 用于「报表（建设中）」占位）；
+  新增 `ToonDashedBorder`（虚线描边容器）；`appBarTheme` 加底部墨色描边（原型 `.appbar`），
+  snackBar / dialog / bottomSheet / input 的描边宽度统一到 `Tok.bw`。
+- **日历页**：header 图标换描边方块；选中日头部改「**N 笔 · 支出 ¥x**」；空态改**虚线圆 + 小猪** + 卡通文案；
+  流水列表去掉外框 `Card`（描边会与行卡翻倍）。
+- **月历格子**：选中态描边改墨色 2px（原来只有淡琥珀边）；收支底色改 `Tok.redTint` / `greenTint`；
+  「今天」用 `brandDeep`。
+- **月份选择页**：appbar 扁平化（仅保留 muted 报表占位）；`‹ 上一年` / `下一年 ›` 换 `_PillButton` 描边胶囊。
+- **统计页**：月份切换换 `ToonIconButton`；收支切换从 `SegmentedButton` → `ToonSeg`；
+  汇总三列 / 图例 / 分类占比行统一令牌色。
+- **趋势柱图**：柱参数按原型重做 —— 宽 13、圆角 `6 6 3 3`、**2px 墨色描边**
+  （Container 的 border 画在尺寸内侧，故高度 +4 抵消原型 content-box 的差）；轴标签 `Tok.ink2` w800。
+- **资产页**：净资产卡改**品牌浅琥珀底**（原型 `.networth`）+ 32px 大号金额；账户行换 `ToonPress` 描边卡。
+- **杂项**：账户 sheet 的错误提示 / 删除按钮色改 `Tok.red`；预算卡「未设预算」态不再渲染整行占位；
+  记一笔 body 改纯白（原型 `pbody` 用 `--surface`，不是全局暖白画布）。
+- **验证**：`flutter analyze` 0 issue；`flutter test` **269 通过 0 skip**（同步改 `budget_card_test` 一处断言）。
+  ⚠️ **本批尚未真机走查**（走查时 MuMu 已关闭）。
+- **待排期**：P3（我的 / 账本 / 分类 / 导入 / 搜索浮层 + 清掉 `import_page` 与 `search_overlay` 的裸色值）。
+
 ### 新增 — F7.6 P1 卡通浅色视觉改版（2026-09-18）
 
 - **背景**：页面原型（`modao/yanxin/`，卡通风格）与本 App 的深色视觉是**两套体系**；
@@ -34,6 +56,7 @@
 - **与原型的有意偏离**：hero 小猪**不做摇摆循环动画**（无限动画会让 `pumpAndSettle` 永不收敛）；
   分类弹层不放收支 seg；图标用 Material 近似；原型顶部状态栏不实现。
 - **待排期**：P2（日历 / 月份选择 / 统计 / 资产）、P3（我的 / 账本 / 分类 / 导入 / 搜索浮层）。
+  → P2 已于 2026-09-19 交付，见上一条。
 
 ### 文档 — 汇总一份《功能需求文档》（2026-09-18）
 

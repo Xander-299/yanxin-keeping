@@ -62,7 +62,8 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
     // 回填金额：1000.00 → 1000（去掉无意义的 .00，方便直接改）
     _balance = TextEditingController(
       text: (a?.initialBalanceCents ?? 0) > 0
-          ? centsToYuan(a!.initialBalanceCents).replaceFirst(RegExp(r'\.00$'), '')
+          ? centsToYuan(a!.initialBalanceCents)
+                .replaceFirst(RegExp(r'\.00$'), '')
           : '',
     );
   }
@@ -106,18 +107,18 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
     try {
       final Account? a = widget.account;
       if (a == null) {
-        await ref.read(assetsProvider.notifier).addAccount(
-          name: name,
-          type: _type,
-          initialBalanceCents: cents,
-        );
+        await ref
+            .read(assetsProvider.notifier)
+            .addAccount(name: name, type: _type, initialBalanceCents: cents);
       } else {
-        await ref.read(assetsProvider.notifier).updateAccount(
-          a.id,
-          name: name,
-          type: _type,
-          initialBalanceCents: cents,
-        );
+        await ref
+            .read(assetsProvider.notifier)
+            .updateAccount(
+              a.id,
+              name: name,
+              type: _type,
+              initialBalanceCents: cents,
+            );
       }
     } on Object catch (e) {
       if (!mounted) return;
@@ -210,7 +211,9 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
   Widget build(BuildContext context) {
     return Padding(
       // 键盘弹起时把内容顶上来
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SafeArea(
         top: false,
         child: SingleChildScrollView(
@@ -222,7 +225,10 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
               children: <Widget>[
                 Text(
                   _isEdit ? '编辑账户' : '新增账户',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -256,7 +262,9 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _balance,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
                   ],
@@ -273,7 +281,7 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
                       _error!,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFFFF6B6B)),
+                      style: const TextStyle(fontSize: 12, color: Tok.red),
                     ),
                   ),
                 const SizedBox(height: 20),
@@ -284,12 +292,14 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                         onPressed: _busy ? null : _delete,
                         child: const Text(
                           '删除账户',
-                          style: TextStyle(color: Color(0xFFFF6B6B)),
+                          style: TextStyle(color: Tok.red),
                         ),
                       ),
                     const Spacer(),
                     TextButton(
-                      onPressed: _busy ? null : () => Navigator.of(context).pop(),
+                      onPressed: _busy
+                          ? null
+                          : () => Navigator.of(context).pop(),
                       child: const Text('取消'),
                     ),
                     const SizedBox(width: 8),

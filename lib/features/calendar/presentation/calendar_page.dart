@@ -43,8 +43,7 @@ class CalendarPage extends ConsumerWidget {
           Expanded(
             child: calendar.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, StackTrace _) =>
-                  Center(child: Text('加载失败：$e')),
+              error: (Object e, StackTrace _) => Center(child: Text('加载失败：$e')),
               data: (CalendarState state) => SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,7 +65,8 @@ class CalendarPage extends ConsumerWidget {
                     _SelectedDaySection(
                       state: state,
                       categoryNameOf: nameOf,
-                      onEdit: (TxRow tx) => context.push('/record', extra: tx.id),
+                      onEdit: (TxRow tx) =>
+                          context.push('/record', extra: tx.id),
                       onDelete: (TxRow tx) => _confirmDelete(context, ref, tx),
                     ),
                     const SizedBox(height: 24),
@@ -84,7 +84,9 @@ class CalendarPage extends ConsumerWidget {
     if (categories == null) {
       return (String? _) => '未分类';
     }
-    final map = <String, String>{for (final Category c in categories) c.id: c.name};
+    final map = <String, String>{
+      for (final Category c in categories) c.id: c.name,
+    };
     return (String? id) => (id == null ? null : map[id]) ?? '未分类';
   }
 
@@ -105,83 +107,83 @@ class CalendarPage extends ConsumerWidget {
   }
 }
 
-/// 顶部栏：左侧侧面栏（抽屉）+ 中间年月（点开月份选择子页）+ 右侧两个占位。
+/// 顶部栏：左侧侧面栏（抽屉）+ 中间年月（点开月份选择子页）+ 报表(建设中) + 统计。
+///
+/// 日历页 header 用的是原型 `.hdr`（不是 `.appbar`），所以图标是**带框**的。
 class _HeaderBody extends ConsumerWidget {
   const _HeaderBody();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final int year = ref.watch(
-      calendarProvider.select((AsyncValue<CalendarState> v) => v.value?.year),
-    ) ?? DateTime.now().year;
-    final int month = ref.watch(
-      calendarProvider.select((AsyncValue<CalendarState> v) => v.value?.month),
-    ) ?? DateTime.now().month;
+    final int year =
+        ref.watch(
+          calendarProvider.select(
+            (AsyncValue<CalendarState> v) => v.value?.year,
+          ),
+        ) ??
+        DateTime.now().year;
+    final int month =
+        ref.watch(
+          calendarProvider.select(
+            (AsyncValue<CalendarState> v) => v.value?.month,
+          ),
+        ) ??
+        DateTime.now().month;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 4),
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
       child: Row(
         children: <Widget>[
-          IconButton(
+          ToonIconButton(
+            icon: Icons.menu_rounded,
             tooltip: '账本',
+            boxed: true,
             onPressed: () => Scaffold.maybeOf(context)?.openDrawer(),
-            icon: const Icon(Icons.menu_rounded),
           ),
           Expanded(
             child: Center(
-              child: InkWell(
+              child: ToonPress(
+                dx: 0,
+                dy: 0,
                 onTap: () => context.push('/month-picker'),
-                borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
                       Text(
                         '$year年$month月',
                         style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(width: 2),
-                      const Icon(Icons.keyboard_arrow_down_rounded, size: 22),
+                      const Icon(Icons.keyboard_arrow_down_rounded, size: 20),
                     ],
                   ),
                 ),
               ),
             ),
           ),
-          const _HeaderIcon(icon: Icons.receipt_long_rounded, tooltip: '报表（建设中）'),
-          const _HeaderIcon(icon: Icons.pie_chart_outline_rounded, tooltip: '统计（建设中）'),
+          ToonIconButton(
+            icon: Icons.receipt_long_rounded,
+            tooltip: '报表（建设中）',
+            boxed: true,
+            muted: true,
+            onPressed: () => showWipToast(context, '报表 · 建设中'),
+          ),
+          ToonIconButton(
+            icon: Icons.pie_chart_outline_rounded,
+            tooltip: '统计',
+            boxed: true,
+            onPressed: () => context.push('/stats'),
+          ),
         ],
       ),
-    );
-  }
-}
-
-/// header 占位图标：点击提示建设中（与首页一致）。
-class _HeaderIcon extends StatelessWidget {
-  const _HeaderIcon({required this.icon, required this.tooltip});
-
-  final IconData icon;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: () {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('功能建设中，敬请期待'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-      },
-      icon: Icon(icon, size: 22),
     );
   }
 }
@@ -279,6 +281,9 @@ class _SelectedDaySection extends StatelessWidget {
   Widget build(BuildContext context) {
     final DateTime day = DateTime(state.year, state.month, state.selectedDay);
     final List<TxRow> items = state.selectedItems;
+    final int dayExpenseCents = items
+        .where((TxRow t) => t.type == 'expense')
+        .fold(0, (int a, TxRow t) => a + t.amountCents);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,18 +292,32 @@ class _SelectedDaySection extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
           child: Row(
             children: <Widget>[
+              // 原型 `.dayhead .bar`：品牌色小圆点（不是竖条）
               Container(
-                width: 3,
-                height: 15,
+                width: 12,
+                height: 12,
                 decoration: BoxDecoration(
                   color: kCalendarAccent,
-                  borderRadius: BorderRadius.circular(2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Tok.ink, width: 2),
                 ),
               ),
               const SizedBox(width: 8),
               Text(
                 _dayHeader(day),
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${items.length} 笔 · 支出 ¥${centsToYuan(dayExpenseCents)}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                ),
               ),
             ],
           ),
@@ -311,12 +330,17 @@ class _SelectedDaySection extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: <Widget>[
-                for (final TxRow tx in items)
-                  TxTile(
-                    tx: tx,
-                    categoryName: categoryNameOf(tx.categoryId),
-                    onTap: () => onEdit(tx),
-                    onLongPress: () => onDelete(tx),
+                for (int i = 0; i < items.length; i++)
+                  Column(
+                    children: <Widget>[
+                      if (i > 0) const ToonDashedLine(),
+                      TxTile(
+                        tx: items[i],
+                        categoryName: categoryNameOf(items[i].categoryId),
+                        onTap: () => onEdit(items[i]),
+                        onLongPress: () => onDelete(items[i]),
+                      ),
+                    ],
                   ),
               ],
             ),
@@ -343,6 +367,8 @@ class _SelectedDaySection extends StatelessWidget {
 }
 
 /// 当天没有账单时的空态 + 「记一笔」（默认日期 = 选中日）。
+///
+/// 原型 `.empty-block`：虚线圆底里放小猪 + 两行文案 + tonal 按钮。
 class _EmptyDay extends StatelessWidget {
   const _EmptyDay({required this.dayMs});
 
@@ -350,18 +376,39 @@ class _EmptyDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      padding: const EdgeInsets.fromLTRB(26, 14, 26, 30),
       child: Column(
         children: <Widget>[
-          const Icon(Icons.event_note_rounded, size: 48, color: Tok.ink3),
-          const SizedBox(height: 10),
-          Text(
-            '这天没有账单哦，赶紧记一笔吧~',
-            style: TextStyle(fontSize: 13, color: muted),
+          const ToonDashedBorder(
+            circle: true,
+            color: Tok.ink,
+            thickness: Tok.bw,
+            dash: 7,
+            gap: 5,
+            background: Tok.brandTint,
+            child: SizedBox(
+              width: 76,
+              height: 76,
+              child: Center(child: PigMascot(size: 40)),
+            ),
           ),
           const SizedBox(height: 14),
+          const Text(
+            '这天没有账单哦，赶紧记一笔吧~',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '点右侧按钮会带上这一天作为默认日期',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: Tok.ink2,
+            ),
+          ),
+          const SizedBox(height: 16),
           ToonButton(
             label: '记一笔',
             icon: Icons.add,

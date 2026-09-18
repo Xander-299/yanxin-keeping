@@ -102,18 +102,19 @@ abstract final class Tok {
 /// 关键点：`onSurfaceVariant` 映射到 [Tok.ink2]，这样既有页面里
 /// 「次要文字用 onSurfaceVariant」的写法会自动变成原型的次级灰，不必逐处改。
 ThemeData buildToonTheme() {
-  final ColorScheme scheme = ColorScheme.fromSeed(
-    seedColor: Tok.brand,
-    brightness: Brightness.light,
-  ).copyWith(
-    primary: Tok.brand,
-    onPrimary: Tok.brandInk,
-    surface: Tok.canvas,
-    onSurface: Tok.ink,
-    onSurfaceVariant: Tok.ink2,
-    error: Tok.red,
-    outline: Tok.ink,
-  );
+  final ColorScheme scheme =
+      ColorScheme.fromSeed(
+        seedColor: Tok.brand,
+        brightness: Brightness.light,
+      ).copyWith(
+        primary: Tok.brand,
+        onPrimary: Tok.brandInk,
+        surface: Tok.canvas,
+        onSurface: Tok.ink,
+        onSurfaceVariant: Tok.ink2,
+        error: Tok.red,
+        outline: Tok.ink,
+      );
 
   const TextStyle base = TextStyle(color: Tok.ink, fontWeight: FontWeight.w600);
 
@@ -158,6 +159,10 @@ ThemeData buildToonTheme() {
       foregroundColor: Tok.ink,
       elevation: 0,
       centerTitle: true,
+      // 原型 `.appbar` 底部一条墨色描边（`.plain` 变体除外，本 App 未用）
+      shape: Border(
+        bottom: BorderSide(color: Tok.ink, width: Tok.bw),
+      ),
       titleTextStyle: TextStyle(
         color: Tok.ink,
         fontSize: 17,
@@ -165,7 +170,11 @@ ThemeData buildToonTheme() {
       ),
     ),
     dividerColor: Tok.dash,
-    dividerTheme: const DividerThemeData(color: Tok.dash, thickness: 2, space: 2),
+    dividerTheme: const DividerThemeData(
+      color: Tok.dash,
+      thickness: 2,
+      space: 2,
+    ),
     iconTheme: const IconThemeData(color: Tok.ink),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

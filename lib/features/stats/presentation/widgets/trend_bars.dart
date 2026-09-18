@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/stats_aggregate.dart';
@@ -27,7 +28,6 @@ class TrendBars extends StatelessWidget {
       final v = p.incomeCents > p.expenseCents ? p.incomeCents : p.expenseCents;
       return v > m ? v : m;
     });
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -48,14 +48,14 @@ class TrendBars extends StatelessWidget {
                         _Bar(
                           cents: p.expenseCents,
                           max: max,
-                          color: const Color(0xFFFF6B6B),
+                          color: Tok.red,
                           tooltip: '支出',
                         ),
                         const SizedBox(width: 4),
                         _Bar(
                           cents: p.incomeCents,
                           max: max,
-                          color: const Color(0xFF4CAF50),
+                          color: Tok.green,
                           tooltip: '收入',
                         ),
                       ],
@@ -64,7 +64,11 @@ class TrendBars extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     p.labelOf(anchorYear),
-                    style: TextStyle(fontSize: 11, color: muted),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Tok.ink2,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),
@@ -90,15 +94,24 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = max == 0 || cents == 0 ? 2.0 : (cents / max) * kTrendBarHeight;
+    final height = max == 0 || cents == 0
+        ? 2.0
+        : (cents / max) * kTrendBarHeight;
     return Tooltip(
       message: '$tooltip ${centsToYuan(cents)} 元',
       child: Container(
-        width: 12,
-        height: height,
+        width: 13,
+        // +4 抵消 2px 描边（Container 的 border 画在尺寸内侧，原型是 content-box）
+        height: height + 4,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(3),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(6),
+            topRight: Radius.circular(6),
+            bottomLeft: Radius.circular(3),
+            bottomRight: Radius.circular(3),
+          ),
+          border: Border.all(color: Tok.ink, width: 2),
         ),
       ),
     );

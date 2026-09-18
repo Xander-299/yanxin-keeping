@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../application/account_meta.dart';
@@ -64,6 +65,17 @@ class AssetsPage extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _AccountTile(item: item, ref: ref),
                 ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
+                child: Text(
+                  '余额 = 初始余额 + Σ收入 − Σ支出（转账不计入）',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Tok.ink2,
+                  ),
+                ),
+              ),
             ],
           );
         },
@@ -72,7 +84,7 @@ class AssetsPage extends ConsumerWidget {
   }
 }
 
-/// 净资产卡：大号金额 + 账户数。
+/// 净资产卡：品牌浅琥珀底（原型 `.networth`）+ 大号金额 + 账户数。
 class _NetWorthCard extends StatelessWidget {
   const _NetWorthCard({required this.summary});
 
@@ -83,34 +95,38 @@ class _NetWorthCard extends StatelessWidget {
     final bool negative = summary.netCents < 0;
     final Color color = negative ? Tok.red : Tok.brandDeep;
     return Card(
+      color: Tok.brandTint,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Text(
+            const Text(
               '净资产',
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w800,
+                color: Tok.ink2,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               '¥ ${centsToYuan(summary.netCents, group: true)}',
               style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
                 height: 1.1,
+                letterSpacing: -1,
                 color: color,
               ),
             ),
             const SizedBox(height: 6),
             Text(
               '${summary.count} 个账户 · 全时间累计',
-              style: TextStyle(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: Tok.ink2,
               ),
             ),
           ],
@@ -130,29 +146,34 @@ class _AccountTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool negative = item.balanceCents < 0;
-    final Color balanceColor = negative
-        ? const Color(0xFFFF6B6B)
-        : const Color(0xFFE8E8E8);
-    final Color muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    // 正余额用墨色（此前误用深色主题的 #E8E8E8，白卡上等于隐形）
+    final Color balanceColor = negative ? Tok.red : Tok.ink;
 
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: Tok.cardDeco(),
+      child: ToonPress(
+        dx: 2,
+        dy: 2,
         onTap: () => showAccountFormSheet(context, ref, account: item.account),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 16, 12),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
           child: Row(
             children: <Widget>[
+              // 原型 `.acct .a-ic`：品牌浅底 + 墨色描边 + 硬阴影
               Container(
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                   color: Tok.brandTint,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Tok.ink, width: 2),
+                  boxShadow: Tok.hard(d: 2),
                 ),
                 child: Icon(
                   accountTypeIcon(item.account.type),
-                  size: 20,
+                  size: 21,
                   color: Tok.brandDeep,
                 ),
               ),
@@ -167,7 +188,7 @@ class _AccountTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -175,7 +196,11 @@ class _AccountTile extends StatelessWidget {
                       '${accountTypeLabel(item.account.type)} · '
                       '收 ${centsToYuan(item.incomeCents)} / '
                       '支 ${centsToYuan(item.expenseCents)}',
-                      style: TextStyle(fontSize: 11, color: muted),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Tok.ink2,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -186,8 +211,8 @@ class _AccountTile extends StatelessWidget {
               Text(
                 centsToYuan(item.balanceCents, group: true),
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w900,
                   color: balanceColor,
                 ),
               ),
@@ -216,7 +241,8 @@ class _EmptyState extends StatelessWidget {
             Icon(
               Icons.account_balance_wallet_rounded,
               size: 56,
-              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.primary
+                  .withValues(alpha: 0.7),
             ),
             const SizedBox(height: 16),
             const Text('还没有账户'),

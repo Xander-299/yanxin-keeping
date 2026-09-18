@@ -54,9 +54,7 @@ class BudgetCard extends ConsumerWidget {
     }
     if (budgetAsync.hasError && !budgetAsync.hasValue) {
       return _BudgetShell(
-        child: _ErrorBody(
-          onRetry: () => ref.invalidate(monthBudgetProvider),
-        ),
+        child: _ErrorBody(onRetry: () => ref.invalidate(monthBudgetProvider)),
       );
     }
 
@@ -175,11 +173,7 @@ class _EmptyBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        _TitleRow(
-          budgetYuan: '未设置',
-          budgetColor: Tok.ink3,
-          onEdit: onEdit,
-        ),
+        _TitleRow(budgetYuan: '未设置', budgetColor: Tok.ink3, onEdit: onEdit),
         const SizedBox(height: 10),
         Row(
           children: <Widget>[
@@ -211,6 +205,10 @@ class _EmptyBody extends StatelessWidget {
           label: '本月日均消费',
           value: centsToYuan(view.dailyAvgCents),
         ),
+        // 原型无条件渲染这两行：没设预算时「剩余每日可消费」显示「—」，
+        // 少一行会让卡片高度在有/无预算之间跳动。
+        const SizedBox(height: 9),
+        const _DayRow(dotColor: kDotPurple, label: '剩余每日可消费', value: '—'),
       ],
     );
   }
@@ -392,6 +390,7 @@ class _LoadingBody extends StatelessWidget {
     );
   }
 }
+
 /// 读取失败：如实告知 + 重试，而不是伪装成「未设置预算」。
 class _ErrorBody extends StatelessWidget {
   const _ErrorBody({required this.onRetry});

@@ -5,6 +5,8 @@
 library;
 
 import 'dart:math' as math;
+// 虚线边框要按路径长度分段，PathMetric 只有 dart:ui 提供
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 
@@ -130,7 +132,12 @@ class ToonDashedLine extends StatelessWidget {
       height: height,
       width: double.infinity,
       child: CustomPaint(
-        painter: _DashPainter(color: color, dash: dash, gap: gap, thickness: height),
+        painter: _DashPainter(
+          color: color,
+          dash: dash,
+          gap: gap,
+          thickness: height,
+        ),
       ),
     );
   }
@@ -166,10 +173,134 @@ class _DashPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DashPainter old) =>
-      old.color != color || old.dash != dash || old.gap != gap || old.thickness != thickness;
+      old.color != color ||
+      old.dash != dash ||
+      old.gap != gap ||
+      old.thickness != thickness;
+}
+
+/// 虚线描边的圆角框 / 正圆（原型 `.hdr .iconbtn.muted` 的虚线方框、
+/// `.eb-ic` 的虚线圆）。
+///
+/// 走 `Path.computeMetrics()` 分段画：手写循环只能画直线，圆弧段画不了。
+/// [background] 非空时先铺底，绘制顺序由 `CustomPaint` 保证在 child 之下。
+class ToonDashedBorder extends StatelessWidget {
+  const ToonDashedBorder({
+    super.key,
+    required this.child,
+    this.radius = 13,
+    this.circle = false,
+    this.color = Tok.ink3,
+    this.thickness = 2,
+    this.dash = 5,
+    this.gap = 4,
+    this.background,
+  });
+
+  final Widget child;
+  final double radius;
+  final bool circle;
+  final Color color;
+  final double thickness;
+  final double dash;
+  final double gap;
+  final Color? background;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedBorderPainter(
+        radius: radius,
+        circle: circle,
+        color: color,
+        thickness: thickness,
+        dash: dash,
+        gap: gap,
+        background: background,
+      ),
+      child: child,
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({
+    required this.radius,
+    required this.circle,
+    required this.color,
+    required this.thickness,
+    required this.dash,
+    required this.gap,
+    required this.background,
+  });
+
+  final double radius;
+  final bool circle;
+  final Color color;
+  final double thickness;
+  final double dash;
+  final double gap;
+  final Color? background;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 描边居中在路径上，故路径内缩半个线宽，边缘才不会被裁掉
+    final double inset = thickness / 2;
+    final Rect rect = Rect.fromLTWH(
+      inset,
+      inset,
+      size.width - thickness,
+      size.height - thickness,
+    );
+    final Path path = Path();
+    if (circle) {
+      path.addOval(rect);
+    } else {
+      path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
+    }
+
+    if (background != null) {
+      canvas.drawPath(path, Paint()..color = background!);
+    }
+
+    final Paint p = Paint()
+      ..color = color
+      ..strokeWidth = thickness
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (final PathMetric m in path.computeMetrics()) {
+      double d = 0;
+      while (d < m.length) {
+        final double end = math.min(d + dash, m.length);
+        canvas.drawPath(m.extractPath(d, end), p);
+        d = end + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) =>
+      old.radius != radius ||
+      old.circle != circle ||
+      old.color != color ||
+      old.thickness != thickness ||
+      old.dash != dash ||
+      old.gap != gap ||
+      old.background != background;
 }
 
 // ────────────────────────────── 按钮 ──────────────────────────────
+
+/// 「建设中」占位提示（原型 `data-act="toast"` 的等价物）。
+///
+/// 统一走这里，避免各页各写一份时长/文案不一致的 SnackBar。
+void showWipToast(BuildContext context, String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+    );
+}
 
 /// 按钮形态：见原型 `.btn.primary / .tonal / .ghost / .danger`。
 enum ToonButtonKind { primary, tonal, ghost, danger }
@@ -277,19 +408,30 @@ class ToonIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color fg = muted ? Tok.ink3 : Tok.ink;
-    final Widget button = Container(
+    // 原型 `.hdr .iconbtn` = 白底实线墨框 + 硬阴影；
+    // `.hdr .iconbtn.muted` = 白底**虚线**墨框、无阴影（「建设中」入口）。
+    final bool dashed = boxed && muted;
+    Widget button = Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         color: boxed && !muted ? Tok.paper : null,
         borderRadius: BorderRadius.circular(13),
-        border: boxed
-            ? Border.all(color: muted ? Tok.ink3 : Tok.ink, width: 2)
+        border: boxed && !dashed
+            ? Border.all(color: Tok.ink, width: 2)
             : Border.all(color: Colors.transparent, width: 2),
         boxShadow: boxed && !muted ? Tok.hard(d: 2.5) : null,
       ),
       child: Icon(icon, size: iconSize, color: fg),
     );
+    if (dashed) {
+      button = ToonDashedBorder(
+        radius: 13,
+        color: Tok.ink3,
+        background: Tok.paper,
+        child: button,
+      );
+    }
 
     final Widget tappable = ToonPress(
       dx: 2,
@@ -297,7 +439,9 @@ class ToonIconButton extends StatelessWidget {
       onTap: onPressed,
       child: Center(child: button),
     );
-    return tooltip == null ? tappable : Tooltip(message: tooltip!, child: tappable);
+    return tooltip == null
+        ? tappable
+        : Tooltip(message: tooltip!, child: tappable);
   }
 }
 
@@ -449,7 +593,8 @@ class ToonField extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: child ??
+            child:
+                child ??
                 Text(
                   value ?? '',
                   maxLines: 1,
@@ -457,18 +602,22 @@ class ToonField extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
-                    color: valueColor ??
-                        (placeholder ? Tok.ink3 : Tok.ink),
+                    color: valueColor ?? (placeholder ? Tok.ink3 : Tok.ink),
                   ),
                 ),
           ),
-          if (trailing != null) ...<Widget>[trailing!, const SizedBox(width: 6)],
+          if (trailing != null) ...<Widget>[
+            trailing!,
+            const SizedBox(width: 6),
+          ],
           const Icon(Icons.chevron_right, size: 18, color: Tok.ink2),
         ],
       ),
     );
 
-    final Widget body = onTap == null ? row : ToonPress(onTap: onTap, child: row);
+    final Widget body = onTap == null
+        ? row
+        : ToonPress(onTap: onTap, child: row);
     if (!dashedTop) return body;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -509,7 +658,11 @@ class ToonAvatar extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: TextStyle(fontSize: small ? 13.5 : 15, fontWeight: FontWeight.w800, color: fg),
+        style: TextStyle(
+          fontSize: small ? 13.5 : 15,
+          fontWeight: FontWeight.w800,
+          color: fg,
+        ),
       ),
     );
   }
@@ -544,7 +697,11 @@ class ToonRing extends StatelessWidget {
           ),
           Text(
             text,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: color),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -714,7 +871,12 @@ class _PigPainter extends CustomPainter {
 
 /// 四角星贴纸（原型 `#i-sparkle`，24 网格）。
 class Sparkle extends StatelessWidget {
-  const Sparkle({super.key, this.size = 21, this.fill = Tok.paper, this.opacity = 1});
+  const Sparkle({
+    super.key,
+    this.size = 21,
+    this.fill = Tok.paper,
+    this.opacity = 1,
+  });
 
   final double size;
   final Color fill;
@@ -724,7 +886,10 @@ class Sparkle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Opacity(
       opacity: opacity,
-      child: CustomPaint(size: Size(size, size), painter: _SparklePainter(fill: fill)),
+      child: CustomPaint(
+        size: Size(size, size),
+        painter: _SparklePainter(fill: fill),
+      ),
     );
   }
 }

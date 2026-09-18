@@ -81,9 +81,12 @@ void main() {
     expect(find.text('898.48'), findsNothing);
     expect(find.text('10.2%'), findsNothing);
 
-    // 没预算也能看到真实日均（101.52 / 当天几号）
+    // 没预算也能看到真实日均（101.52 / 当天几号）。
+    // 「剩余每日可消费」自 F7.6 起按原型无条件保留，但没预算时值必须是「—」
+    // 而不是 0（0 会被读成「今天不能花了」）。
     expect(find.text('本月日均消费'), findsOneWidget);
-    expect(find.text('剩余每日可消费'), findsNothing);
+    expect(find.text('剩余每日可消费'), findsOneWidget);
+    expect(find.text('—'), findsOneWidget);
   });
 
   testWidgets('已设预算 1000 + 支出 101.52 → 10.2% / 剩余 898.48', (WidgetTester tester) async {

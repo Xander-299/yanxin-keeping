@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 
 import '../application/calendar_controller.dart';
@@ -28,8 +29,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
   @override
   void initState() {
     super.initState();
-    _year =
-        ref.read(calendarProvider).value?.year ?? DateTime.now().year;
+    _year = ref.read(calendarProvider).value?.year ?? DateTime.now().year;
   }
 
   Future<void> _pick(int month, int day) async {
@@ -48,64 +48,83 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('$_year年'),
-        actions: const <Widget>[
-          _PickerIcon(icon: Icons.receipt_long_rounded, tooltip: '报表（建设中）'),
-          _PickerIcon(icon: Icons.pie_chart_outline_rounded, tooltip: '统计（建设中）'),
+        actions: <Widget>[
+          // 原型这里只有一个 muted 的「报表」占位（月选择页没有统计入口）
+          const _PickerIcon(
+            icon: Icons.receipt_long_rounded,
+            tooltip: '报表（建设中）',
+            muted: true,
+          ),
         ],
       ),
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
-              child: Column(
-                children: <Widget>[
-                  for (int row = 0; row < 4; row++)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          for (int col = 0; col < 3; col++)
-                            Expanded(
-                              child: _MiniMonth(
-                                year: _year,
-                                month: row * 3 + col + 1,
-                                daysWithTx:
-                                    days[row * 3 + col + 1] ?? const <int>{},
-                                selectedMonth: current?.month,
-                                selectedDay: current?.selectedDay,
-                                onPick: _pick,
+      body: Container(
+        color: Tok.paper,
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+                child: Column(
+                  children: <Widget>[
+                    for (int row = 0; row < 4; row++)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            for (int col = 0; col < 3; col++)
+                              Expanded(
+                                child: _MiniMonth(
+                                  year: _year,
+                                  month: row * 3 + col + 1,
+                                  daysWithTx:
+                                      days[row * 3 + col + 1] ?? const <int>{},
+                                  selectedMonth: current?.month,
+                                  selectedDay: current?.selectedDay,
+                                  onPick: _pick,
+                                ),
                               ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
+                  ],
+                ),
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    _PillButton(
+                      label: '‹ 上一年',
+                      onTap: () => setState(() => _year--),
                     ),
-                ],
+                    const SizedBox(width: 24),
+                    _PillButton(
+                      label: '下一年 ›',
+                      onTap: () => setState(() => _year++),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  _PillButton(
-                    label: '‹ 上一年',
-                    onTap: () => setState(() => _year--),
-                  ),
-                  const SizedBox(width: 24),
-                  _PillButton(
-                    label: '下一年 ›',
-                    onTap: () => setState(() => _year++),
-                  ),
-                ],
+            const Padding(
+              padding: EdgeInsets.fromLTRB(24, 0, 24, 20),
+              child: Text(
+                '琥珀色 = 这一天有记账；点某一天即跳到该月该日',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -218,27 +237,24 @@ class _MiniMonth extends StatelessWidget {
   }
 }
 
-/// 子页 appbar 占位图标。
+/// 子页 appbar 占位图标（muted = 三级灰）。
 class _PickerIcon extends StatelessWidget {
-  const _PickerIcon({required this.icon, required this.tooltip});
+  const _PickerIcon({
+    required this.icon,
+    required this.tooltip,
+    this.muted = false,
+  });
 
   final IconData icon;
   final String tooltip;
+  final bool muted;
 
   @override
   Widget build(BuildContext context) {
     return IconButton(
       tooltip: tooltip,
-      onPressed: () {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(
-            const SnackBar(
-              content: Text('功能建设中，敬请期待'),
-              duration: Duration(seconds: 1),
-            ),
-          );
-      },
+      color: muted ? Tok.ink3 : Tok.ink,
+      onPressed: () => showWipToast(context, '报表 · 建设中'),
       icon: Icon(icon, size: 22),
     );
   }

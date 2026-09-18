@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/ledger/application/month_summary.dart';
@@ -74,18 +75,23 @@ class _MonthBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.chevron_left_rounded),
+        ToonIconButton(
+          icon: Icons.chevron_left_rounded,
           tooltip: '上一月',
           onPressed: onPrev,
         ),
-        Text(
-          '$year年$month月',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text(
+            '$year年$month月',
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          ),
         ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right_rounded),
+        // 不能翻到未来月：禁用态用三级灰（原型 `iconbtn muted` + opacity .35）
+        ToonIconButton(
+          icon: Icons.chevron_right_rounded,
           tooltip: '下一月',
+          muted: !canGoNext(year, month),
           onPressed: canGoNext(year, month) ? onNext : null,
         ),
       ],
@@ -110,14 +116,14 @@ class _SummaryCard extends StatelessWidget {
               child: _StatCell(
                 label: '收入',
                 value: summary.incomeYuan,
-                color: const Color(0xFF4CAF50),
+                color: Tok.green,
               ),
             ),
             Expanded(
               child: _StatCell(
                 label: '支出',
                 value: summary.expenseYuan,
-                color: const Color(0xFFFF6B6B),
+                color: Tok.red,
               ),
             ),
             Expanded(
@@ -161,8 +167,8 @@ class _StatCell extends StatelessWidget {
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
+            fontSize: 17.5,
+            fontWeight: FontWeight.w900,
             color: color,
           ),
         ),
@@ -196,25 +202,14 @@ class _BreakdownCard extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
-                SizedBox(
-                  height: 32,
-                  child: SegmentedButton<String>(
-                    key: const ValueKey<String>('stats-kind-toggle'),
-                    segments: const <ButtonSegment<String>>[
-                      ButtonSegment<String>(
-                        value: 'expense',
-                        label: Text('支出'),
-                      ),
-                      ButtonSegment<String>(value: 'income', label: Text('收入')),
-                    ],
-                    selected: <String>{state.kind},
-                    // Flutter 3.32+ 起回调改名 onSelectionChanged（onSelected 已移除）
-                    onSelectionChanged: (Set<String> v) => onKindChanged(v.first),
-                    style: SegmentedButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      textStyle: const TextStyle(fontSize: 12),
-                    ),
-                  ),
+                // key 保给测试用（stats_page_test 依赖它定位切换器）
+                ToonSeg(
+                  key: const ValueKey<String>('stats-kind-toggle'),
+                  labels: const <String>['支出', '收入'],
+                  index: state.kind == 'income' ? 1 : 0,
+                  small: true,
+                  onChanged: (int i) =>
+                      onKindChanged(i == 1 ? 'income' : 'expense'),
                 ),
               ],
             ),
@@ -241,13 +236,7 @@ class _BreakdownCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         for (var i = 0; i < slices.length; i++)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: _LegendRow(
-                              slice: slices[i],
-                              color: categoryColor(i),
-                            ),
-                          ),
+                          _LegendRow(slice: slices[i], color: categoryColor(i)),
                       ],
                     ),
                   ),
@@ -270,29 +259,47 @@ class _LegendRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    return Row(
-      children: <Widget>[
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            slice.name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 13),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: <Widget>[
+          // 原型 `.legend-row .dot`：10px 圆 + 2px 墨色描边
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              border: Border.all(color: Tok.ink, width: 2),
+            ),
           ),
-        ),
-        Text(slice.percentText, style: TextStyle(fontSize: 12, color: muted)),
-        const SizedBox(width: 10),
-        Text(
-          centsToYuan(slice.cents, group: true),
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        ),
-      ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              slice.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+          Text(
+            slice.percentText,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: muted,
+            ),
+          ),
+          SizedBox(
+            width: 78,
+            child: Text(
+              centsToYuan(slice.cents, group: true),
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -319,17 +326,9 @@ class _TrendCard extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
-                _Dot(
-                  color: const Color(0xFFFF6B6B),
-                  label: '支出',
-                  muted: muted,
-                ),
+                _Dot(color: Tok.red, label: '支出', muted: muted),
                 const SizedBox(width: 12),
-                _Dot(
-                  color: const Color(0xFF4CAF50),
-                  label: '收入',
-                  muted: muted,
-                ),
+                _Dot(color: Tok.green, label: '收入', muted: muted),
               ],
             ),
             const SizedBox(height: 14),
@@ -354,12 +353,23 @@ class _Dot extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(color: Tok.ink, width: 2),
+          ),
         ),
-        const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 11, color: muted)),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: muted,
+          ),
+        ),
       ],
     );
   }

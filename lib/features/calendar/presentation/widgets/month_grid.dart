@@ -62,6 +62,7 @@ class MonthGrid extends StatelessWidget {
                     w,
                     style: TextStyle(
                       fontSize: 12,
+                      fontWeight: FontWeight.w800,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
@@ -101,59 +102,95 @@ class MonthGrid extends StatelessWidget {
     final DayAgg? agg = inMonth ? byDay[date.day] : null;
     final bool selected = inMonth && date.day == selectedDay;
 
+    // 原型 `.day.tint-e / .tint-i`：支出优先于收入；`.day.sel` 写在后面
+    // 覆盖 tint 底色 → 选中日一定是品牌浅底 + 墨色描边 + 硬阴影。
+    final Color? cellBg = selected
+        ? Tok.brandTint
+        : agg == null
+        ? null
+        : agg.hasExpense
+        ? Tok.redTint
+        : agg.hasIncome
+        ? Tok.greenTint
+        : null;
+
     return InkWell(
       onTap: inMonth ? () => onSelectDay(date.day) : null,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        height: 62,
-        margin: const EdgeInsets.all(2),
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          color: agg == null
-              ? Colors.transparent
-              : agg.hasExpense
-              ? Tok.redTint
-              : agg.hasIncome
-              ? Tok.greenTint
-              : Colors.transparent,
-          border: selected ? Border.all(color: Tok.ink, width: 2) : null,
-        ),
-        child: Column(
-          children: <Widget>[
-            Text(
-              '${date.day}',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.1,
-                fontWeight: selected || isToday
-                    ? FontWeight.w700
-                    : FontWeight.w500,
-                color: !inMonth
-                    ? Tok.ink3
-                    : isToday
-                    ? Tok.brandDeep
-                    : Tok.ink,
-              ),
+      borderRadius: BorderRadius.circular(Tok.rSm),
+      child: Opacity(
+        // 跨月格子（原型 `.day.out`）
+        opacity: inMonth ? 1 : 0.3,
+        child: Container(
+          height: 62,
+          margin: const EdgeInsets.all(2),
+          padding: const EdgeInsets.fromLTRB(2, 5, 2, 4),
+          decoration: BoxDecoration(
+            color: cellBg,
+            borderRadius: BorderRadius.circular(Tok.rSm),
+            border: Border.all(
+              color: selected ? Tok.ink : Colors.transparent,
+              width: 2,
             ),
-            const Spacer(),
-            if (inMonth && agg != null) ...<Widget>[
-              if (agg.hasExpense)
-                _amountText('-${compactYuan(agg.expenseCents)}', kExpenseRed),
-              if (agg.hasIncome)
-                _amountText('+${compactYuan(agg.incomeCents)}', kIncomeGreen),
+            // 选中态给硬阴影（原型 `.day.sel` 的 `--sh-sm`）
+            boxShadow: selected ? Tok.hard(d: 2.5) : null,
+          ),
+          child: Column(
+            children: <Widget>[
+              // 固定 24 高：今天要从文字变成圆底，不固定会让整行跳一下
+              SizedBox(
+                width: 24,
+                height: 24,
+                child: Center(
+                  child: isToday
+                      ? Container(
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: kCalendarAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Tok.ink, width: 2),
+                          ),
+                          child: _dayNumber(date, isToday: true),
+                        )
+                      : _dayNumber(date, isToday: false),
+                ),
+              ),
+              const Spacer(),
+              if (inMonth && agg != null) ...<Widget>[
+                if (agg.hasExpense)
+                  _amountText('-${compactYuan(agg.expenseCents)}', kExpenseRed),
+                if (agg.hasIncome)
+                  _amountText('+${compactYuan(agg.incomeCents)}', kIncomeGreen),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
   }
 
+  /// 日期数字：今天用品牌深色 + 900 字重（原型 `.day.today .dnum`）。
+  Widget _dayNumber(DateTime date, {required bool isToday}) => Text(
+    '${date.day}',
+    style: TextStyle(
+      fontSize: 13,
+      height: 1.1,
+      fontWeight: isToday ? FontWeight.w900 : FontWeight.w800,
+      color: isToday ? Tok.brandInk : Tok.ink,
+    ),
+  );
+
   Widget _amountText(String text, Color color) => FittedBox(
     child: Text(
       text,
       maxLines: 1,
-      style: TextStyle(fontSize: 9, height: 1.2, color: color),
+      style: TextStyle(
+        fontSize: 9,
+        height: 1.25,
+        fontWeight: FontWeight.w800,
+        color: color,
+      ),
     ),
   );
 }
