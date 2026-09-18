@@ -111,6 +111,38 @@ sleep 7
     如果页面已经被键盘挡住而你以为没生效，再按一次就**退出 App 落到 MuMu 桌面/浏览器**了
     （重启靠 `monkey -p <pkg> -c android.intent.category.LAUNCHER 1`）。
     返回优先点页面左上角的 `Back`（1080×1920 下 @(84,156)）。
+12. **MuMu 没启动时 `adb wait-for-device` 会永久挂住**（实测 15 分钟零输出，被误当成"构建卡死"）。
+    走查前**先探测再等**：
+    ```bash
+    "$ADB" devices | grep -q emulator-5554 || { echo "MuMu 未启动 → 请用户先启动 MuMu"; exit 1; }
+    ```
+    `adb devices` 输出只有 `List of devices attached` 一行 = 设备不在线，**不要**接着跑 wait-for-device，
+    直接请用户启动 MuMu（用户手动启动是本项目既定流程）。同一现象也会让 `install` 静默等待。
+
+## 视觉对拍：原型定点截图（F7.6 起必做）
+
+改 UI 后要和页面原型并排比对。原型 `D:\new file\modao\yanxin\` 是**单页应用、没有 URL 路由**
+（`app.js` 里 `const go = (screen) => {...}`，屏状态存在全局 `S.screen`），所以不能直接 `#hash` 打开某一屏。
+
+**做法**：复制原型到临时目录 + 末尾追加一小段脚本读 query 定点跳屏（**不动用户原文件**）：
+
+```bash
+mkdir -p /tmp/yanxin-proto && cp "D:/new file/modao/yanxin/"{index.html,styles.css,data.js,screens.js,app.js} /tmp/yanxin-proto/
+printf '%s\n' '<script>' 'const q = new URLSearchParams(location.search);' \
+  'if (q.get("ov")) { S.overlay = q.get("ov"); render(); }' \
+  'if (q.get("s")) { S.screen = q.get("s"); render(); }' '</script>' >> /tmp/yanxin-proto/index.html
+# 屏名取自原型左侧栏：home / record / calendar / month-picker / stats / assets / books / profile / categories / import
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless=new --disable-gpu --hide-scrollbars \
+  --window-size=1200,1000 --screenshot=".workbuddy/shots/proto-p2-stats.png" \
+  "file:///<USER_HOME>/AppData/Local/Temp/yanxin-proto/index.html?s=stats"
+```
+
+要点：
+- 追加脚本能读到 `S` / `render()`，因为 classic script 的顶层 `const/let` 共享同一全局词法环境。
+- Git Bash 的 `/tmp` == `%LOCALAPPDATA%\Temp`（`<USER_HOME>\AppData\Local\Temp`），
+  但 Chrome 只认 Windows 路径，必须写成 `file:///C:/Users/...`。
+- 截出来是「左侧栏 + 中间手机」的整页图，中间那台才是设计稿本体，比对时裁中间看。
+- **截图统一落到 `.workbuddy/shots/`**（该目录已在 `.gitignore`，写到 `.workbuddy/` 根下会被误提交）。
 
 ## 改 schema 时必做：覆盖安装验迁移
 
