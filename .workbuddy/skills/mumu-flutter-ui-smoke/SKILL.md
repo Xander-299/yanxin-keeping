@@ -141,8 +141,32 @@ printf '%s\n' '<script>' 'const q = new URLSearchParams(location.search);' \
 - 追加脚本能读到 `S` / `render()`，因为 classic script 的顶层 `const/let` 共享同一全局词法环境。
 - Git Bash 的 `/tmp` == `%LOCALAPPDATA%\Temp`（`<USER_HOME>\AppData\Local\Temp`），
   但 Chrome 只认 Windows 路径，必须写成 `file:///C:/Users/...`。
+- **`--screenshot=` 的路径相对的是 Chrome 自己的 CWD，不是 bash 的 CWD** → 一律给 Windows 绝对路径
+  （`D:/Tencent/.../shots/x.png`），否则静默报 `Failed to write file ... 系统找不到指定的路径`。
+  并发/连续跑多次 headless 时各带一个 `--user-data-dir=...`，避免 profile 锁。
 - 截出来是「左侧栏 + 中间手机」的整页图，中间那台才是设计稿本体，比对时裁中间看。
 - **截图统一落到 `.workbuddy/shots/`**（该目录已在 `.gitignore`，写到 `.workbuddy/` 根下会被误提交）。
+
+## 走查前的第一件事：确认设备上装的是**刚构建的那版**
+
+改完代码直接 `adb ... screencap` 是**最容易误判的一步**：上一轮的 APK 还在设备上，
+你会看到「改了没用 / 修了还是老的」并开始怀疑代码。判定与做法：
+
+```bash
+source env.sh && flutter build apk --debug          # 只有一个输出才继续
+"$ADB" -s emulator-5554 install -r -t build/app/outputs/flutter-apk/app-debug.apk   # 必须看到 Success
+"$ADB" -s emulator-5554 shell am force-stop com.teacodeman.yanxin
+"$ADB" -s emulator-5554 shell am start -n com.teacodeman.yanxin/.MainActivity
+```
+
+判据：安装输出必须是 `Success`；截图里应能看到本次改动的最显著视觉特征。
+（2026-09-19 实际踩过：设备上还是 P1 的 APK，日历空态看着没改，其实代码早改了。）
+
+## 视觉改动别把装饰文字并进正文
+
+原型里 `content: '● '` 这类**装饰字符**，Flutter 侧不要写进 `Text('● 9月')` ——
+widget 测试是按 `find.text('9月')` 断言的，改文案会连带打挂测试。
+做法：装饰单独成一个 widget（小圆点 `Container`）放在 `Row` 里，正文 `Text` 保持原字符串。
 
 ## 改 schema 时必做：覆盖安装验迁移
 
