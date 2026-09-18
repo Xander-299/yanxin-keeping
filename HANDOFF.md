@@ -5,9 +5,11 @@
 > **本次（F7.6 卡通视觉改版 P1 + P2）**：用户给定页面原型 `D:\new file\modao\yanxin\`（卡通浅色），
 > 确认三项决策 —— **全站硬替换为浅色 / 分 3 批交付 / 零新依赖**；小 SPEC `docs/SPEC-F7.6-cartoon-ui.md`（已签字）。
 > - **P1 已交付 + 真机走查通过**：主题底座（`core/theme/tokens.dart` + `toon.dart`）、底栏、首页、记一笔、分类弹层、删除弹窗、账本抽屉。
-> - **P2 已交付、门禁绿、⚠️ 尚未真机走查**：日历 / 月历格子 / 月份选择 / 统计 / 趋势柱 / 资产 / 账户 sheet。
+> - **P2 已交付 + 真机走查通过**：日历 / 月历格子 / 月份选择 / 统计 / 趋势柱 / 资产 / 账户 sheet；
+>   走查中修掉 2 处（**日历下半部分不居中**、月份选择页迷你月缺星期表头）。
 > - 门禁：`flutter analyze` **0 issue**；`flutter test` **269 全过 0 skip**。
-> - **下一步 = P3**：我的 / 账本管理 / 分类管理 / 导入三步 / 日期与预算 sheet / 搜索浮层（并清掉 `import_page`、`search_overlay` 的裸色值）。
+> - **下一步 = P3**：我的 / 账本管理 / 分类管理 / 导入三步 / 日期与预算 sheet / 搜索浮层
+>   （+ 清掉 `import_page`、`search_overlay` 的裸色值；资产页空态与日历留白两处小摩擦）。
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
 ---
@@ -178,7 +180,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    （**首页搜索图标已接真实搜索浮层、首页预算卡已是真实数据、资产 tab 已是真实资产页**，不再占位）
 3. 【P3】`gradle wrapper` 用 `gradle-9.3.1-all.zip`（230MB），换 `-bin.zip` 可提速
 4. 【P3】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）
-5. 【P3】**F7.6 P2 尚未真机走查**（走查时 MuMu 已关闭）—— 待 MuMu 启动后跑 日历 / 月份选择 / 统计 / 资产 四页对拍
+5. 【P3】**P2 走查残留两处小摩擦**：① 资产页「还没有账户」空态仍是 Material 图标 + `FilledButton`（原型无此态，需统一成卡通空态）；
+   ② 日历页月历与「月结余」卡之间留白比原型略大
 6. 【P3】`.workbuddy/skills/flutter-windows-env-bootstrap/SKILL.md` 与 `.workbuddy/bootstrap_*.py` / `dl_ndk.py` 是 **B 机专用**（路径写死 `C:\src\*`），在 A 机不适用，勿照抄
 
 # 待确认事项
@@ -257,15 +260,14 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：F7.6 视觉改版 **P1 已真机走查通过、P2 已交付未走查**，**下一步 = ①补 P2 真机走查 ②做 P3**。
-   - 补走查：先启动 **MuMu 12**（`adb devices` 必须有 `emulator-5554`，否则 `adb wait-for-device` 会永久挂住），
-     再 `source env.sh && flutter build apk --debug` → `install -r -t` → 逐页截图与原型对拍
-     （日历 / 月份选择 / 统计 / 资产）。
+1. **当前最重要的事**：F7.6 视觉改版 **P1 / P2 已交付并真机走查通过**，**下一步 = P3**。
    - P3 范围：我的页（头像卡 + 4 条目 + 品牌提示卡）、账本管理、分类管理、导入三步步骤条、
      日期选择 sheet、预算 sheet、搜索浮层（chips + 结果条 + 吉祥物空态）；
-     顺带清掉 `import_page.dart` / `search_overlay.dart` 里剩余裸色值（`grep -rn "Color(0x" lib/ | grep -v core/theme`）。
-   按老规矩：先出小 SPEC（`docs/SPEC-F7.6-*.md`）→ 用户点头 → 实现 → 门禁 → 文档
-   （**动工前先读 `docs/PRD-yanxin-flutter.md` 对齐现有口径、读原型对视觉**）。
+     顺带：清掉 `import_page.dart` / `search_overlay.dart` 里剩余裸色值
+     （`grep -rn "Color(0x" lib/ | grep -v core/theme`）、资产页空态卡通化、日历留白微调。
+   - 按老规矩：先出小 SPEC（`docs/SPEC-F7.6-*.md`）→ 用户点头 → 实现 → 门禁 → 文档
+     （**动工前先读 `docs/PRD-yanxin-flutter.md` 对齐口径、读原型对视觉**）。
+   - 走查前先确认 MuMu 已启动（`adb devices` 为空时 `adb wait-for-device` 会永久挂住）。
    F7.5 剩余项（数据导出 / 分类预算 / 报表明细）仍在 backlog。
 2. **要真机走查**：先 `source env.sh && flutter build apk --debug`（A 机增量构建快），再
    `adb -s emulator-5554 install -r -t <apk>` 装到 MuMu 12，然后照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走。
@@ -299,7 +301,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F1–F7.5b 全部 ✅**：F7.1 日历、F7.2 统计·报表、F7.3 月度预算（**schema v2**）、F7.4 流水搜索、
   F7.5-a 搜索浮层化 + 类型筛选、**F7.5-b 资产页**（净资产 + 账户 CRUD + 账户余额）。
 - **F7.6 卡通视觉改版（按用户原型全站换浅色）**：P1 底座 + 底栏 + 首页 + 记一笔 ✅走查通过；
-  **P2 日历 / 统计 / 资产 ✅已交付未走查；P3（我的 / 账本 / 分类 / 导入 / 弹层）待排期**。
+  **P2 日历 / 统计 / 资产 ✅已交付并走查通过（修掉「日历下半部分不居中」+ 迷你月缺星期表头）；P3（我的 / 账本 / 分类 / 导入 / 弹层）待排期**。
   **深色主题已彻底移除**；原型在 `D:\new file\modao\yanxin\`。
 - **F7.5 剩余项（数据导出 / 分类预算 / 报表明细）待排期。**
 - HEAD 见上（改完 `git push` 即可；本机 = 远端）。
@@ -309,5 +311,5 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。
 - 搜索：入口是**覆盖首页的浮层**（`showSearchOverlay`，不是路由）；口径 = 当前账本全量 + 内存过滤；命中 = 分类名 / 备注 / 金额子串并集 + 类型指令「仅支出 / 仅收入 / 转账」（`parsePlan`）。
-- 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，通用件在 `toon.dart`；**禁止裸色值**）。F7.6 P3 待做。
-- 下一步：**①补 F7.6 P2 真机走查（先启动 MuMu）②做 F7.6 P3**；改完 `git push` 即可。
+- 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 P3 待做。**
+- 下一步：**做 F7.6 P3**（我的 / 账本 / 分类 / 导入 / 弹层 + 清裸色值）；改完 `git push` 即可。

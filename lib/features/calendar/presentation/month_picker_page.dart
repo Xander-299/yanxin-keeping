@@ -13,7 +13,6 @@ import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 
 import '../application/calendar_controller.dart';
-import 'widgets/month_grid.dart';
 
 /// 月份选择子页。
 class MonthPickerPage extends ConsumerStatefulWidget {
@@ -80,7 +79,6 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
                                   daysWithTx:
                                       days[row * 3 + col + 1] ?? const <int>{},
                                   selectedMonth: current?.month,
-                                  selectedDay: current?.selectedDay,
                                   onPick: _pick,
                                 ),
                               ),
@@ -137,7 +135,6 @@ class _MiniMonth extends StatelessWidget {
     required this.month,
     required this.daysWithTx,
     required this.selectedMonth,
-    required this.selectedDay,
     required this.onPick,
   });
 
@@ -145,7 +142,6 @@ class _MiniMonth extends StatelessWidget {
   final int month;
   final Set<int> daysWithTx;
   final int? selectedMonth;
-  final int? selectedDay;
   final void Function(int month, int day) onPick;
 
   @override
@@ -158,22 +154,58 @@ class _MiniMonth extends StatelessWidget {
 
     return Padding(
       key: ValueKey<String>('mini-month-$month'),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.fromLTRB(3, 6, 3, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            '$month月',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: isSelectedMonth ? Tok.brandDeep : Tok.ink,
-            ),
+          // 原型 `.m-name`：居中、三级灰；当前月改品牌深色并加 `::before` 小圆点
+          // （圆点单独成 widget，不要并进文本 —— 测试按 `find.text('9月')` 找标题）
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (isSelectedMonth) ...<Widget>[
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: Tok.brandDeep,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 3),
+              ],
+              Text(
+                '$month月',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  color: isSelectedMonth ? Tok.brandDeep : Tok.ink2,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 4),
+          // 原型 `.m-wk`：8px 三级灰星期表头（没有它读不出格子是周几）
+          Row(
+            children: <Widget>[
+              for (final String w in _weekHeads)
+                Expanded(
+                  child: Text(
+                    w,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w800,
+                      color: Tok.ink3,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 2),
           for (int r = 0; r < rows; r++)
             SizedBox(
-              height: 15,
+              height: 13,
               child: Row(
                 children: <Widget>[
                   for (int c = 0; c < 7; c++)
@@ -183,7 +215,6 @@ class _MiniMonth extends StatelessWidget {
                         day: 1 - leading + r * 7 + c,
                         total: total,
                         now: now,
-                        isSelectedMonth: isSelectedMonth,
                       ),
                     ),
                 ],
@@ -199,43 +230,49 @@ class _MiniMonth extends StatelessWidget {
     required int day,
     required int total,
     required DateTime now,
-    required bool isSelectedMonth,
   }) {
     if (day < 1 || day > total) return const SizedBox.shrink();
     final bool hasTx = daysWithTx.contains(day);
     final bool isToday =
         now.year == year && now.month == month && now.day == day;
-    final bool isSelected = isSelectedMonth && selectedDay == day;
+
+    // 原型：`.mark`（这天有记账）= 品牌底 + 深棕字；`.today` 覆盖为墨底白字
+    final Color? bg = isToday
+        ? Tok.ink
+        : hasTx
+        ? Tok.brand
+        : null;
+    final Color fg = isToday
+        ? Tok.paper
+        : hasTx
+        ? Tok.brandInk
+        : Tok.ink2;
 
     return InkWell(
       onTap: () => onPick(month, day),
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(5),
       child: Container(
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(4),
-          color: isSelected ? kCalendarAccent : null,
-          border: isToday && !isSelected
-              ? Border.all(color: kCalendarAccent, width: 1)
-              : null,
+          borderRadius: BorderRadius.circular(5),
+          color: bg,
         ),
         child: Text(
           '$day',
           style: TextStyle(
-            fontSize: 9,
+            fontSize: 8,
             height: 1,
-            color: isSelected
-                ? Tok.brandInk
-                : hasTx
-                ? Tok.brandDeep
-                : Tok.ink3,
-            fontWeight: isSelected || hasTx ? FontWeight.w700 : FontWeight.w400,
+            color: fg,
+            fontWeight: isToday || hasTx ? FontWeight.w900 : FontWeight.w700,
           ),
         ),
       ),
     );
   }
 }
+
+/// 迷你月历的星期表头（原型 `.m-wk`）。
+const List<String> _weekHeads = <String>['日', '一', '二', '三', '四', '五', '六'];
 
 /// 子页 appbar 占位图标（muted = 三级灰）。
 class _PickerIcon extends StatelessWidget {

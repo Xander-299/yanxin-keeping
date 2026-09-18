@@ -286,7 +286,10 @@ class _SelectedDaySection extends StatelessWidget {
         .fold(0, (int a, TxRow t) => a + t.amountCents);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      // stretch（不是 start）：空态块自己只有「最宽子项」那么宽，
+      // 用 start 会被顶到左边 —— 它内部的居中就成了「块内居中、整块偏左」。
+      // 原型 `.empty-block` 是块级 div（占满宽 + text-align:center），这里靠拉伸对齐。
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
@@ -390,12 +393,13 @@ class _EmptyDay extends StatelessWidget {
             child: SizedBox(
               width: 76,
               height: 76,
-              child: Center(child: PigMascot(size: 40)),
+              child: Center(child: PigMascot(size: 52)),
             ),
           ),
           const SizedBox(height: 14),
           const Text(
             '这天没有账单哦，赶紧记一笔吧~',
+            textAlign: TextAlign.center,
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),

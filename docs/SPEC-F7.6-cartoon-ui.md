@@ -1,6 +1,6 @@
 # SPEC — F7.6 卡通浅色视觉改版（对齐页面原型）
 
-> 状态：**已签字**（2026-09-18 用户确认三项决策）· P1 / P2 **已交付**，P3 待排期
+> 状态：**已签字**（2026-09-18 用户确认三项决策）· P1 / P2 **已交付并真机走查**，P3 待排期
 > 起草：2026-09-18 · 原型：`D:\new file\modao\yanxin\`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）
 > 关联：`docs/PRD-yanxin-flutter.md`（口径不动）、`app_template/*.jpg`（旧参考图，本次起被原型取代）
 
@@ -159,7 +159,20 @@
 | 3 | 图标用 Material 近似 | 用户已确认零新依赖，Material 无法复刻 1.9px 描边质感 |
 | 4 | 原型顶部状态栏不实现 | 那是原型外壳，不是 App 内容 |
 
-### P2 已交付（2026-09-19，门禁绿 / **未真机走查**）
+### P2 已交付（2026-09-19，门禁绿 + **MuMu 12 真机走查已过**）
+
+**真机走查（用户报告 1 项 → 修完复验）**：
+
+| # | 问题（用户/走查发现） | 根因 | 修法 |
+|---|---|---|---|
+| 1 | **日历下半部分没有居中**（用户报告） | `_SelectedDaySection` 外层 `Column` 用 `CrossAxisAlignment.start`，空态块只占「最宽子项」宽度 → 块内居中、整块偏左 | 外层改 `stretch`（原型 `.empty-block` 是块级 div 占满宽）；两行文案补 `textAlign.center`；小猪按原型改 52px |
+| 2 | 月份选择页迷你月缺星期表头 + 月名左对齐 | P2 只改了取色，漏了原型 `.m-wk` 与 `.m-name` 的居中/灰阶/当前月圆点 | 补 8px 星期表头行；月名居中改 `ink2`（当前月 `brandDeep` + 圆点）；格子按 `.mark`/`.today` 规则（品牌底深棕字 / 墨底白字） |
+
+走查覆盖：日历（空态居中 / 有账日列表 + 「昨天 9月18日 周五 · 1 笔 · 支出 ¥88.88」）、
+月份选择、统计（三列汇总 + donut + 图例 + 双柱）、资产（净资产卡 + 账户行 + 口径脚注）。
+**结论：阻断 0**；2 处体验摩擦记入待办（见下）。
+
+**实施明细**：
 
 | 文件 | 状态 |
 |---|---|
@@ -167,7 +180,7 @@
 | `lib/core/theme/tokens.dart` | ✅ `appBarTheme` 加底部墨色描边（原型 `.appbar`）；`snackBar` / `dialog` / `bottomSheet` / `input` 描边统一到 `Tok.bw` |
 | `calendar_page.dart` | ✅ header 换描边方块图标；日汇总选 `N 笔 · 支出 ¥x`；空态改虚线圆 + 小猪 + 文案；流水列表去 `Card`（避免描边翻倍） |
 | `widgets/month_grid.dart` | ✅ 格子描边 = 选中态墨色 2px；tint 底改 `Tok.redTint`/`greenTint`；今天用 `brandDeep` |
-| `month_picker_page.dart` | ✅ appbar 扁平 + 只留 muted 报表占位；`‹ 上一年` / `下一年 ›` 换 `_PillButton` 描边胶囊 |
+| `month_picker_page.dart` | ✅ appbar 扁平 + 只留 muted 报表占位；`‹ 上一年` / `下一年 ›` 换 `_PillButton` 描边胶囊；迷你月补星期表头与 mark/today 规则 |
 | `stats_page.dart` | ✅ 月份切换换 `ToonIconButton`；收支切换 `SegmentedButton` → `ToonSeg`；汇总三列 / 图例 / 占比行统一令牌色 |
 | `widgets/trend_bars.dart` | ✅ 柱改原型参数：宽 13、圆角 `6 6 3 3`、2px 墨色描边（+4px 补偿 content-box 差）；轴标签 `Tok.ink2` w800 |
 | `assets_page.dart` | ✅ 净资产卡改品牌浅琥珀底（`.networth`）+ 32px 大号金额；账户行换 `ToonPress` 描边卡 |
@@ -175,7 +188,7 @@
 | `budget_card.dart` | ✅ 「未设预算」态不再渲染整行占位，改为日均单行 |
 | `record_page.dart` | ✅ 页面 body 改纯白（原型 `pbody` 用 `--surface`，不是全局暖白画布） |
 
-**门禁**：`flutter analyze` **0 issue**；`flutter test` **269 通过 0 skip**（同步改 `budget_card_test` 的「未设预算」断言）。
+**门禁**：`flutter analyze` **0 issue**；`flutter test` **269 通过 0 skip**。
 
 **剩余裸色值**（留 P3）：`import/presentation/import_page.dart`、`search/presentation/search_overlay.dart`。
 
@@ -183,5 +196,7 @@
 
 我的页（头像卡 + 4 条目 + 品牌提示卡）、账本管理、分类管理（seg + 字母头像列表）、
 导入三步（步骤条 + 勾选列表 + 报告卡）、分类选择 sheet（已由 P1 完成主体，复核即可）、日期选择 sheet、
-预算 sheet、账户 sheet（已由 P2 复核）、搜索浮层（chips + 结果条 + 吉祥物空态 + 裸色值清零）。
+预算 sheet、账户 sheet（已由 P2 复核）、搜索浮层（chips + 结果条 + 吉祥物空态 + 裸色值清零）、
+**资产页空态**（仍是 Material 图标 + `FilledButton`，原型无此态 → 统一成卡通空态）、
+**日历月历与月结余卡之间留白比原型略大**（微调）。
 
