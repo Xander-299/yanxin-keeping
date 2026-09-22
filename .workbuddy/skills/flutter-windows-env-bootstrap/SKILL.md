@@ -6,6 +6,11 @@ agent_created: true
 
 # Windows 换机重建 Flutter 环境
 
+> ⚠️ **本技能是 B 机（Administrator / C:）专用**：正文与 `.workbuddy/bootstrap_*.py` / `dl_ndk.py`
+> 里的路径写死了 `C:\src\*`，在 A 机（panda / D:）**不适用，勿照抄**。
+> A 机环境已就绪，无需重建；A 机的构建/走查流程见 `mumu-flutter-ui-smoke`。
+> 两台机器的常量对照见 `HANDOFF.md` 开头那张表。
+
 判定前提：机器上没有（或路径失效）Flutter SDK / Android SDK / Pub 缓存。
 **先做体检再动手**：确认有哪些盘、`java -XshowSettings:properties` 看 `java.home` 找现成 JDK、
 `ls` 找现成的 adb，别一上来就全装一遍。

@@ -28,6 +28,10 @@ abstract final class Tok {
   // ── 语义色（糖果色） ──
   static const Color red = Color(0xFFFF5D5D);
   static const Color redTint = Color(0xFFFFE5E5);
+
+  /// 红底提示条上的深红文字（原型 `#A8321F`）。
+  /// `red` 铺在 `redTint` 上对比只有 ~2.7:1，小字读不清，故与 `brandInk` 同思路单列。
+  static const Color redInk = Color(0xFFA8321F);
   static const Color green = Color(0xFF2FC98A);
   static const Color greenTint = Color(0xFFD9F7E9);
   static const Color blue = Color(0xFF4DA8FF);

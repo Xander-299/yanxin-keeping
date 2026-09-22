@@ -1,6 +1,6 @@
 # SPEC — F7.6 卡通浅色视觉改版（对齐页面原型）
 
-> 状态：**已签字**（2026-09-18 用户确认三项决策）· P1 / P2 **已交付并真机走查**，P3 待排期
+> 状态：**已签字并全部交付**（2026-09-18 用户确认三项决策）· P1 / P2 / P3 **均已交付 + 真机走查通过**
 > 起草：2026-09-18 · 原型：`D:\new file\modao\yanxin\`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）
 > 关联：`docs/PRD-yanxin-flutter.md`（口径不动）、`app_template/*.jpg`（旧参考图，本次起被原型取代）
 
@@ -34,6 +34,7 @@
 | 卡片纸 / 画布 / 画布次级 | `paper` / `canvas` / `canvas2` | `#FFFFFF` / `#FFF7EA` / `#FFFCF6` |
 | 品牌 | `brand` / `brandDeep` / `brandInk` / `brandTint` / `brandTint2` | `#FFB627` / `#E1810A` / `#4A3103` / `#FFF1D4` / `#FFE1AC` |
 | 支出 / 深色文字态 | `red` / `redTint` | `#FF5D5D` / `#FFE5E5` |
+| 红底提示条文字 | `redInk` | `#A8321F`（与 `brandInk` 同思路；`red` 在 `redTint` 上对比不足） |
 | 收入 | `green` / `greenTint` | `#2FC98A` / `#D9F7E9` |
 | 辅助 | `blue` / `purple` / `pink` / `lemon`（含各自 tint） | `#4DA8FF` / `#A98BFF` / `#FF7FAB` / `#FFE066` |
 | 分割线 | `line` | `#F0E7D8`（虚线分割用 `rgba(42,42,53,.2)`） |
@@ -192,11 +193,38 @@
 
 **剩余裸色值**（留 P3）：`import/presentation/import_page.dart`、`search/presentation/search_overlay.dart`。
 
-### P3 待办（下一步）
+### P3 已交付（2026-09-19 代码 · 门禁绿 + **MuMu 12 真机走查已过**）
 
-我的页（头像卡 + 4 条目 + 品牌提示卡）、账本管理、分类管理（seg + 字母头像列表）、
-导入三步（步骤条 + 勾选列表 + 报告卡）、分类选择 sheet（已由 P1 完成主体，复核即可）、日期选择 sheet、
-预算 sheet、账户 sheet（已由 P2 复核）、搜索浮层（chips + 结果条 + 吉祥物空态 + 裸色值清零）、
-**资产页空态**（仍是 Material 图标 + `FilledButton`，原型无此态 → 统一成卡通空态）、
-**日历月历与月结余卡之间留白比原型略大**（微调）。
+| 文件 | 状态 |
+|---|---|
+| `profile/presentation/profile_page.dart` | ✅ 重写：头像卡（62 品牌圆角方块 + `PigMascot`）+ 4 条目卡（38 描边图标方块 / `ToonDashedLine` 分隔 / 未实现项「建设中」灰字）+ 品牌提示卡（`brandTint` 底 + `brandInk` 字） |
+| `book/presentation/book_manage_page.dart` | ✅ 重写：FAB → AppBar `ToonIconButton`；账本行 = `ToonAvatar`（首字）+ `币种 · 类型` + 选中「品牌浅底 + 墨色描边 + 硬阴影 + 对勾」 |
+| `category/presentation/category_manage_page.dart` | ✅ 重写：`SegmentedButton` → `ToonSeg`；字母头像（支出 `redTint` / 收入 `greenTint`）+ 预置标记；删除确认框换 `ToonButton` |
+| `import/presentation/import_page.dart` | ✅ **报告 `AlertDialog` → 第 3 步页面**：`_StepBar` 步骤条（虚线连接 / 完成打勾）+ 虚线投放区 + 自定义勾选行（可单条取消，联动计数）+ 报告卡（44 图标方块 + 42px 大数字 + 虚线 kv 列表）；裸色值清零 |
+| `search/presentation/search_overlay.dart` | ✅ `ChoiceChip` → `ToonChip`、结果条玻璃层 → `ToonCard`、引导态与无结果态按原型重写（小猪 + 「清空输入」）；裸色值清零 |
+| `record/presentation/widgets/date_picker_sheet.dart` **新增** | ✅ 卡通日期弹层（抓手 + 「上限为今天，不能记未来的账」+ `MonthGrid`）；`MonthGrid` 加 `maxDate` 参数（超期格子灰显 0.3 且不可点） |
+| `ledger/presentation/widgets/budget_edit_sheet.dart` | ✅ 重写：抓手 + ¥ 描边输入框（内嵌清空钮）+ 预设 `ToonChip` + 「删除预算」linkbtn + `ToonButton`（ghost / primary） |
+| `assets/presentation/assets_page.dart` | ✅ 空态改卡通（虚线圆 + 小猪 + `ToonButton`）；AppBar `+` 换 `ToonIconButton`（原型 `.hdr .iconbtn`）；错误态换 `ToonButton` |
+| `assets/.../widgets/account_form_sheet.dart` | ✅ **补做**（见下）；`calendar/presentation/calendar_page.dart` ✅ 网格左右 padding 10→8、月历与月结余卡留白改由卡 margin 承担（对齐原型 12px） |
+| `core/theme/tokens.dart` | ✅ 补 `redInk`（原型 `#A8321F`，红底提示条上的深红文字） |
+| `features/shared/name_dialog.dart` | ✅ `TextButton` → `ToonButton` |
+
+**SPEC 自纠**：P2 记录里的「账户 sheet 已由 P2 复核」不成立 —— `git show 3d4e749` 对该文件**只有取色**（formatter + 红字改令牌），结构仍是 Material：浮动 label 的 `OutlineInputBorder`、`DropdownButtonFormField`、`TextButton` / `FilledButton`、无抓手无副标题。**P3 真机走查时发现并当场补做**：抓手 + `.s-sub` 副标题 + 小标 + 墨色描边裸输入框 + 类型改 6 个 `ToonChip` + 「当前余额 ¥x」+ 红底流水提示条（`txCount > 0` 时，省得点了删除才被拦）+ `删除账户` linkbtn + `ToonButton`。
+
+**门禁**：`flutter analyze` **0 issue**；`flutter test` **269 通过 0 skip**。
+
+**产品代码裸色值**：已清零。`grep -rn "Color(0x" lib/ | grep -v core/theme` 只剩 `month_hero.dart` 的 `Color(0xD9FFFFFF)` —— hero 金额的白色文字投影，属白/透明类例外。
+
+**真机走查（MuMu 12 · 900×1600 · 320dpi · 竖屏）**：
+
+| 页面 | 结论 |
+|---|---|
+| 我的页 / 分类管理 / 账本抽屉 + 账本管理 | ✅ 与原型一致 |
+| 预算 sheet + 保存链路 | ✅ 预设 1000 → 保存 → 卡片变 `1,000.00` / `8.9%` / 剩余 `911.12` |
+| 搜索浮层（引导 / 结果条 / 无结果小猪） | ✅ |
+| 导入三步（步骤条 / 解析结果 / 单条取消联动 / 报告卡 / 「去看账单」跳转） | ✅ |
+| 记一笔的日期弹层 | ✅ 抓手 + 「上限为今天」；23 日之后（24–26、27–30 及下月 1–3）灰显**且点不动**；点 20 日回填 `2026年9月20日 周日` |
+| 资产页空态 | ✅ 虚线圆 + 小猪 + 「新建账户」；顺手发现 AppBar `+` 与账户 sheet 未卡通化（已修） |
+
+**结论：阻断 0。**
 

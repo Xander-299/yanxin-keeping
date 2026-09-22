@@ -12,9 +12,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yanxin/core/constants/preset.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/account_meta.dart';
+import '../../application/asset_aggregate.dart';
 import '../../application/assets_controller.dart';
 
 /// 打开账户表单弹窗。[account] 为空 = 新增，否则 = 编辑。
@@ -153,9 +155,11 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
           title: const Text('删不了这个账户'),
           content: Text('「${a.name}」下还有 $txCount 笔流水，请先把这些流水改到别的账户。'),
           actions: <Widget>[
-            TextButton(
+            ToonButton(
+              label: '知道了',
+              kind: ToonButtonKind.ghost,
+              small: true,
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('知道了'),
             ),
           ],
         ),
@@ -169,13 +173,17 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
         title: const Text('删除账户'),
         content: Text('删除「${a.name}」后不再计入净资产，确定删除？'),
         actions: <Widget>[
-          TextButton(
+          ToonButton(
+            label: '取消',
+            kind: ToonButtonKind.ghost,
+            small: true,
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
           ),
-          TextButton(
+          ToonButton(
+            label: '删除',
+            kind: ToonButtonKind.danger,
+            small: true,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
           ),
         ],
       ),
@@ -209,6 +217,14 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final Account? a = widget.account;
+    final AssetItem? item = a == null
+        ? null
+        : ref.watch(assetsProvider).value?.itemOf(a.id);
+    final int txCount = item?.txCount ?? 0;
+    final int currentCents = item?.balanceCents ?? 0;
+    final bool hasInput = _balance.text.trim().isNotEmpty;
+
     return Padding(
       // 键盘弹起时把内容顶上来
       padding: EdgeInsets.only(
@@ -218,100 +234,224 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
         top: false,
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
+                // 抓手
+                Center(
+                  child: Container(
+                    width: 46,
+                    height: 6,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Tok.ink,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
                 Text(
                   _isEdit ? '编辑账户' : '新增账户',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '初始余额不允许负数；有流水的账户不可删除',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Tok.ink2,
                   ),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _name,
-                  autofocus: !_isEdit,
-                  textInputAction: TextInputAction.next,
-                  decoration: const InputDecoration(
-                    labelText: '账户名称',
-                    hintText: '如：现金 / 招行储蓄卡',
-                    border: OutlineInputBorder(),
+
+                const _FieldLabel('账户名称'),
+                _BareInput(
+                  child: TextField(
+                    controller: _name,
+                    autofocus: !_isEdit,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    // 主题给输入框统一加了填充 + 描边 → 这里要裸输入框
+                    decoration: const InputDecoration(
+                      hintText: '例如：招商银行储蓄卡',
+                      border: InputBorder.none,
+                      filled: false,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      counterText: '',
+                    ),
                   ),
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _type,
-                  decoration: const InputDecoration(
-                    labelText: '账户类型',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: <DropdownMenuItem<String>>[
+
+                const SizedBox(height: 14),
+                const _FieldLabel('账户类型'),
+                // 原型用 chips 选类型（不是下拉）；6 个类型实测两行放得下
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
                     for (final String t in accountTypes)
-                      DropdownMenuItem<String>(
-                        value: t,
-                        child: Text(accountTypeLabel(t)),
+                      ToonChip(
+                        key: ValueKey<String>('acct-type-$t'),
+                        label: accountTypeLabel(t),
+                        selected: _type == t,
+                        onTap: _busy ? null : () => setState(() => _type = t),
                       ),
                   ],
-                  onChanged: (String? v) {
-                    if (v != null) setState(() => _type = v);
-                  },
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _balance,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
+
+                const SizedBox(height: 14),
+                const _FieldLabel('初始余额（元）'),
+                _BareInput(
+                  child: Row(
+                    children: <Widget>[
+                      const Text(
+                        '¥',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Tok.ink2,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _balance,
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          inputFormatters: <TextInputFormatter>[
+                            FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                          ],
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: '0.00',
+                            border: InputBorder.none,
+                            filled: false,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            counterText: '',
+                          ),
+                          onChanged: (_) => setState(() => _error = null),
+                          onSubmitted: (_) => _save(),
+                        ),
+                      ),
+                      if (hasInput)
+                        ToonIconButton(
+                          icon: Icons.close,
+                          tooltip: '清空',
+                          size: 30,
+                          iconSize: 17,
+                          onPressed: () => setState(() {
+                            _balance.clear();
+                            _error = null;
+                          }),
+                        ),
+                    ],
                   ),
-                  inputFormatters: <TextInputFormatter>[
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: '初始余额（元）',
-                    hintText: '0.00',
-                    prefixText: '¥ ',
-                    border: OutlineInputBorder(),
-                  ),
-                  onSubmitted: (_) => _save(),
                 ),
+
+                if (_isEdit)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '当前余额 ¥${centsToYuan(currentCents, group: true)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Tok.ink2,
+                      ),
+                    ),
+                  ),
+
+                // 有流水 → 先摆出红底提示条（原型同款），省得点了删除才被拦
+                if (txCount > 0)
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                    decoration: BoxDecoration(
+                      color: Tok.redTint,
+                      borderRadius: BorderRadius.circular(Tok.rSm),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Icon(Icons.info_outline, size: 18, color: Tok.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            '该账户下有流水，需先把流水改绑到其它账户才能删除（还剩 $txCount 笔）',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Tok.redInk,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                 if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
                       _error!,
-                      style: const TextStyle(fontSize: 12, color: Tok.red),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Tok.red,
+                      ),
                     ),
                   ),
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 18),
                 Row(
                   children: <Widget>[
                     if (_isEdit)
-                      TextButton(
-                        onPressed: _busy ? null : _delete,
-                        child: const Text(
-                          '删除账户',
-                          style: TextStyle(color: Tok.red),
+                      ToonPress(
+                        dx: 1.5,
+                        dy: 1.5,
+                        onTap: _busy ? null : _delete,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          child: Text(
+                            '删除账户',
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w800,
+                              color: Tok.red,
+                            ),
+                          ),
                         ),
                       ),
                     const Spacer(),
-                    TextButton(
-                      onPressed: _busy
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      child: const Text('取消'),
+                    ToonButton(
+                      label: '取消',
+                      kind: ToonButtonKind.ghost,
+                      small: true,
+                      onPressed: _busy ? null : () => Navigator.of(context).pop(),
                     ),
                     const SizedBox(width: 8),
-                    FilledButton(
+                    ToonButton(
+                      label: '保存',
+                      small: true,
                       onPressed: _busy ? null : _save,
-                      child: _busy
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('保存'),
                     ),
                   ],
                 ),
@@ -320,6 +460,48 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 原型的小标（`.s12.mute2`）：输入框 / chips 上方的字段名。
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Tok.ink2,
+        ),
+      ),
+    );
+  }
+}
+
+/// 墨色描边圆角输入框（原型 `.input`）；内部放裸 `TextField`。
+class _BareInput extends StatelessWidget {
+  const _BareInput({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: Tok.paper,
+        borderRadius: BorderRadius.circular(Tok.rMd),
+        border: Tok.inkBorder(),
+      ),
+      child: child,
     );
   }
 }

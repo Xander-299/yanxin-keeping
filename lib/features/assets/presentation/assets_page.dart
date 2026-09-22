@@ -28,11 +28,12 @@ class AssetsPage extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('资产'),
         actions: <Widget>[
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
+          ToonIconButton(
+            icon: Icons.add,
             tooltip: '新增账户',
             onPressed: () => showAccountFormSheet(context, ref),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       body: async.when(
@@ -43,11 +44,26 @@ class AssetsPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text('加载失败：$e', textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                OutlinedButton(
+                const Text(
+                  '加载失败',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '$e',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Tok.ink2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ToonButton(
+                  label: '重试',
+                  icon: Icons.refresh,
+                  small: true,
                   onPressed: () => ref.invalidate(assetsProvider),
-                  child: const Text('重试'),
                 ),
               ],
             ),

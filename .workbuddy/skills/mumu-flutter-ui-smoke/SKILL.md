@@ -118,6 +118,25 @@ sleep 7
     ```
     `adb devices` 输出只有 `List of devices attached` 一行 = 设备不在线，**不要**接着跑 wait-for-device，
     直接请用户启动 MuMu（用户手动启动是本项目既定流程）。同一现象也会让 `install` 静默等待。
+13. **凡涉及 `/sdcard/...` 的命令都要 `MSYS_NO_PATHCONV=1`**。Git Bash 会把 `/sdcard/ui.xml`
+    当 Unix 路径转换成 `C:/Program Files/Git/sdcard/ui.xml`，表现是：
+    `adb push` 报 `remote secure_mkdirs failed: No such file or directory`、
+    `uiautomator dump` + `pull` 静默拿不到文件（继续跑就用到了上一次的旧 xml）。
+    ```bash
+    MSYS_NO_PATHCONV=1 "$ADB" -s "$DEV" shell uiautomator dump /sdcard/ui.xml
+    MSYS_NO_PATHCONV=1 "$ADB" -s "$DEV" shell screencap -p /sdcard/x.png
+    MSYS_NO_PATHCONV=1 "$ADB" -s "$DEV" pull /sdcard/x.png .workbuddy/shots/x.png
+    ```
+14. **`ui_dump.py` 给的坐标偶尔不是按钮本身，连点无效时先怀疑它**。脚本按语义节点算中心，
+    某些结构下报的是**外层容器**的中心（实测两次：整卡容器中心 y=483 而真实按钮在 y=639；
+    对话框里 `Scrim` 的 bounds 与输入框重叠，两者同坐标）。
+    判据：同一坐标连点 2~3 次都无状态变化 → 拉原始语义树按 **class + text** 自己选真节点：
+    ```bash
+    MSYS_NO_PATHCONV=1 "$ADB" -s "$DEV" shell uiautomator dump /sdcard/ui.xml
+    MSYS_NO_PATHCONV=1 "$ADB" -s "$DEV" pull /sdcard/ui.xml .workbuddy/ui.xml
+    ```
+    再用 `xml.etree` 打印 `class / text / bounds / 中心`（`EditText` 就取它自己的 bounds）。
+    注意 `uiautomator` **不裁视口**：报出的 bounds 可能落在屏幕外，`input tap` 过去等于点空。
 
 ## 视觉对拍：原型定点截图（F7.6 起必做）
 
@@ -146,6 +165,35 @@ printf '%s\n' '<script>' 'const q = new URLSearchParams(location.search);' \
   并发/连续跑多次 headless 时各带一个 `--user-data-dir=...`，避免 profile 锁。
 - 截出来是「左侧栏 + 中间手机」的整页图，中间那台才是设计稿本体，比对时裁中间看。
 - **截图统一落到 `.workbuddy/shots/`**（该目录已在 `.gitignore`，写到 `.workbuddy/` 根下会被误提交）。
+
+## 放大截图判定像素级细节（「有没有那根线 / 那 px 描边」）
+
+1× 看整屏截图时，「输入框的底边框紧贴文字」极容易被读成「hint 文本带了 underline」；
+同理，墨色 3px 描边叠在遮罩变暗的背景上，1× 下看着像「没有描边」。别凭感觉下结论，放大看。
+**本沙箱 pip 不通外网（`pillow` 装不上）**，用 Chrome headless 缩放来裁切放大：
+
+```bash
+cat > .workbuddy/_zoom.html <<'EOF'
+<html><body style="margin:0;background:#000;overflow:hidden">
+<img id="im" src="file:///D:/Tencent/yanxin-flutter/.workbuddy/shots/x.png"
+     style="position:absolute;transform-origin:0 0;image-rendering:pixelated">
+<script>
+const p=new URLSearchParams(location.search);
+const x=+p.get('x'), y=+p.get('y'), z=+p.get('z')||4;
+const im=document.getElementById('im');
+im.style.left=(-x*z)+'px'; im.style.top=(-y*z)+'px'; im.style.transform='scale('+z+')';
+</script></body></html>
+EOF
+"/c/Program Files/Google/Chrome/Application/chrome.exe" --headless --disable-gpu --hide-scrollbars \
+  --user-data-dir="$TEMP/chrome-zoom" --window-size=1200,300 \
+  --screenshot="D:/Tencent/yanxin-flutter/.workbuddy/shots/_zoom.png" \
+  "file:///D:/Tencent/yanxin-flutter/.workbuddy/_zoom.html?x=60&y=795&z=4"
+```
+
+- `x` / `y` 是**原图坐标**（`screencap` 出来的就是设备像素，如竖屏 900×1600），`z` 是放大倍数；
+  `--window-size` 的宽高 = 想看的区域尺寸 × z。
+- 改看别的图时 `sed -i 's#旧图名#新图名#' .workbuddy/_zoom.html` 即可。
+- 看完**删掉** `_zoom.html` 与 `_zoom*.png`：`.gitignore` 只兜住了 `.workbuddy/*.png`，`.html` 会被误提交。
 
 ## 走查前的第一件事：确认设备上装的是**刚构建的那版**
 
