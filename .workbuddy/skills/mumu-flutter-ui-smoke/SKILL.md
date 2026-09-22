@@ -166,6 +166,30 @@ printf '%s\n' '<script>' 'const q = new URLSearchParams(location.search);' \
 - 截出来是「左侧栏 + 中间手机」的整页图，中间那台才是设计稿本体，比对时裁中间看。
 - **截图统一落到 `.workbuddy/shots/`**（该目录已在 `.gitignore`，写到 `.workbuddy/` 根下会被误提交）。
 
+## 直接改设备上的 App 数据（走查残留清理 / 造测试数据）
+
+走查常在模拟器上留下垃圾（临时账本、临时账户、测试流水），而 App 未必有对应的删除入口。
+**不用 pull / 改 / push 数据库往返** —— 模拟器自带 `/system/bin/sqlite3`，配 `run-as` 直接改私有库：
+
+```bash
+"$ADB" -s "$DEV" shell am force-stop com.teacodeman.yanxin      # ① 必须先停，否则 drift 连接会覆盖
+"$ADB" -s "$DEV" shell run-as com.teacodeman.yanxin ls -l app_flutter/          # → yanxin.sqlite
+"$ADB" -s "$DEV" shell run-as com.teacodeman.yanxin cp app_flutter/yanxin.sqlite \
+                                                     app_flutter/yanxin.sqlite.bak
+"$ADB" -s "$DEV" shell "run-as com.teacodeman.yanxin sqlite3 app_flutter/yanxin.sqlite '.schema books'"
+"$ADB" -s "$DEV" shell "run-as com.teacodeman.yanxin sqlite3 app_flutter/yanxin.sqlite \
+  \"update books set deleted_at=$TS, updated_at=$TS, dirty=1 where name='QA-Temp' and deleted_at is null; select changes();\""
+# ② 重启 App 验证：抽屉里不再有该账本，原有数据没丢
+"$ADB" -s "$DEV" shell am start -n com.teacodeman.yanxin/.MainActivity
+```
+
+要点：
+- `run-as` 只对 **debug 包**有效（本项目走查装的都是 `--debug`），这是前提。
+- **先 `cp` 一份备份**再改；改完的验证必须包含「其他数据没受影响」。
+- 优先用**软删**（`deleted_at`）而不是 `DELETE` —— 与 App 自身口径一致，也留了后悔药。
+- 删父行（如 `books`）就够：子表（账户 / 分类 / 流水）随父行一起不可达，不必逐个动。
+- 改完记得 `dirty=1`（本项目有同步标记列），否则将来接云端同步时会漏推。
+
 ## 放大截图判定像素级细节（「有没有那根线 / 那 px 描边」）
 
 1× 看整屏截图时，「输入框的底边框紧贴文字」极容易被读成「hint 文本带了 underline」；
