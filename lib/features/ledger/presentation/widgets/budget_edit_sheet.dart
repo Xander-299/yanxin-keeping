@@ -1,4 +1,4 @@
-/// 「设置本月预算」底部弹窗。
+/// 「设置本月预算」底部弹窗（F7.6 P3 卡通化，对齐原型 `ovlBudget`）。
 ///
 /// 就地设置，不新增路由：常用额度快捷键 + 金额输入 + 保存 / 删除。
 /// 保存走 [MonthBudgetController]，成功后只刷新预算卡（不重查流水）。
@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/budget_controller.dart';
@@ -18,7 +19,7 @@ import '../../application/ledger_controller.dart';
 /// 常用额度快捷键（元）。
 const List<int> kBudgetPresets = <int>[1000, 2000, 3000, 5000];
 
-/// 弹出设置预算弹窗。[view] 用于回填当前预算。
+/// 弹出设置预算弹窗。[view] 用于回填当前预算与已消费。
 Future<void> showBudgetEditSheet(
   BuildContext context,
   WidgetRef ref, {
@@ -32,14 +33,20 @@ Future<void> showBudgetEditSheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
       side: BorderSide(color: Tok.ink, width: Tok.bw),
     ),
-    builder: (BuildContext _) => _BudgetEditSheet(initialCents: view.budgetCents),
+    builder: (BuildContext _) => _BudgetEditSheet(
+      initialCents: view.budgetCents,
+      spentCents: view.spentCents,
+    ),
   );
 }
 
 class _BudgetEditSheet extends ConsumerStatefulWidget {
-  const _BudgetEditSheet({required this.initialCents});
+  const _BudgetEditSheet({required this.initialCents, required this.spentCents});
 
   final int initialCents;
+
+  /// 该月已消费（分），用于「当前 / 已消费」那行提示。
+  final int spentCents;
 
   @override
   ConsumerState<_BudgetEditSheet> createState() => _BudgetEditSheetState();
@@ -132,13 +139,17 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
         title: const Text('删除本月预算'),
         content: const Text('删除后将不再跟踪本月预算进度，确定删除？'),
         actions: <Widget>[
-          TextButton(
+          ToonButton(
+            label: '取消',
+            kind: ToonButtonKind.ghost,
+            small: true,
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
           ),
-          TextButton(
+          ToonButton(
+            label: '删除',
+            kind: ToonButtonKind.danger,
+            small: true,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
           ),
         ],
       ),
@@ -163,6 +174,8 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
   Widget build(BuildContext context) {
     final ({int year, int month}) ym = _month();
     final bool hasExisting = widget.initialCents > 0;
+    final bool hasInput = _controller.text.trim().isNotEmpty;
+
     return Padding(
       // 键盘弹起时把内容顶上来
       padding: EdgeInsets.only(
@@ -171,16 +184,31 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
+              // 抓手
+              Center(
+                child: Container(
+                  width: 46,
+                  height: 6,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Tok.ink,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
               Text(
                 '设置 ${ym.year}年${ym.month}月 预算',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               const Text(
                 '用于在首页看到本月花销进度与剩余额度',
                 style: TextStyle(
@@ -190,36 +218,104 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                ],
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-                decoration: InputDecoration(
-                  prefixText: '¥ ',
-                  prefixStyle: const TextStyle(fontSize: 20),
-                  hintText: '0.00',
-                  errorText: _error,
-                  border: const OutlineInputBorder(),
+              // ¥ 输入框（原型：墨色描边圆角 + 大号数字）
+              Container(
+                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                decoration: BoxDecoration(
+                  color: Tok.paper,
+                  borderRadius: BorderRadius.circular(Tok.rMd),
+                  border: Tok.inkBorder(),
                 ),
-                onSubmitted: (_) => _save(),
+                child: Row(
+                  children: <Widget>[
+                    const Text(
+                      '¥',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: Tok.ink2,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        autofocus: true,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: <TextInputFormatter>[
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                        ],
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        // 主题给输入框统一加了填充 + 描边 → 这里要裸输入框
+                        decoration: const InputDecoration(
+                          hintText: '0.00',
+                          border: InputBorder.none,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                          counterText: '',
+                        ),
+                        onChanged: (_) => setState(() => _error = null),
+                        onSubmitted: (_) => _save(),
+                      ),
+                    ),
+                    if (hasInput)
+                      ToonIconButton(
+                        icon: Icons.close,
+                        tooltip: '清空',
+                        size: 30,
+                        iconSize: 17,
+                        onPressed: () => setState(() {
+                          _controller.clear();
+                          _error = null;
+                        }),
+                      ),
+                  ],
+                ),
               ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Tok.red,
+                    ),
+                  ),
+                ),
+              if (hasExisting)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '当前：¥${centsToYuan(widget.initialCents, group: true)}'
+                    ' · 已消费 ¥${centsToYuan(widget.spentCents, group: true)}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Tok.ink2,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: <Widget>[
                   for (final int preset in kBudgetPresets)
-                    ActionChip(
-                      label: Text('$preset'),
-                      onPressed: () {
-                        setState(() {
-                          _controller.text = '$preset';
-                          _error = null;
-                        });
-                      },
+                    ToonChip(
+                      label: '$preset',
+                      selected: _controller.text.trim() == '$preset',
+                      onTap: () => setState(() {
+                        _controller.text = '$preset';
+                        _error = null;
+                      }),
                     ),
                 ],
               ),
@@ -227,27 +323,49 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
               Row(
                 children: <Widget>[
                   if (hasExisting)
-                    TextButton(
-                      onPressed: _busy ? null : _clear,
-                      child: const Text('删除预算'),
+                    ToonPress(
+                      dx: 1.5,
+                      dy: 1.5,
+                      onTap: _busy ? null : _clear,
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        child: Text(
+                          '删除预算',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: Tok.red,
+                          ),
+                        ),
+                      ),
                     ),
                   const Spacer(),
-                  TextButton(
+                  ToonButton(
+                    label: '取消',
+                    kind: ToonButtonKind.ghost,
+                    small: true,
                     onPressed: _busy ? null : () => Navigator.of(context).pop(),
-                    child: const Text('取消'),
                   ),
                   const SizedBox(width: 8),
-                  FilledButton(
+                  ToonButton(
+                    label: '保存',
+                    small: true,
                     onPressed: _busy ? null : _save,
-                    child: _busy
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('保存'),
                   ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '同一月份重复设置会走更新（部分唯一索引），不会产生两条记录。',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                  height: 1.6,
+                ),
               ),
             ],
           ),

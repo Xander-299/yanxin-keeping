@@ -232,33 +232,48 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // F7.6 P3：与日历空态统一成卡通空态（虚线圆 + 小猪 + 胶囊按钮），
+    // 不再用 Material 图标 + FilledButton。
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 26),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Icon(
-              Icons.account_balance_wallet_rounded,
-              size: 56,
-              color: Theme.of(context).colorScheme.primary
-                  .withValues(alpha: 0.7),
+            const ToonDashedBorder(
+              circle: true,
+              color: Tok.ink,
+              thickness: Tok.bw,
+              dash: 7,
+              gap: 5,
+              background: Tok.brandTint,
+              child: SizedBox(
+                width: 76,
+                height: 76,
+                child: Center(child: PigMascot(size: 52)),
+              ),
             ),
-            const SizedBox(height: 16),
-            const Text('还没有账户'),
-            const SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 14),
+            const Text(
+              '还没有账户',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 6),
+            const Text(
               '建一个账户（现金 / 储蓄卡 / 支付宝…），就能看到净资产分布',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Tok.ink2,
               ),
             ),
-            const SizedBox(height: 20),
-            FilledButton(
+            const SizedBox(height: 16),
+            ToonButton(
+              label: '新建账户',
+              icon: Icons.add,
               onPressed: () => showAccountFormSheet(context, ref),
-              child: const Text('新建账户'),
             ),
           ],
         ),

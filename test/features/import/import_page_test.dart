@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
@@ -66,7 +67,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // 选文件 → 解析预览
-    await tester.tap(find.text('选择文件'));
+    // F7.6 P3 起步骤条第 1 步标签也叫「选择文件」（同原型）→ 用按钮定位
+    await tester.tap(find.widgetWithText(ToonButton, '选择文件'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('识别为「微信支付」账单'), findsOneWidget);
@@ -75,17 +77,22 @@ void main() {
     expect(find.text('确认导入（2 笔）'), findsOneWidget);
 
     // 取消第一条（美团），只导入滴滴
-    await tester.tap(find.byType(CheckboxListTile).first);
+    // F7.6 P3 起预览行是自定义卡通勾选行（不再是 CheckboxListTile）
+    await tester.tap(find.byKey(const ValueKey<String>('imp-row-0')));
     await tester.pumpAndSettle();
     expect(find.text('确认导入（1 笔）'), findsOneWidget);
 
-    // 确认导入 → 报告对话框（importRows 走 drift 事务，真实异步）
+    // 确认导入 → 第 3 步报告页（importRows 走 drift 事务，真实异步）
     await tester.tap(find.text('确认导入（1 笔）'));
     await pumpUntil(tester, find.text('导入完成'));
     expect(find.text('导入完成'), findsOneWidget);
     expect(find.textContaining('成功导入 1 笔'), findsOneWidget);
 
-    await tester.tap(find.text('完成'));
+    // 报告页「再导入一个文件」回到第 1 步（报告不再是弹窗，没有「完成」按钮）
+    // 测试视口 800×600 偏小，报告卡较长 → 先滚到可见，否则 tap 落空
+    await tester.ensureVisible(find.text('再导入一个文件'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('再导入一个文件'));
     await tester.pumpAndSettle();
 
     // 落库校验：仅 1 笔，备注/分类正确
@@ -132,7 +139,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('选择文件'));
+    // F7.6 P3 起步骤条第 1 步标签也叫「选择文件」（同原型）→ 用按钮定位
+    await tester.tap(find.widgetWithText(ToonButton, '选择文件'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('确认导入（1 笔）'));
     await pumpUntil(tester, find.text('导入完成'));
@@ -176,7 +184,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('选择文件'));
+    // F7.6 P3 起步骤条第 1 步标签也叫「选择文件」（同原型）→ 用按钮定位
+    await tester.tap(find.widgetWithText(ToonButton, '选择文件'));
     await tester.pumpAndSettle();
 
     // 说明文案让用户知道「点条目可取消」
@@ -239,7 +248,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // 走一次完整导入 → 必然全部重复
-    await tester.tap(find.text('选择文件'));
+    // F7.6 P3 起步骤条第 1 步标签也叫「选择文件」（同原型）→ 用按钮定位
+    await tester.tap(find.widgetWithText(ToonButton, '选择文件'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('确认导入（2 笔）'));
     await pumpUntil(tester, find.text('没有新增'));

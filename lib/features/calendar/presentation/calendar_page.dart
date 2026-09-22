@@ -49,7 +49,8 @@ class CalendarPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      // 原型 `.cal { padding: 6px 8px 0 }`
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
                       child: MonthGrid(
                         year: state.year,
                         month: state.month,
@@ -59,7 +60,8 @@ class CalendarPage extends ConsumerWidget {
                             ref.read(calendarProvider.notifier).selectDay(day),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    // 网格与月结余卡之间不再另加间距：原型是 `.day` 的 2px 外边距
+                    // + `.summary-bar` 的 10px margin（= 12px），由卡的 margin 承担。
                     _SummaryBar(state: state),
                     const SizedBox(height: 8),
                     _SelectedDaySection(
@@ -203,9 +205,10 @@ class _SummaryBar extends StatelessWidget {
         ? kIncomeGreen
         : Tok.ink;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: Tok.cardDeco(radius: 20),
+      // 原型 `.summary-bar { margin: 10px 16px; padding: 13px 16px }`
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+      decoration: Tok.cardDeco(),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[

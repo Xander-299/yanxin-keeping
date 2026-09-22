@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
@@ -208,9 +209,9 @@ void main() {
     // 末尾带一个空格 —— 用户接着敲关键词才会被空格分隔开，保持类型指令有效
     final TextField field = tester.widget<TextField>(find.byKey(_inputKey));
     expect(field.controller?.text, '仅支出 ');
-    // chip 高亮由输入框内容推导
+    // chip 高亮由输入框内容推导（F7.6 P3 起用卡通 ToonChip，不再是 ChoiceChip）
     expect(
-      tester.widget<ChoiceChip>(find.byKey(_chipKey('仅支出'))).selected,
+      tester.widget<ToonChip>(find.byKey(_chipKey('仅支出'))).selected,
       isTrue,
     );
 
@@ -326,7 +327,8 @@ void main() {
 
     expect(_inOverlay(find.text('没有匹配「不存在的关键词」的账单')), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, '清空'));
+    // F7.6 P3 起清空入口是卡通胶囊按钮（不再是 TextButton）
+    await tester.tap(find.widgetWithText(ToonButton, '清空输入'));
     await tester.pumpAndSettle();
     expect(_inOverlay(find.text('输入分类、备注或金额开始搜索')), findsOneWidget);
   });

@@ -1,6 +1,7 @@
 /// 分类管理：支出/收入分组 + 新建自定义分类 + 删除自定义分类。
 ///
 /// 对应旧栈 `pages/category/manage.vue`。预置分类 is_preset=1 不可删（可改名）。
+/// F7.6 P3 卡通化，对齐原型 `scrCategories`。
 library;
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,8 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import '../../shared/name_dialog.dart';
 
 /// 分类管理页。
@@ -29,19 +32,29 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
     final bookAsync = ref.watch(currentBookProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text('分类管理 · ${bookAsync.value?.name ?? ''}')),
+      backgroundColor: Tok.paper,
+      appBar: AppBar(
+        title: Text('分类管理 · ${bookAsync.value?.name ?? ''}'),
+        actions: <Widget>[
+          ToonIconButton(
+            icon: Icons.add,
+            tooltip: '新建分类',
+            onPressed: () => _create(context, ref),
+          ),
+          const SizedBox(width: 12),
+        ],
+      ),
       body: Column(
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: SegmentedButton<String>(
-              segments: const <ButtonSegment<String>>[
-                ButtonSegment<String>(value: 'expense', label: Text('支出')),
-                ButtonSegment<String>(value: 'income', label: Text('收入')),
-              ],
-              selected: <String>{_kind},
-              onSelectionChanged: (Set<String> next) =>
-                  setState(() => _kind = next.first),
+            child: Center(
+              child: ToonSeg(
+                labels: const <String>['支出', '收入'],
+                index: _kind == 'expense' ? 0 : 1,
+                onChanged: (int i) =>
+                    setState(() => _kind = i == 0 ? 'expense' : 'income'),
+              ),
             ),
           ),
           Expanded(
@@ -56,42 +69,44 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                 if (cats.isEmpty) {
                   return const Center(child: Text('还没有分类'));
                 }
-                return ListView.separated(
-                  itemCount: cats.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (BuildContext context, int index) {
-                    final c = cats[index];
-                    final isPreset = c.isPreset == 1;
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primaryContainer,
-                        child: Text(
-                          c.name.isEmpty ? '?' : c.name.substring(0, 1),
+                return ListView(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      child: ToonCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        clip: true,
+                        child: Column(
+                          children: <Widget>[
+                            for (int i = 0; i < cats.length; i++)
+                              _CatRow(
+                                category: cats[i],
+                                kind: _kind,
+                                dashedTop: i > 0,
+                                onDelete: () => _delete(context, ref, cats[i]),
+                              ),
+                          ],
                         ),
                       ),
-                      title: Text(c.name),
-                      trailing: isPreset
-                          ? null
-                          : IconButton(
-                              tooltip: '删除',
-                              icon: const Icon(Icons.delete_outline),
-                              onPressed: () =>
-                                  _delete(context, ref, c),
-                            ),
-                    );
-                  },
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
+                      child: Text(
+                        '预置分类不可删除，可改名改图标；自定义分类可增 / 改 / 软删。',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Tok.ink2,
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: '新建分类',
-        onPressed: () => _create(context, ref),
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -118,13 +133,17 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
         title: const Text('删除分类'),
         content: Text('确定删除「${category.name}」？已记录的流水不受影响。'),
         actions: <Widget>[
-          TextButton(
+          ToonButton(
+            label: '取消',
+            kind: ToonButtonKind.ghost,
+            small: true,
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('取消'),
           ),
-          TextButton(
+          ToonButton(
+            label: '删除',
+            kind: ToonButtonKind.danger,
+            small: true,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('删除'),
           ),
         ],
       ),
@@ -141,5 +160,70 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
         }
       }
     }
+  }
+}
+
+/// 分类行：字母头像（支出红 / 收入绿）+ 名称 + 预置标记或删除按钮。
+class _CatRow extends StatelessWidget {
+  const _CatRow({
+    required this.category,
+    required this.kind,
+    required this.dashedTop,
+    required this.onDelete,
+  });
+
+  final Category category;
+  final String kind;
+  final bool dashedTop;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool income = kind == 'income';
+    final Widget row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: <Widget>[
+          ToonAvatar(
+            text: category.name.isEmpty ? '?' : category.name.substring(0, 1),
+            bg: income ? Tok.greenTint : Tok.redTint,
+            fg: income ? Tok.green : Tok.red,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              category.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700),
+            ),
+          ),
+          if (category.isPreset == 1)
+            const Text(
+              '预置 · 不可删',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Tok.ink3,
+              ),
+            )
+          else
+            ToonIconButton(
+              icon: Icons.delete_outline,
+              tooltip: '删除',
+              muted: true,
+              size: 34,
+              iconSize: 18,
+              onPressed: onDelete,
+            ),
+        ],
+      ),
+    );
+
+    if (!dashedTop) return row;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[const ToonDashedLine(), row],
+    );
   }
 }

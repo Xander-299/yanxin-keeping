@@ -17,6 +17,8 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/ledger/application/month_summary.dart';
@@ -134,7 +136,6 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    final Color surface = Theme.of(context).colorScheme.surface;
     final AsyncValue<SearchState> async = ref.watch(searchProvider);
     final SearchPlan plan = parsePlan(_input.text);
 
@@ -154,7 +155,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                   sigmaX: kSearchGlassSigma,
                   sigmaY: kSearchGlassSigma,
                 ),
-                child: ColoredBox(color: surface.withValues(alpha: 0.55)),
+                // 原型 `.glass`：暖白画布 55% + 11px 模糊
+                child: ColoredBox(
+                  color: Tok.canvas.withValues(alpha: 0.55),
+                ),
               ),
             ),
           ),
@@ -246,73 +250,89 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
     final bool hasInput = controller.text.trim().isNotEmpty;
     final String? active = plan.typeWord;
 
     return Material(
       // 不透明：盖住玻璃的上半部分
-      color: theme.colorScheme.surface,
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Row(
-              children: <Widget>[
-                IconButton(
-                  key: const ValueKey<String>('search-close'),
-                  tooltip: '关闭',
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: onClose,
-                ),
-                Expanded(
-                  child: TextField(
-                    key: const ValueKey<String>('search-input'),
-                    controller: controller,
-                    focusNode: focusNode,
-                    autofocus: true,
-                    maxLength: kSearchKeywordMaxLength,
-                    textInputAction: TextInputAction.search,
-                    decoration: InputDecoration(
-                      hintText: '搜索分类、备注或金额',
-                      border: InputBorder.none,
-                      counterText: '',
-                      suffixIcon: hasInput
-                          ? IconButton(
-                              key: const ValueKey<String>('search-clear'),
-                              tooltip: '清空',
-                              icon: const Icon(Icons.cancel_rounded, size: 20),
-                              onPressed: onClear,
-                            )
-                          : null,
+      color: Tok.paper,
+      child: Container(
+        // 原型 `.search-ovl .bar`：底部一条墨色描边
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Tok.ink, width: Tok.bw)),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(6, 4, 8, 0),
+                child: Row(
+                  children: <Widget>[
+                    ToonIconButton(
+                      key: const ValueKey<String>('search-close'),
+                      icon: Icons.arrow_back,
+                      tooltip: '关闭',
+                      onPressed: onClose,
                     ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-              child: Row(
-                children: <Widget>[
-                  for (final String word in kTypeDirectives.keys)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        key: ValueKey<String>('search-chip-$word'),
-                        label: Text(word),
-                        selected: active == word,
-                        // 关掉对勾：它会让选中 chip 变宽、把后面几个挤位移（真机看出来的跳动）。
-                        // 选中态靠底色/边框区分，足够了。
-                        showCheckmark: false,
-                        onSelected: (_) => onToggleType(word),
+                    Expanded(
+                      child: TextField(
+                        key: const ValueKey<String>('search-input'),
+                        controller: controller,
+                        focusNode: focusNode,
+                        autofocus: true,
+                        maxLength: kSearchKeywordMaxLength,
+                        textInputAction: TextInputAction.search,
+                        style: const TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: '搜索分类、备注或金额',
+                          border: InputBorder.none,
+                          // 主题给输入框统一加了填充 + 描边（表单用），这里要裸输入框
+                          filled: false,
+                          isDense: true,
+                          counterText: '',
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 12,
+                          ),
+                        ),
                       ),
                     ),
-                ],
+                    if (hasInput)
+                      ToonIconButton(
+                        key: const ValueKey<String>('search-clear'),
+                        icon: Icons.close,
+                        tooltip: '清空',
+                        size: 36,
+                        iconSize: 19,
+                        onPressed: onClear,
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                child: Row(
+                  children: <Widget>[
+                    for (final String word in kTypeDirectives.keys)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ToonChip(
+                          key: ValueKey<String>('search-chip-$word'),
+                          label: word,
+                          selected: active == word,
+                          onTap: () => onToggleType(word),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -333,11 +353,10 @@ class _ResultBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: _GlassPanel(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+      child: ToonCard(
+        padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -347,20 +366,20 @@ class _ResultBar extends StatelessWidget {
                   '共 $total 笔',
                   style: const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const Spacer(),
                 _AmountCell(
                   label: '支出',
                   value: summary.expenseYuan,
-                  color: const Color(0xFFFF6B6B),
+                  color: Tok.red,
                 ),
                 const SizedBox(width: 12),
                 _AmountCell(
                   label: '收入',
                   value: summary.incomeYuan,
-                  color: const Color(0xFF4CAF50),
+                  color: Tok.green,
                 ),
               ],
             ),
@@ -369,7 +388,11 @@ class _ResultBar extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   '仅显示最近 $shown 笔，补充关键词可缩小范围',
-                  style: TextStyle(fontSize: 11, color: muted),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Tok.ink2,
+                  ),
                 ),
               ),
           ],
@@ -397,16 +420,17 @@ class _AmountCell extends StatelessWidget {
       children: <Widget>[
         Text(
           '$label ',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+            color: Tok.ink2,
           ),
         ),
         Text(
           value,
           style: TextStyle(
             fontSize: 13,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
             color: color,
           ),
         ),
@@ -423,42 +447,54 @@ class _Intro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     // ⚠️ 这里**不能**用 SingleChildScrollView：Scrollable 会以 opaque 命中整块下方区域，
     // 点提示块以外的玻璃空白就关不掉浮层了（真机走查抓到的）。Align 只占内容高度，空白可穿透。
-    // 内容约 220dp，正常手机（逻辑高 ≥ 480）放得下，不需要滚动兜底。
+    // 内容约 180dp，正常手机（逻辑高 ≥ 480）放得下，不需要滚动兜底。
     return Align(
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-        child: _GlassPanel(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+        child: ToonCard(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Icon(Icons.search_rounded, size: 34, color: muted),
-              const SizedBox(height: 10),
               const Text(
                 '输入分类、备注或金额开始搜索',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
-              Text(
-                '分类：餐饮 / 交通　备注：午餐　金额：88.88',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: muted),
+              const Text(
+                '分类名（餐饮 / 交通）· 备注（房租 / 午餐）\n金额（88 命中 88.00、188.00）',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                  height: 1.8,
+                ),
               ),
               const SizedBox(height: 12),
               Wrap(
-                alignment: WrapAlignment.center,
                 spacing: 8,
+                runSpacing: 8,
                 children: <Widget>[
                   for (final String example in _examples)
-                    ActionChip(
-                      label: Text(example),
-                      onPressed: () => onPick(example),
+                    ToonChip(
+                      label: example,
+                      selected: false,
+                      onTap: () => onPick(example),
                     ),
                 ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '搜的是当前账本的全时间流水，最多显示 $kSearchResultLimit 条',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                ),
               ),
             ],
           ),
@@ -469,65 +505,55 @@ class _Intro extends StatelessWidget {
 }
 
 /// 空态示例关键词：点一下就填进输入框，省得用户猜「能搜什么」。
-const List<String> _examples = <String>['餐饮', '午餐', '88.88'];
+const List<String> _examples = <String>['餐饮', '房租', '88', '工资'];
 
-/// 有输入但没有命中。
-///
-/// 提示块**顶部对齐**且高度固定为屏高 × 1/5 —— 不再 `Center` 撑满整屏
-/// （那样四周会留下大片空白，整页显得比实际更"空"）。
+/// 有输入但没有命中（原型：小猪吉祥物 + 一句清空引导）。
 class _NoResult extends StatelessWidget {
   const _NoResult({required this.keyword, required this.onClear});
 
   final String keyword;
   final VoidCallback onClear;
 
-  /// 提示块高度占整屏的比例。
-  static const double _heightFraction = 1 / 5;
-
   @override
   Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    // 用整屏高度而非 body 高度：输入框 autofocus，键盘弹起会压扁 body，
-    // 按 body 算的话提示块会跟着一起缩。
-    final double blockHeight =
-        MediaQuery.sizeOf(context).height * _heightFraction;
+    // 同 _Intro：Align 只占内容高度，块外空白可穿透关闭（别用 Scrollable）
     return Align(
       alignment: Alignment.topCenter,
-      child: SizedBox(
-        height: blockHeight,
-        child: Center(
-          // 兜底：极小屏放不下时可滚，不会 RenderFlex 溢出
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: _GlassPanel(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(Icons.search_off_rounded, size: 32, color: muted),
-                  const SizedBox(height: 6),
-                  Text(
-                    '没有匹配「$keyword」的账单',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                  Text(
-                    '换个分类名、备注里的字，或金额里的数字试试',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, color: muted),
-                  ),
-                  const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: onClear,
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: const Text('清空'),
-                  ),
-                ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+        child: ToonCard(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const PigMascot(size: 52),
+              const SizedBox(height: 10),
+              Text(
+                '没有匹配「$keyword」的账单',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
+              const SizedBox(height: 6),
+              const Text(
+                '换个分类名、备注里的字，或金额里的数字试试',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Tok.ink2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              ToonButton(
+                label: '清空输入',
+                kind: ToonButtonKind.ghost,
+                small: true,
+                onPressed: onClear,
+              ),
+            ],
           ),
         ),
       ),
@@ -535,27 +561,6 @@ class _NoResult extends StatelessWidget {
   }
 }
 
-/// 浮在毛玻璃之上的半透明面板：玻璃下面就是首页内容，文字得有个底才稳。
-class _GlassPanel extends StatelessWidget {
-  const _GlassPanel({
-    required this.child,
-    this.padding = const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-  });
+// 浮层里的面板统一用 `ToonCard`（白底 + 墨色描边 + 硬阴影）：玻璃下面就是首页内容，
+// 文字需要一个实底才稳，原型 `.search-tip` / `.resbar` 也是实心白卡。
 
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.82),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-      ),
-      child: child,
-    );
-  }
-}

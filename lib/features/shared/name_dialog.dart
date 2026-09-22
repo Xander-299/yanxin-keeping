@@ -3,6 +3,8 @@ library;
 
 import 'package:flutter/material.dart';
 
+import '../../core/theme/toon.dart';
+
 /// 弹出输入框，返回名称（取消返回 null）。
 Future<String?> showNameDialog(BuildContext context, {required String title}) {
   return showDialog<String>(
@@ -39,13 +41,16 @@ class _NameDialogState extends State<_NameDialog> {
         decoration: const InputDecoration(hintText: '请输入名称'),
       ),
       actions: <Widget>[
-        TextButton(
+        ToonButton(
+          label: '取消',
+          kind: ToonButtonKind.ghost,
+          small: true,
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
         ),
-        TextButton(
+        ToonButton(
+          label: '确定',
+          small: true,
           onPressed: () => Navigator.of(context).pop(_controller.text),
-          child: const Text('确定'),
         ),
       ],
     );

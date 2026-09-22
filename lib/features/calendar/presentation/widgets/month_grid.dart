@@ -27,6 +27,7 @@ class MonthGrid extends StatelessWidget {
     required this.selectedDay,
     required this.onSelectDay,
     this.now,
+    this.maxDate,
   });
 
   final int year;
@@ -43,6 +44,10 @@ class MonthGrid extends StatelessWidget {
 
   /// 覆盖「今天」（测试注入用；为空取真实当前时间）。
   final DateTime? now;
+
+  /// 晚于该日期的格子灰显且不可点（原型 calGrid 的 `disableFuture`；
+  /// 记一笔选日期用它挡住「记未来的账」）。为空 = 全部可选。
+  final DateTime? maxDate;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +106,12 @@ class MonthGrid extends StatelessWidget {
         date.day == today.day;
     final DayAgg? agg = inMonth ? byDay[date.day] : null;
     final bool selected = inMonth && date.day == selectedDay;
+    final DateTime? limit = maxDate;
+    final bool disabled =
+        limit != null &&
+        DateTime(date.year, date.month, date.day).isAfter(
+          DateTime(limit.year, limit.month, limit.day),
+        );
 
     // 原型 `.day.tint-e / .tint-i`：支出优先于收入；`.day.sel` 写在后面
     // 覆盖 tint 底色 → 选中日一定是品牌浅底 + 墨色描边 + 硬阴影。
@@ -115,11 +126,11 @@ class MonthGrid extends StatelessWidget {
         : null;
 
     return InkWell(
-      onTap: inMonth ? () => onSelectDay(date.day) : null,
+      onTap: inMonth && !disabled ? () => onSelectDay(date.day) : null,
       borderRadius: BorderRadius.circular(Tok.rSm),
       child: Opacity(
-        // 跨月格子（原型 `.day.out`）
-        opacity: inMonth ? 1 : 0.3,
+        // 跨月格子与「超过上限」的格子（原型 `.day.out` / `disableFuture`）
+        opacity: inMonth && !disabled ? 1 : 0.3,
         child: Container(
           height: 62,
           margin: const EdgeInsets.all(2),

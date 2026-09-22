@@ -29,6 +29,7 @@ import 'package:yanxin/features/stats/application/stats_controller.dart';
 import '../application/amount_input.dart';
 import 'widgets/amount_keyboard.dart';
 import 'widgets/category_picker.dart';
+import 'widgets/date_picker_sheet.dart';
 
 /// 记一笔页。[txId] 非空时为编辑模式。
 ///
@@ -83,16 +84,13 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   }
 
   /// 选日期（上限为今天：未来月份首页翻不过去，记未来账会「看不见」）。
+  ///
+  /// F7.6 P3 起走自绘卡通弹层（原型 `ovlDate`），不再是 Material `showDatePicker`。
   Future<void> _pickDate() async {
     final DateTime initial = DateTime.fromMillisecondsSinceEpoch(_occurredAtMs);
-    final DateTime now = DateTime.now();
-    final DateTime today = DateTime(now.year, now.month, now.day);
-    final DateTime last = initial.isAfter(today) ? initial : today;
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2000, 1, 1),
-      lastDate: last,
+    final DateTime? picked = await showDatePickerSheet(
+      context,
+      initial: initial,
     );
     if (picked == null || !mounted) return;
     setState(() {

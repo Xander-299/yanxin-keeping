@@ -139,6 +139,11 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField), '打车');
     await tester.tap(find.text('确定'));
+    // 先等对话框关掉：对话框淡出动画期间 EditableText 也匹配 '打车'，
+    // 直接断言会「找到 2 个」（与下面新建账本用例同一处理）。
+    for (var i = 0; i < 20 && find.byType(TextField).evaluate().isNotEmpty; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
     await pumpUntil(tester, find.text('打车'));
 
     expect(find.text('打车'), findsOneWidget);
