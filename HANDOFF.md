@@ -214,7 +214,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 - **「功能需求文档」在哪**：`docs/PRD-yanxin-flutter.md` —— 汇总稿（FR 编号 + 状态图例 + 口径 + backlog），
   **只看这一份就能知道 App 现在该有哪些行为**。注意它是**汇总不是签字件**，新需求仍要另出小 SPEC。
-- `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`、**`docs/SPEC-F7.6-cartoon-ui.md`（F7.6 视觉改版，已签字）**
+- `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`、**`docs/SPEC-F7.6-cartoon-ui.md`（F7.6 视觉改版，已交付）**、**`docs/SPEC-F7.7-backlog.md`（F7.7 五批 backlog，⬜ 待签字 —— 报表明细 / 数据导出 / 账户图标 / 搜索增强 / 日历增强）**
 - **页面原型（视觉唯一依据）**：`D:\new file\modao\yanxin\`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）；
   改任何 UI 前先并排对拍。旧参考图 `app_template/*.jpg`（深色）**已被取代**。
 - `tasks/todo-flutter.md`（F0–F7.6 已勾选；F7.5 剩余项待排期）、`CHANGELOG.md`（**含版本规则与 tag 表**）、`README.md`
