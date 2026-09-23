@@ -1,6 +1,7 @@
 # SPEC — F7.7 backlog 五批（报表明细 / 数据导出 / 账户图标 / 搜索增强 / 日历增强）
 
-> 状态：**A 批已签字并实施**（2026-09-23）；B / C / D / E 四批 **⬜ 待签字**（可分批签，只签 A 也可开工）
+> 状态：**A 批已签字并交付**（`v0.7.7`，2026-09-23 · 真机走查通过）；**B 批已签字并实施**（`v0.7.8`，2026-09-23，见 §B.4 + §G）；
+> **C / D / E 三批 ⬜ 待签字**（可分批签）
 > 上游：`docs/PRD-yanxin-flutter.md`（口径汇总）· `HANDOFF.md`「未解决问题」
 > 前置：F7.6 卡通视觉改版已收尾（`v0.7.6`）。本批**全是新功能**，视觉一律沿用 F7.6 的令牌 + 通用件。
 > 目的：把 backlog 里剩下的 5 项**一次性写清楚**，签一次字就能按 A→E 顺序逐批交付，每批单独打 tag。
@@ -135,7 +136,7 @@
 | `lib/features/profile/presentation/profile_page.dart` | 「数据导出」条目接真实入口 |
 | `test/features/export/csv_export_test.dart` **新增** | CSV 转义 / BOM / 金额格式 / 空账本 |
 
-### B.4 实施前置核查 + 待签字裁定（2026-09-23 补，**待签字**）
+### B.4 实施前置核查 + 签字裁定（2026-09-23 补，✅ **已签字**）
 
 **前置核查 —— 「零新依赖」成立（已逐项核对源码）**
 
@@ -150,7 +151,7 @@
   `listByBook(bookId)`（纯只读，**不改 schema**，仍 v2）。
 - 金额格式化直接复用 `core/utils/money.dart` 的 `centsToYuan(cents)`（两位小数、无千分位）。
 
-**待签字裁定（同意则回「B 批按 B.4 默认开工」即可）**
+**签字裁定（2026-09-23：用户确认「全部按 B.4 默认」→ 已按下表建议默认实施）**
 
 | # | 问题 | 建议默认 |
 |---|---|---|
@@ -265,7 +266,8 @@
 | 角色 | 结论 | 日期 |
 |---|---|---|
 | 用户 | ✅ **A 批已签字开工**（2026-09-23）。三点默认处理逐条确认：<br>① **A.0 前置「记一笔支持选账户」→ 做，按 SPEC**（默认仍是列表首个账户）；<br>② **D.5 拼音 / 首字母匹配 → 不做**（不引新依赖）；<br>③ **E.5 农历 / 节假日 → 不做**（不引新依赖）。<br>另：**A.3 与 A.4 冲突已由用户裁定** —— 报表页的流水行**只读、不可点**（按 A.4，不做长按删除）。 | 2026-09-23 |
-| 用户 | ⬜ 待签字 —— B / C / D / E 四批 | |
+| 用户 | ✅ **B 批已签字开工**（2026-09-23）：确认「**全部按 B.4 默认**」——<br>B.4.1 CSV 金额用元无符号 / B.4.2 来源列原样英文 / B.4.3 备份金额用整数分 / B.4.4 JSON 结构照列 /<br>B.4.5 不导软删 / B.4.6 空账本可导出 / B.4.7 底部弹层入口 / B.4.8 修 `_BrandTip` 过时文案 / B.4.9 转账行分类留空。 | 2026-09-23 |
+| 用户 | ⬜ 待签字 —— C / D / E 三批 | |
 
 **签了哪些批就做哪些批**；未签的批次保持 `⬜ 待排期`。
 
@@ -273,7 +275,32 @@
 
 ## G. 实施记录
 
-### A 批 —— 报表明细清单（`v0.7.7`）· 实施中
+### B 批 —— 数据导出（流水 CSV + 备份 JSON）· 代码 + 测试已落地
+
+**日期**：2026-09-23 · **签字**：用户确认「全部按 B.4 默认」→ 9 条裁定项全按默认实施 · **状态**：实现完成，analyze ✅ 0 issue，新增 31 例纯测试全绿（`budget_repository_test` +11 = 原 8 新 3、`csv_export_test` +20）；widget 测试 `export_sheet_test.dart`（3 例）本机跑不了，待用户终端 `flutter test` 全量回归（预期总数 289 → **315** = test() 249 + testWidgets 66）
+
+**实现清单（对照 B.3 修订 + B.4 裁定）**
+
+| 文件 | 内容 |
+|---|---|
+| `lib/features/export/application/csv_export.dart` **新增** | 纯函数：`buildBillCsv`（表头 `日期,类型,金额,分类,账户,备注,来源`；日期 `YYYY-MM-DD HH:mm`；金额 `centsToYuan(abs)` 两位小数无符号；RFC4180 转义 + UTF-8 BOM + `\r\n`）与 `buildBackupJson`（`schemaVersion:2`、金额整数分、不导软删）；`utf8Bytes()` 供 FilePicker |
+| `lib/features/export/presentation/export_sheet.dart` **新增** | 底部弹层「导出流水 CSV / 导出备份 JSON」两条 ToonPress + 取消；`FilePicker.saveFile`（SAF，取消 = null 静默）；成功 SnackBar「已导出 N 笔到 {文件名}」，异常给「导出失败，请换个保存位置再试」人话提示 |
+| `lib/features/profile/presentation/profile_page.dart` | 「数据导出」行接 `onTap → showExportSheet`；`_BrandTip` 按 B.4.8 改文案（「下一站：数据导出」→「已覆盖…→ 数据导出」，角标 `Backlog` → `v0.7.8`） |
+| `lib/data/repositories/budget_repository.dart` | 补 B.4 唯一缺口：`listByBook(bookId)` 只读（`deleted_at IS NULL`，按 period 排序），不改 schema |
+| `test/features/export/csv_export_test.dart` **新增** | 20 例：BOM 三字节 / `\r\n` / RFC4180 转义（逗号·引号·换行）/ 金额格式 / 类型映射 / 转账行分类留空 / 中文 / 空账本 / JSON 结构与整数分 |
+| `test/features/export/export_sheet_test.dart` **新增** | 3 例 testWidgets：弹层渲染、空账本成功路径提示、file_picker 缺原生实现走错误分支（人话提示、弹层不关） |
+| `test/data/repositories/budget_repository_test.dart` | +3 例：`listByBook` 只回本账本未软删、按 period 排序 |
+| `tool/export_probe.dart` **新增**（配合 `data_layer_probe.py --script`） | 数据层真跑探针：内存库造数 → 真实仓储 → CSV/JSON 全字段断言；**探针抓到一处单测盲区**（Dart UTF-8 解码会吃开头 BOM → 单测改为断言 3 字节而非解码字符串） |
+
+**门禁记录**
+
+- `python tool/dart_analyze_fallback.py` → **`No issues found!`**（全项目，含新增 4 个文件）。
+- `python tool/dart_test_fallback.py csv_export_test budget_repository_test` → **+31 全绿**（21s）。
+- `python tool/data_layer_probe.py --script tool/export_probe.dart` → 探针断言全过。
+- ⏳ 用户终端全量 `flutter test`（含 3 例新 testWidgets）+ 真机走查（导出弹层两条路径 + SAF 文件名）→ 之后 **`v0.7.8`**。
+
+
+### A 批 —— 报表明细清单（`v0.7.7`）· ✅ 已交付（`v0.7.7` 已打 tag）
 
 **日期**：2026-09-23 · **状态**：代码 + 测试已落地；**门禁受阻（环境问题，非代码问题）**
 

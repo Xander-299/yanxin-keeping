@@ -236,10 +236,12 @@
 - [x] 走查补做：① 账户弹层其实没卡通化（P2 只取色，SPEC 误记「已复核」）；② 资产页 AppBar `+` 换 `ToonIconButton`
 - [x] 版本记录：`v0.7.6` tag + `CHANGELOG.md` 顶部版本规则与 tag 表（F7 阶段一版一 tag）
 
-### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A 已签并实现，B–E 待签字**）
+### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A 已交付（v0.7.7）· B 已实现待收尾 · C–E 待签字**）
 
 - [x] 小 SPEC 起草（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.11`
 - [x] **A 批签字**（2026-09-23）：A.0 做 / D.5 拼音不做 / E.5 农历不做；且裁定「报表页流水行只读不可点」
+- [x] **A 批真机走查通过（2026-09-23，MuMu 12 无阻断）→ `v0.7.7` 已打 tag 并推远端**；
+      F2 / F5 两项「待裁定」用户裁定**保持现状**不改
 - [x] **A.0 前置**：记一笔支持选账户（第 4 个 `ToonField`「账户」+ `showAccountPicker()` 底部弹层；默认仍首个账户）
 - [x] **A 报表明细清单**：新页 `/reports`（AppBar「报表」+ 月份切换 + `ToonSeg` 明细·分类·账户 + 独立记月份 + 卡通空态）
 - [x] 4 处「报表（建设中）」占位点亮：首页 header→分类档 / 首页「全部账单」→明细档 /
@@ -253,14 +255,17 @@
       已用探针校准确认 lint 规则在线）。原理与协议三坑见 `docs/SPEC-F7.7-backlog.md` §G
 - [x] **`flutter test` 的等效手段已入库** —— `tool/dart_test_fallback.py`（Python 起 `frontend_server`
       编译 + `flutter_tester.exe` 执行；参数抄 flutter_tools 源码）。**实测纯 `test()` 226 例全绿 / 0 失败**
-- [ ] **`flutter test` 全绿 0 skip** —— 🟡 **本机已验一半**：
-      ✅ 纯 `test()` **226/226 全绿**；⏳ **63 个 `testWidgets` 跑不了**（该封装喂不了真运行器）
-      → **仍需用户终端跑一次收尾**（预期 **289** = 269 + A 批 18 + 首次验收 2；静态计数 63 + 226 = 289 ✔）。
+- [x] **`flutter test` 全绿 0 skip（A 批）** —— ✅ **2026-09-23 用户终端全量通过（289 passed / 0 skipped）**
+      （本机半验：纯 `test()` 226/226 全绿；63 个 `testWidgets` 本机跑不了，已由用户终端覆盖）。
       首轮反馈的 4 个失败已处理（3 个是测试写法问题已修 / 1 个 GBK 无法复现）；
       第二轮 `real_bills_test` 的 `loading` 已定性为「唯一在加载期做 IO 的文件」并加固（懒读 + 降级跳过）
-- [ ] **真机走查**（MuMu 12 / 900×1600 / 320dpi）**阻断 0** —— ⏳ **未走查**；现有 APK 不含 A 批，需先重建
-- [ ] **tag `v0.7.7` 暂缓**：待上面两条补齐后把 CHANGELOG `[Unreleased]` 移成 `## [v0.7.7]` + `git tag -a`
-- [ ] B 数据导出（待签字）
+- [x] **真机走查（A 批）阻断 0** —— ✅ 2026-09-23 用户 MuMu 12 走查通过
+- [x] **tag `v0.7.7`**：✅ 已打并推远端（CHANGELOG `[Unreleased]` 已移成 `## [v0.7.7]`）
+- [x] **B 数据导出**（✅ 已签字「全部按 B.4 默认」并实现，2026-09-23）：
+      `csv_export.dart`（CSV 表头 日期,类型,金额,分类,账户,备注,来源 + BOM/CRLF/RFC4180；备份 JSON schemaVersion 2 金额整数分）+
+      `export_sheet.dart` 底部弹层（SAF 保存、取消静默）+ 我的页入口 + `_BrandTip` 文案 + `budget_repository.listByBook`；
+      新增测试 34 例（纯 31 全绿 ✅ 等效实测 + testWidgets 3 本机跑不了）；
+      ⏳ **用户终端 `flutter test` 全量回归（预期 315）+ 真机走查导出两条路径 → 打 `v0.7.8`**
 - [ ] C 账户图标 / 颜色（待签字）
 - [ ] D 搜索增强（待签字；**动 schema v2→v3**）
 - [ ] E 日历增强（待签字）
