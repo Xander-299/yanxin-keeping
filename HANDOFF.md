@@ -1,8 +1,9 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；进入「F7.5 剩余功能」待排期）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；F7.7 五批 backlog **已出 SPEC，待签字**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-23 01:40 · 更新人：AI 助手（**本机 = A 机**）
-> **本次（F7.6 卡通视觉改版 P3 —— 末批，视觉改版至此收尾）**：用户给定页面原型 `D:\new file\modao\yanxin\`（卡通浅色），
+> 最后更新：2026-09-23 08:35 · 更新人：AI 助手（**本机 = A 机**）
+>
+> **上一轮（F7.6 卡通视觉改版 P3 —— 末批，视觉改版至此收尾）**：用户给定页面原型 `D:\new file\modao\yanxin\`（卡通浅色），
 > 三项决策 —— **全站硬替换为浅色 / 分 3 批交付 / 零新依赖**；小 SPEC `docs/SPEC-F7.6-cartoon-ui.md`（已签字）。
 > - **P1 已交付 + 真机走查通过**：主题底座（`core/theme/tokens.dart` + `toon.dart`）、底栏、首页、记一笔、分类弹层、删除弹窗、账本抽屉。
 > - **P2 已交付 + 真机走查通过**：日历 / 月历格子 / 月份选择 / 统计 / 趋势柱 / 资产；
@@ -12,8 +13,14 @@
 > - 门禁：`flutter analyze` **0 issue**；`flutter test` **269 全过 0 skip**。真机走查（MuMu 12 / 900×1600 / 320dpi）**阻断 0**。
 > - **版本记录**：F7 阶段起一版一 tag，`v0.7.<N>` ↔ `F7.<N>`，回滚用 `git checkout v0.7.5`。当前 **`v0.7.6`**，
 >   tag 表写在 `CHANGELOG.md` 顶部。
-> - **下一步**：F7.6 视觉改版已收尾 → 转 **F7.5 剩余功能项**（数据导出 / 分类预算 / 报表明细 / 账户图标选择 /
->   搜索增强 / 日历增强）。**这些是新产品功能，按项目规则须先出小 SPEC 并签字**，见文末「下一步」。
+>
+> **本轮（收尾 + 交接准备，零产品代码改动）**：
+> - 走查残留账本 **`QA-Temp` 已软删**（改库前已备份），模拟器恢复干净；走查造的流水 / 预算数据保留。
+> - **`docs/SPEC-F7.7-backlog.md` 已起草并入库**（`909c3dc`）：把 backlog 剩的 5 项一次写清，A→E 顺次交付，各打一个 tag（`v0.7.7`…`v0.7.11`）。
+> - 用户表态「**全都做，按顺序**」→ **但 SPEC 正文尚未逐条确认**（A.0 前置 / D.5 拼音 / E.5 农历 三处默认处理需点头），
+>   **按项目规则未签字不动产品代码 → 开工前先确认**。
+> - 工作区干净，HEAD = `8f1058b` = `origin/master`。
+>
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
 ---
@@ -79,7 +86,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-23 F7.6 P3 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`） |
-| git | 本机 HEAD = `origin/master`；工作区干净；**最新 tag = `v0.7.6`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| git | 本机 HEAD = **`8f1058b`** = `origin/master`；工作区干净；**最新 tag = `v0.7.6`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
 | 源码规模 | `lib/` 72 个 `.dart`，`test/` 34 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -95,7 +102,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   → `52fde16`（技能更新）→ `c6b616e`（F7.4 搜索）→ `78065a7`（文档）→ `6319796`（搜索无结果态 UI）
   → `e0cf8fd`（文档）→ `764d1e2`（F7.5-a 搜索浮层化）→ `f95ba97`（文档回写）
 - **A 机接手续做（当前线）**：`94bbb33`（走查截图不再入库）→ `1f6f690`（**F7.6 P1**）
-  → `3d4e749`（**F7.6 P2**）→ `aa96f01`（P2 走查修复）→ `5f0d369`（**F7.6 P3**）→ 本轮（P3 走查补做 + 版本记录）
+  → `3d4e749`（**F7.6 P2**）→ `aa96f01`（P2 走查修复）→ `5f0d369`（**F7.6 P3**）
+  → `d3b2076`（P3 走查补做 + **版本记录机制 `v0.7.6`**）→ `909c3dc`（**F7.7 backlog SPEC**）
+  → **`8f1058b`（当前 HEAD，走查技能补「run-as + 设备 sqlite3 改库」一节）**
 
 # 当前方案与关键决策
 
@@ -139,7 +148,14 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.6 P2 卡通视觉改版** ✅（2026-09-19）：日历页（日汇总「N 笔 · 支出 ¥x」+ 虚线圆小猪空态）、月历格子（选中墨色 2px 描边 + tint 底）、
   月份选择页（扁平 appbar + `_PillButton` 翻年）、统计页（`ToonSeg` 收支切换 + 令牌化配色）、趋势柱（宽 13 / 圆角 6 6 3 3 / 2px 墨色描边）、
   资产页（品牌浅琥珀净资产卡 + `ToonPress` 账户行）、账户 sheet 取色、预算卡空态、记一笔 body 改纯白。
-  新增 `ToonDashedBorder` 与 `ToonIconButton` 的 muted 变体。**⚠️ 本批尚未真机走查**。
+  新增 `ToonDashedBorder` 与 `ToonIconButton` 的 muted 变体。
+- **F7.6 P3 卡通视觉改版** ✅（2026-09-23，`5f0d369` + 走查补做 `d3b2076`）：我的页（62 方形头像卡 + 4 条目卡 + 品牌提示卡）、
+  账本管理（FAB → AppBar `ToonIconButton`；选中行品牌浅底 + 墨色描边 + 对勾）、分类管理（`ToonSeg` + 字母头像）、
+  **导入改成三步页**（步骤条 + 虚线投放区 + 自定义勾选行 + 报告卡 42px 大数字）、**日期选择 sheet**（新建 `date_picker_sheet.dart` + `MonthGrid.maxDate` 挡未来日期）、
+  预算 sheet 重写（¥ 描边裸输入框 + 预设 chips）、账户 sheet 补做、搜索浮层（示例 chips + 结果条 + 小猪空态）、
+  资产页空态（虚线圆 + 小猪）、日历留白微调；**产品代码裸色值清零**。新增令牌 `Tok.redInk`。
+- **F7.7 backlog SPEC 起草** ✅（2026-09-23，`909c3dc`）：`docs/SPEC-F7.7-backlog.md` —— 5 批 A→E
+  （A 报表明细 / B 数据导出 / C 账户图标 / D 搜索增强 / E 日历增强），**⬜ 待签字**。
 - **F7.5-b 资产页** ✅（`lib/features/assets/`）：净资产卡（≥0 琥珀橙 / <0 红）+ 账户列表（类型图标 / 名称 /「类型 · 收 X / 支 Y」/ 余额）+ 空态；底部 sheet 做账户增 / 改 / 软删，**有流水的账户禁止删除**；口径 = **初始余额 + Σ收入 − Σ支出，transfer 不计**；**不改 schema**（仍 v2）。新增 `dataEpochProvider`（数据版本号），5 个写操作点 bump 代替逐个 `refresh()`
 - **F7.5-a 搜索浮层化 + 类型筛选** ✅：`/search` 路由与 `SearchPage` **删除**，改 `showGeneralDialog` 打开 `SearchOverlay`（首页留在页面栈当背景）；`BackdropFilter(sigma 12)` 毛玻璃；**类型 chips「仅支出 / 仅收入 / 转账」** → `parsePlan` 解析成 `Transactions.type` 条件（独立成词才生效，多词取最后）；chip 填入输入框并补**尾随空格**；三种关闭方式（按钮 / 点玻璃空白 / 系统返回）
 - **本机（A 机）重新接入 + env 双机器化** ✅（2026-09-17）：仓库快进 13 提交到 `f95ba97`；`env.sh` 改自动识别；本机门禁 analyze 0 / test **253 全过 0 skip**
@@ -169,34 +185,36 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **本机（A 机）HEAD = `origin/master`，工作区干净**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录已入库；**tag = `v0.7.6`**）。
+- **本机（A 机）HEAD = `8f1058b` = `origin/master`，工作区干净**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC 已入库；**tag = `v0.7.6`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**。
 - **本机门禁（2026-09-23 F7.6 P3 后复跑）**：`flutter analyze` No issues found；`flutter test` **269 passed, 0 skipped**。
 - `lib/core/db/database.g.dart` 已入库；**改表结构必须重跑 `dart run build_runner build`**。
 - ⚠️ **深色主题已被 F7.6 彻底移除**（用户确认）：全站只有一套卡通浅色主题，`app_template/*.jpg` 旧参考图作废。
 - APK：A 机 debug APK 已用 F7.6 P3（含账户弹层补做）代码构建过（`build/app/outputs/flutter-apk/app-debug.apk`）；release 仍是 F7.1 时期产物。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
-  ⚠️ 2026-09-23 走查在模拟器上留下了临时账本 **`QA-Temp`**（含一个 PayPal 储蓄卡账户 + 一笔餐饮 20 元支出），
-  用于验证资产页空态与账户弹层；App 内没有删账本的入口，不需要就直接 `adb shell pm clear com.teacodeman.yanxin` 清库重来。
+  ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
+  改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
+- **本机 = 远端**：`8f1058b`，工作区干净；tag `v0.7.1`…`v0.7.6` 已推远端。
 
 # 未解决问题
 
-> 说明：F7.6 是**纯视觉改版**，不含新功能。下面第 1 条是**需要另开小 SPEC 的新功能**（按项目规则未签字不动产品代码）；
-> 第 2–4 条是纯工程/体验项。
+> 说明：F7.6 是**纯视觉改版**，不含新功能。下面第 1 条 = **F7.7 五批 backlog**（已出 SPEC，**待用户签字**，按项目规则未签字不动产品代码）；
+> 第 2 条已并入 A 批；第 3 条是纯体验项。
 
-1. 【待排期 · **需小 SPEC 签字**】**F7.5 剩余功能项**（资产页已交付并走查）：数据导出（「我的」页占位）、分类预算（按分类额度）、报表明细清单；
-   **账户图标选择**（走查遗留 F1：`accounts.icon` / `color` 列已存在，仅界面未暴露，改动很小）；
-   搜索增强（关键词高亮 / 账户名匹配 / 搜索历史 / 日期区间 / 拼音首字母）；日历增强（农历 / 节假日、长按快速记账、页内翻月）
-2. 【待排期】**报表**仍是「建设中」占位：首页 header「报表」图标、`全部账单 ›`、日历页 header「报表」图标
+1. 【**最高优先 · 卡在用户签字**】`docs/SPEC-F7.7-backlog.md` 已起草（5 批 A→E，`909c3dc`）。
+   用户已答「**全都做，按顺序**」，但 **SPEC 正文尚未逐条签字** → 按项目规则未签字不动产品代码，开工前先确认。
+   批次与版本：**A 报表明细（`v0.7.7`，含前置 A.0「记一笔支持选账户」）** → B 数据导出（`v0.7.8`）
+   → C 账户图标 / 颜色（`v0.7.9`）→ D 搜索增强（`v0.7.10`，**动 schema v2→v3**）→ E 日历增强（`v0.7.11`）。
+2. 【已并入 A 批】**报表**仍是「建设中」占位 —— **共 4 处**：首页 header「报表」图标、首页 `全部账单 ›`、
+   日历页 header「报表」图标、月份选择页 header「报表」图标。A 批一次点亮
    （**首页搜索图标已接真实搜索浮层、首页预算卡已是真实数据、资产 tab 已是真实资产页**，不再占位）。
-   该项内容即上面第 1 条的「报表明细清单」，一起做。
 3. 【低】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）—— 属预期行为，除非要专门为横屏排一版布局。
 
 **本轮（F7.6 P3）已清掉的旧待办**：
 
 | 原编号 | 事项 | 处理 |
 |---|---|---|
-| 旧 3 | `gradle wrapper` 用 `-all.zip`（230MB） | ✅ 2026-09-23 改 `-bin.zip`（131MB，镜像已验证可下），构建复跑通过 |
+| 旧 3 | `gradle wrapper` 用 `-all.zip`（754 MB） | ✅ 2026-09-23 改 `-bin.zip`（277 MB，镜像已验证可下），构建复跑通过；旧 `-all` 目录已是死重，手工删可回收 754 MB |
 | 旧 5① | 资产页「还没有账户」空态仍是 Material 图标 + `FilledButton` | ✅ 走查前改卡通空态（虚线圆 + 小猪 + `ToonButton`） |
 | 旧 5② | 日历页月历与「月结余」卡之间留白比原型略大 | ✅ 网格 padding 10→8，留白改由卡 margin 承担 |
 | 旧 6 | `.workbuddy/skills/flutter-windows-env-bootstrap` 是 B 机专用 | ✅ 该技能正文顶部加粗体警告，避免 A 机照抄 |
@@ -205,9 +223,15 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 待确认事项
 
+- 【待确认 · **开工前必答**】**F7.7 SPEC 的三处默认处理**：① **A.0** 记一笔加第 4 个字段「账户」
+  （默认仍是列表首个账户，老行为不变，老用例不受影响）—— 不加这步「按账户报表」永远只有一行、C 批账户图标也白做；
+  ② **D.5 拼音 / 首字母匹配默认不做**（要引 `lpinyin` 或内置字表，包体 +~60KB）；③ **E.5 农历 / 节假日默认不做**（要引 `lunar` 类包 + 每年手工更新节假日表）
+- 【待确认 · **D 批动 schema**】搜索历史要持久化，但 **`shared_preferences` 不在依赖里**（已核对 `pubspec.yaml`）→
+  改为落现有 drift 库（新增 KV 表 `app_meta`，schema **v2 → v3**）；**动 schema 必须走「真机覆盖安装验迁移」**，
+  内存库单测只能证明 `onUpgrade` 逻辑本身
 - 【待确认】`android/gradle.properties` 里 `org.gradle.jvmargs=-Xmx8G` 是 B 机调大的；**A 机内存未知**，若构建 OOM 可改回 `-Xmx4G`
 - 【待确认】`lib/core/result.dart`（SPEC §4 的 `Result<T>`）**暂未建**：校验全走异常，无调用方，等有需要再引入
-- 【待确认】日历页是否要加农历 / 节假日（参考图上有，当前无农历依赖）
+- 【待确认】日历页是否要加农历 / 节假日（原型参考图上有，当前无农历依赖）→ **已并入 F7.7 SPEC 的 E.5**，默认不做
 - 【待定】A 机 release APK 仍用 **debug 签名**（`build.gradle.kts` 的 `signingConfig = debug`）→ 可装可测、**不能上架**；正式发布需配 keystore + `key.properties` + 改 `signingConfig`
 
 # 关键资料
@@ -217,7 +241,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`、**`docs/SPEC-F7.6-cartoon-ui.md`（F7.6 视觉改版，已交付）**、**`docs/SPEC-F7.7-backlog.md`（F7.7 五批 backlog，⬜ 待签字 —— 报表明细 / 数据导出 / 账户图标 / 搜索增强 / 日历增强）**
 - **页面原型（视觉唯一依据）**：`D:\new file\modao\yanxin\`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）；
   改任何 UI 前先并排对拍。旧参考图 `app_template/*.jpg`（深色）**已被取代**。
-- `tasks/todo-flutter.md`（F0–F7.6 已勾选；F7.5 剩余项待排期）、`CHANGELOG.md`（**含版本规则与 tag 表**）、`README.md`
+- `tasks/todo-flutter.md`（F0–F7.6 已勾选；F7.5 剩余项已并进 `docs/SPEC-F7.7-backlog.md`）、`CHANGELOG.md`（**含版本规则与 tag 表**）、`README.md`
 - `docs/acceptance-M1-M2.md`（首用验收 M1/M2 报告）
 - `env.sh` — **每次开终端必 `source env.sh`**（自动识别 A/B 机）
 - `android/gradle.properties` — 含 **`kotlin.incremental=false`**（修跨盘 Kotlin 崩溃，**勿删**）与 `android.builder.sdkDownload=false`
@@ -276,18 +300,28 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
     会按「还没到位」的视口算滚动，把按钮顶到屏幕外 → tap 报 offset 越界（像「按钮不存在」，极具误导性）
 29. **写操作刷新优先用 `dataEpochProvider`**（`ref.read(dataEpochProvider.notifier).bump()`），
     别再逐个 provider 手工 `refresh()` —— 已因漏刷 `statsProvider` 出过 bug
+30. **真机 adb 命令一律加 `MSYS_NO_PATHCONV=1`**：Git Bash 会把 `/sdcard/...` 转成 Windows 路径 →
+    `adb push` 报 `remote secure_mkdirs failed`、`uiautomator dump` + `pull` 找不到文件（**报错文案完全不提路径转换，极难联想**）
+31. **`.workbuddy/ui_dump.py` 报的坐标可能是「整张卡的容器中心」而不是真实按钮** → 点了没反应时别怀疑没改包，
+    用原始语义树按 node `bounds` 自己换算（踩过：投放卡的 `选择文件` 按钮真实 y=639，dump 报 y=483）
+32. **清走查残留 / 造数据**：`run-as com.teacodeman.yanxin sqlite3 app_flutter/yanxin.sqlite "..."`（设备自带 sqlite3 可用）；
+    **改前先 `cp` 备份**成 `app_flutter/yanxin.sqlite.bak-<日期>`。详见 `mumu-flutter-ui-smoke` 对应小节
+33. **`git push -q 2>&1 | tail -N` 在本沙箱会静默失败**（远端没更新、退出码仍 0）→ **直接 `git push` 不加重定向**，
+    推完用 `git ls-remote origin refs/heads/master` 核对哈希（别信 `git status -sb` 的 `[ahead N]`）
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：F7.6 视觉改版 **P1 / P2 / P3 全部交付并真机走查通过 → 视觉改版收尾**（版本 `v0.7.6`）。
-   **下一步 = 从「未解决问题」第 1 条里挑一个功能开小 SPEC**（数据导出 / 分类预算 / 报表明细 / 账户图标选择 /
-   搜索增强 / 日历增强）。**按老规矩：先出小 SPEC（`docs/SPEC-F7.x-*.md`）→ 用户点头 → 实现 → 门禁 → 文档 →
-   打 tag**（动工前先读 `docs/PRD-yanxin-flutter.md` 对齐口径、读原型对视觉）。
+1. **当前最重要的事**：F7.6 视觉改版已收尾（`v0.7.6`），**下一件事 = F7.7 A 批「报表明细清单」**。
+   `docs/SPEC-F7.7-backlog.md` 已写好（5 批 A→E），**用户已表态「全都做，按顺序」，但正文还没逐条签字** →
+   动产品代码**前先确认三点**：**A.0**（记一笔加「账户」字段）、**D.5**（拼音默认不做）、**E.5**（农历默认不做）；
+   用户点头后**按 A→E 顺序一批一交付**（每批：实现 → 门禁 → 真机走查 → 回写 SPEC 实施记录 / CHANGELOG / HANDOFF / todo → `git tag -a`）。
+   动工前先读 `docs/PRD-yanxin-flutter.md` 对齐口径、读原型 `D:\new file\modao\yanxin\` 对视觉。
    走查前先确认 MuMu 已启动（`adb devices` 为空时 `adb wait-for-device` 会永久挂住）。
 2. **要真机走查**：先 `source env.sh && flutter build apk --debug`（A 机增量构建快），再
    `adb -s emulator-5554 install -r -t <apk>` 装到 MuMu 12，然后照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走。
-3. **占位项（未做功能，别当 bug）**：首页 / 日历页 header 的「报表」图标、`全部账单 ›`、「我的」页数据导出
-   （**资产 tab 已是真实资产页**，不再是占位）。
+3. **占位项（未做功能，别当 bug）** —— 全部集中在 F7.7 的 A / B 两批：
+   ① **4 处「报表」占位**（首页 header / 首页 `全部账单 ›` / 日历页 header / 月份选择页 header）→ A 批点亮；
+   ② 「我的 → **数据导出**」→ B 批做。**资产 tab 已是真实资产页**，不是占位。
 3b. **视觉规则（F7.6 起）**：全站**只有卡通浅色一套主题**（深色已删）；色值一律走 `Tok.xxx` 令牌，
    **产品代码里禁止出现裸 `Color(0x…)`**（除 `lib/core/theme/` 内）；造型走 `ToonCard / ToonButton /
    ToonPress / ToonSeg / ToonField …` 通用件，别自己拼描边阴影。
@@ -321,9 +355,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.6 卡通视觉改版（按用户原型全站换浅色）✅ 三批全部交付 + 真机走查通过**（`v0.7.6`）：
   P1 底座 + 底栏 + 首页 + 记一笔；P2 日历 / 统计 / 资产；P3 我的 / 账本 / 分类 / 导入三步 / 四个弹层 / 搜索浮层。
   **深色主题已彻底移除**；原型在 `D:\new file\modao\yanxin\`。
-- **下一步：F7.5 剩余功能项**（数据导出 / 分类预算 / 报表明细 / 账户图标选择 / 搜索增强 / 日历增强）
-  —— 都是新产品功能，**须先出小 SPEC 并签字**。
-- HEAD 见上（改完 `git push` 即可；本机 = 远端）。**最新 tag `v0.7.6`**（一版一 tag，回滚用 `git checkout v0.7.5`）。
+- **F7.7 backlog SPEC 已起草**（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：**A 报表明细（含 A.0 记一笔选账户）→ B 数据导出 →
+  C 账户图标 / 颜色 → D 搜索增强（动 schema **v2→v3**）→ E 日历增强**，各打一个 tag `v0.7.7`…`v0.7.11`。
+- HEAD = **`8f1058b`** = 远端，工作区干净；**最新 tag `v0.7.6`**（一版一 tag，回滚 `git checkout v0.7.5`）。
 - 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 269 全过 0 skip**
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
@@ -332,4 +366,5 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 搜索：入口是**覆盖首页的浮层**（`showSearchOverlay`，不是路由）；口径 = 当前账本全量 + 内存过滤；命中 = 分类名 / 备注 / 金额子串并集 + 类型指令「仅支出 / 仅收入 / 转账」（`parsePlan`）。
 - 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
 - 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.5`。
-- 下一步：**从 F7.5 剩余功能项里挑一个开小 SPEC**（数据导出 / 分类预算 / 报表明细 / 账户图标选择 / 搜索增强 / 日历增强）；改完 `git push` + 打 tag。
+- 下一步：**F7.7 A 批「报表明细清单」** —— 但先让用户确认 SPEC 里三点（**A.0 记一笔加账户字段 / D.5 拼音不做 / E.5 农历不做**），
+  点头后按 A→E 顺序做，一批一提交一 tag（`v0.7.7`…）。改完 `git push` + `git push --tags`。
