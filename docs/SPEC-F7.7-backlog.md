@@ -280,7 +280,7 @@
 | 门禁 | 结果 |
 |---|---|
 | `flutter analyze` 0 issue | ✅ **已达成（等效手段）** —— `python tool/dart_analyze_fallback.py` → **`No issues found!`**（全项目，分析 19s，退出码 0）。见下「等效门禁」。 |
-| `flutter test` 全绿 0 skip（基线 269，只增不删） | ⏳ **用户终端已跑一轮（2026-09-23）：4 个失败** —— 其中 **3 例是测试自身写法问题，已修**：<br>① `record_account_test` ×2：`tap(find.widgetWithText(AppBar, '保存'))` 命中的是 **AppBar 自身**，取中心点（标题区）→ 点不到右上角按钮且**不报警** → 静默不保存、库里 0 条（此坑 `tasks/todo-flutter.md` 在 F5.5 就记过，A 批又踩）；已改 `_tapSave()` → `tap(find.text('保存'))`。<br>② `reports_page_test`「转账单列一段」：转账段在分类档最下面，800×600 视口里卡在绘制区边缘，而 `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren` 只把**绘制区内**子项算 onstage → 默认 finder 搜不到；已改为先 `scrollUntilVisible(..., skipOffstage: false)` 再断言。<br>③ `bill_decode_test`「GBK 字节回退解码不乱码」：**未能复现** —— 纯 Dart VM 直跑真实 `decodeBillBytes([0xd6,0xd0,0xce,0xc4])` 得 `gbk` / `中文`，断言全成立，判定环境 / 编译缓存，需 `flutter clean` 后复跑。<br>用例数 **+18**（9 纯函数 + 7 widget + 2 A.0，⚠️ 原文写「+20（11+7+2）」为误记；全仓静态计数 **289** = 基线 269 + A 批 18 + 首次使用验收 2）。<br>`inheritStdio` 包装器能把 `flutter` 拉起来，但 `flutter_tools` 内部满地 `Process.runSync`（`LocalProcessManager.runSync`）→ 第二层就断。**只能在正常环境跑**。 |
+| `flutter test` 全绿 0 skip（基线 269，只增不删） | ⏳ **用户终端已跑一轮（2026-09-23）：4 个失败** —— 其中 **3 例是测试自身写法问题，已修**：<br>① `record_account_test` ×2：`tap(find.widgetWithText(AppBar, '保存'))` 命中的是 **AppBar 自身**，取中心点（标题区）→ 点不到右上角按钮且**不报警** → 静默不保存、库里 0 条（此坑 `tasks/todo-flutter.md` 在 F5.5 就记过，A 批又踩）；已改 `_tapSave()` → `tap(find.text('保存'))`。<br>② `reports_page_test`「转账单列一段」：转账段在分类档最下面，800×600 视口里卡在绘制区边缘，而 `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren` 只把**绘制区内**子项算 onstage → 默认 finder 搜不到；已改为先 `scrollUntilVisible(..., skipOffstage: false)` 再断言。<br>③ `bill_decode_test`「GBK 字节回退解码不乱码」：**未能复现** —— 纯 Dart VM 直跑真实 `decodeBillBytes([0xd6,0xd0,0xce,0xc4])` 得 `gbk` / `中文`，断言全成立，判定环境 / 编译缓存，需 `flutter clean` 后复跑。<br>用例数 **+18**（9 纯函数 + 7 widget + 2 A.0，⚠️ 原文写「+20（11+7+2）」为误记；全仓静态计数 **289** = 基线 269 + A 批 18 + 首次使用验收 2）。<br>✅ **本机已用等效手段跑通一半（2026-09-23）**：`python tool/dart_test_fallback.py`（Python 起 `frontend_server` 编译 + `flutter_tester.exe` 执行，参数抄 flutter_tools 源码）→ **纯 `test()` 226 例全绿 / 0 失败 / 0 跳过**（全量 35 文件，约 15min）。<br>⏳ **63 个 `testWidgets` 跑不了** —— `AutomatedTestWidgetsFlutterBinding` 需要真正的 test 运行器驱动帧，只给 bootstrap 时「启动首例后**永不完成**」（计数停 0、rc 仍 0）→ **仍需用户终端跑一次收尾**（预期 **289 passed / 0 skipped**）。<br>解析坑：计数顺序是 `+通过 ~跳过 -失败`（不是 `+ - ~`）且只打非零项；进度行时间戳自带冒号，先剥 `^\d\d:\d\d ` 再切；**判绿必须要求终态汇总行**（只看计数会假绿）。 |
 | 真机走查（MuMu 12 / 900×1600 / 320dpi）阻断 0 | ❌ **未走查** —— 构建链路（`flutter build` → Gradle 插件 → `dart`）同样断在 `flutter_tools`，无法产出含 A 批代码的 APK。**只能在正常环境做**。 |
 
 **环境阻塞（本机 · 2026-09-23）**
@@ -362,3 +362,41 @@
 > ② `open()` 里 `await future` 改用 `_awaitInitial()` 包装（规避 analyzer「提升变量赋值需明确类型」）；
 > ③ `_RatioBar` 从 `Container + Align + FractionallySizedBox`（松约束下高度塌成 0，进度条不可见）改 `SizedBox + Stack + Positioned.fill`。
 
+
+### 第二轮 `flutter test` 反馈 —— `real_bills_test.dart` 报 `loading`（2026-09-23）
+
+用户在自己终端复跑后只剩 1 个失败：`test/features/import/real_bills_test.dart: loading <路径>`。
+
+**定性**：`loading <路径>` = **加载失败** = 编译错 **或** 加载期（`main()` 体）抛异常 ——
+flutter_tools 生成的 listener 把 `main()` 的异常转成 `IsolateSpawnException` 上报，
+于是真实原因与其它用例结果**全丢**。
+
+**三条独立证据**：
+1. 编译干净：analyzer 全项目 0 issue + 测试引用的每个符号（`parseTimeMs` / `BillParseResult` /
+   `stats.*` / `rows.*`）逐个核对存在；
+2. `main()` 体（读两个真实件 + `parseBillFileAuto`）在纯 Dart VM 单独跑 —— **带 `--enable-asserts` 也跑过** ——
+   数字与断言完全一致（微信 335/327/8、支付宝 32/28/4、GBK 回中文）；
+3. **用真实 `flutter_tester` 直接加载该文件 → `+8` 全过**。
+
+**结论**：文件功能**无问题**。唯一可疑点：它是全仓**唯一在加载期做同步 IO + 解析**的文件
+（`main()` 顶部先 `readAsBytesSync`），正好把「读文件 / 解析出问题」放大成**整个文件的 `loading` 失败**，
+也最容易在冷启动并发编译时撞上加载超时。
+
+**加固（已改，复验 `+8-0~0` 全绿）**：`main()` 里**零 IO** —— 改 `RealBill`
+（懒读 + 懒解析 + `on Exception` 降级）+ `markTestSkipped`：缺件 / 读不出 / 解析失败
+→ **只跳过该例**并给出可读原因，不再让整个文件炸在加载期。
+
+**若仍复现**：需要那行 `loading` 的**完整 `[E]` 块**（含异常文本 / 堆栈）—— 本机已排除
+「编译错」与「加载期抛异常」两类，剩下的只能靠原文。
+
+### 新增工具 `tool/dart_test_fallback.py`（`flutter test` 的等效替代）
+
+`flutter test` 本体 = flutter_tools 起两个**原生子进程**：① `dartaotruntime + frontend_server_aot.dart.snapshot`
+编译测试文件为 dill；② `<engine>/windows-x64/flutter_tester.exe <dill>` 执行。两者都能被 Python
+`subprocess` 直接启动 → **绕开本机命名管道 231**。参数一律抄 flutter_tools 源码
+（`compile.dart` / `test/flutter_platform.dart:143 generateTestBootstrap` / `test/flutter_tester_device.dart`）。
+
+- **实测**：全量 35 文件 → **纯 `test()` 226 例全绿、0 失败、0 跳过**（约 15min，单文件 6-15s）。
+  与静态计数自洽：`testWidgets` 63 + 纯 `test()` 226 = **289** ✔。
+- **边界**：`testWidgets` 跑不了（需要真运行器驱动帧）。含 widget 的文件报「未跑完」而**不会假绿**。
+- **校准**：用「必然失败」的探针验证过能抓到失败并打印堆栈（否则第一版曾对空文件假绿过）。

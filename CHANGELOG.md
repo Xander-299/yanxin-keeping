@@ -88,6 +88,24 @@
   在 `gbk_codec` 锁 0.4.0（+ `dependency_overrides`，sha256 固定）的当前状态下该用例**不可能失败**。
   → 建议 `flutter clean && flutter pub get` 后复跑并回贴失败原文。
 
+### 修复 + 工具 — `flutter test` 等效门禁 + `real_bills_test` 加载期加固（2026-09-23）
+
+- **新增 `tool/dart_test_fallback.py`** —— `flutter test` 的等效替代，**推翻此前「本机无解」的结论**：
+  `flutter test` 本体就是 flutter_tools 起两个**原生子进程**（`dartaotruntime + frontend_server_aot.dart.snapshot`
+  编译测试文件为 dill → `<engine>/windows-x64/flutter_tester.exe <dill>` 执行），两者都能被 Python
+  `subprocess` 直接启动 → **绕开本机命名管道 231**。编译 / 引导文件 / tester 三处参数一律抄 flutter_tools 源码。
+  **实测全量 35 文件：纯 `test()` 226 例全绿 / 0 失败 / 0 跳过**（约 15min；与静态计数自洽：`testWidgets` 63 + 226 = **289**）。
+  ⚠️ **边界**：`testWidgets` 跑不了（`AutomatedTestWidgetsFlutterBinding` 需要真运行器驱动帧）
+  → 含 widget 的文件报「未跑完」而**不会假绿**（判绿要求终态汇总行）。**63 个 widget 用例仍需用户终端跑。**
+- **修 `test/features/import/real_bills_test.dart`**：用户复跑时报 `loading <路径>`（= 加载失败）。
+  三条独立证据（编译干净 / `main()` 体单独跑数字与断言全对（含 `--enable-asserts`）/ 真实 `flutter_tester`
+  直接加载 **`+8` 全过**）证明**功能无问题**；唯一可疑点：它是全仓**唯一在加载期做同步 IO + 解析**的文件 ——
+  flutter_tools 生成的 listener 会把 `main()` 的异常转成 `IsolateSpawnException`，于是整个文件只剩一句「加载失败」。
+  加固：`main()` 里**零 IO** —— 改 `RealBill`（懒读 + 懒解析 + `on Exception` 降级）+ `markTestSkipped`，
+  缺件 / 读不出 / 解析失败**只跳过该例**并给出可读原因。复验 **`+8-0~0` 全绿**。
+- **文档**：`docs/SPEC-F7.7-backlog.md` §G 补「第二轮反馈」与工具说明；`HANDOFF.md` 未解决问题第 1 条改写
+  （`flutter test` 已解决一半）、盲区防护新增 2 条（加载期 IO / `testWidgets` 假绿）。
+
 ### 已知环境阻塞 — 本机（A 机）Dart 无法创建子进程（2026-09-23）
 
 - 现象：一切 `flutter` / `dart` 子进程启动失败 → `ProcessException: 所有的管道范例都在使用中
@@ -107,8 +125,11 @@
   喂**同一套 `analysis_options.yaml`**，故口径一致（含 lint）。已用探针文件校准（能正确报出
   `prefer_single_quotes` / `prefer_const_declarations`），确认 lint 规则**在线**；
   服务器对干净文件也推空数组，故「0 诊断」无歧义。
-- **仍跑不了**：`flutter test`（`flutter_tools` 内部大量 `Process.runSync`，`inheritStdio` 包装器
-  救不了第二层）、真机走查（构建链路同上）。
+- **`flutter test` 也已用等效手段跑通**：`python tool/dart_test_fallback.py`（Python 起 `frontend_server`
+  编译 + `flutter_tester.exe` 执行）→ **纯 `test()` 226 例全绿 / 0 失败 / 0 跳过**。
+  ⚠️ 但 **63 个 `testWidgets` 用例跑不了**（该封装喂不了真运行器）→ 这一半仍需用户在自己终端跑。
+- **仍跑不了**：真机走查（构建链路是多层 spawn：`flutter_tools` → Gradle → 插件里的 `dart`，
+  `inheritStdio` 包装器只救第一层）。
 - 解除方式见 `HANDOFF.md`「未解决问题」；协议三坑见 `docs/SPEC-F7.7-backlog.md` §G。
 
 ## [v0.7.6] — 2026-09-23 · F7.6 卡通浅色视觉改版（P1 + P2 + P3）

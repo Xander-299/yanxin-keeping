@@ -251,11 +251,13 @@
 - [x] **`flutter analyze` 0 issue** —— ✅ **等效达成**（2026-09-23）：`python tool/dart_analyze_fallback.py` →
       `No issues found!`（Python 托管**同一个** `analysis_server_aot.dart.snapshot` + 同一套 `analysis_options.yaml`；
       已用探针校准确认 lint 规则在线）。原理与协议三坑见 `docs/SPEC-F7.7-backlog.md` §G
-- [ ] **`flutter test` 全绿 0 skip** —— ⏳ **用户终端已跑一轮（2026-09-23）：4 个失败** →
-      3 个是**测试自身写法问题，已修**（`record_account_test` ×2 的「AppBar 保存」点错位置；
-      `reports_page_test`「转账单列一段」要先 `scrollUntilVisible` 跨过视口）；
-      1 个（`bill_decode_test` GBK 解码）**无法复现** → 复跑前 `flutter clean && flutter pub get`。
-      预期 **289** = 基线 269 + A 批 18 + 首次使用验收 2；本机无替代方案，需正常环境
+- [x] **`flutter test` 的等效手段已入库** —— `tool/dart_test_fallback.py`（Python 起 `frontend_server`
+      编译 + `flutter_tester.exe` 执行；参数抄 flutter_tools 源码）。**实测纯 `test()` 226 例全绿 / 0 失败**
+- [ ] **`flutter test` 全绿 0 skip** —— 🟡 **本机已验一半**：
+      ✅ 纯 `test()` **226/226 全绿**；⏳ **63 个 `testWidgets` 跑不了**（该封装喂不了真运行器）
+      → **仍需用户终端跑一次收尾**（预期 **289** = 269 + A 批 18 + 首次验收 2；静态计数 63 + 226 = 289 ✔）。
+      首轮反馈的 4 个失败已处理（3 个是测试写法问题已修 / 1 个 GBK 无法复现）；
+      第二轮 `real_bills_test` 的 `loading` 已定性为「唯一在加载期做 IO 的文件」并加固（懒读 + 降级跳过）
 - [ ] **真机走查**（MuMu 12 / 900×1600 / 320dpi）**阻断 0** —— ⏳ **未走查**；现有 APK 不含 A 批，需先重建
 - [ ] **tag `v0.7.7` 暂缓**：待上面两条补齐后把 CHANGELOG `[Unreleased]` 移成 `## [v0.7.7]` + `git tag -a`
 - [ ] B 数据导出（待签字）
