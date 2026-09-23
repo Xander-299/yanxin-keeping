@@ -139,4 +139,42 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('listByBook：全量未删预算，按 period 升序（供数据导出用）', () async {
+    // 乱序写入，验证返回顺序按 period 升序而非写入顺序
+    await repo.setForMonth(bookId: bookId, year: 2026, month: 10, amountCents: 3);
+    await repo.setForMonth(bookId: bookId, year: 2025, month: 12, amountCents: 1);
+    await repo.setForMonth(bookId: bookId, year: 2026, month: 1, amountCents: 2);
+
+    final rows = await repo.listByBook(bookId);
+    expect(rows.map((b) => b.period).toList(), <String>[
+      '2025-12',
+      '2026-01',
+      '2026-10',
+    ]);
+    expect(rows.map((b) => b.amountCents).toList(), <int>[1, 2, 3]);
+  });
+
+  test('listByBook：不含已软删、且按账本隔离', () async {
+    await repo.setForMonth(bookId: bookId, year: 2026, month: 9, amountCents: 100);
+    await repo.setForMonth(bookId: bookId, year: 2026, month: 8, amountCents: 200);
+    await repo.clearForMonth(bookId, 2026, 8);
+
+    final other = await BookRepository(db).create(name: '另一个账本');
+    await BudgetRepository(db).setForMonth(
+      bookId: other.id,
+      year: 2026,
+      month: 9,
+      amountCents: 999,
+    );
+
+    final rows = await repo.listByBook(bookId);
+    expect(rows.length, 1);
+    expect(rows.single.period, '2026-09');
+    expect(rows.single.amountCents, 100);
+  });
+
+  test('listByBook：空账本返回空列表', () async {
+    expect(await repo.listByBook(bookId), isEmpty);
+  });
 }

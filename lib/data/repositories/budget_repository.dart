@@ -74,6 +74,16 @@ class BudgetRepository {
         );
   }
 
+  /// 查询某账本**全部月份**的未删预算，按 `period` 升序（`'YYYY-MM'` 字典序即时序）。
+  ///
+  /// 供数据导出（`F7.7 B 批` 备份 JSON）一次性取全量用；与 [getForMonth] 的区别是不带月份条件。
+  Future<List<BudgetRow>> listByBook(String bookId) {
+    return (_db.select(_db.budgets)
+          ..where((b) => b.bookId.equals(bookId) & b.deletedAt.isNull())
+          ..orderBy([(b) => OrderingTerm.asc(b.period)]))
+        .get();
+  }
+
   /// 清除某账本某月的预算（软删除）。返回受影响行数（0 表示本来就没设）。
   Future<int> clearForMonth(String bookId, int year, int month) {
     final now = DateTime.now().millisecondsSinceEpoch;

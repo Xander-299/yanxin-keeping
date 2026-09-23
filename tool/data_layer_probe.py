@@ -1,19 +1,20 @@
-"""在不依赖 Flutter 的纯 Dart VM 里跑数据层的「首次使用」验收探针。
+"""在不依赖 Flutter 的纯 Dart VM 里跑「脱离 flutter_tester」的验证探针。
 
 背景（见 HANDOFF.md「未解决问题」第 1 条）：本机 Dart VM 起不了「需要管道
 stdio」的子进程（命名管道 `CreateFile failed 231`）→ `flutter test` 不可用。
-但 `lib` 的数据层（drift 仓储 + 报表聚合）不依赖 `package:flutter`；唯一把
+但 `lib` 里除 UI 之外的代码大多不依赖 `package:flutter`；唯一把
 `dart:ui` 拖进来的是 `lib/core/db/database.dart` 里的 drift_flutter
 （→ path_provider → flutter）。
 
-做法：复制一份 `lib/` 到 `.dart_tool/data_layer_probe/` 下的临时包 →
-把该文件的 drift_flutter 换成 `drift/native` 的内存库 → 跑 `data_layer_probe.dart`。
+做法：复制一份 `lib/` 到 `.dart_tool/<脚本名>/` 下的临时包 →
+把该文件的 drift_flutter 换成 `drift/native` 的内存库 → 跑指定探针脚本。
 临时包整个落在 `.dart_tool/`（已在 .gitignore 里），不碰工作区、不碰任何真实数据。
 
 用法：
-    python tool/data_layer_probe.py            # 用 PATH 上的 dart
+    python tool/data_layer_probe.py                       # 默认跑数据层验收探针
+    python tool/data_layer_probe.py --script tool/export_probe.dart
     python tool/data_layer_probe.py --dart <path-to-dart.exe>
-    python tool/data_layer_probe.py --keep     # 保留临时包便于排查
+    python tool/data_layer_probe.py --keep                # 保留临时包便于排查
 """
 
 from __future__ import annotations
@@ -27,7 +28,6 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WORK = ROOT / ".dart_tool" / "data_layer_probe"
 
 OLD_IMPORT = "import 'package:drift_flutter/drift_flutter.dart';"
 NEW_IMPORT = "import 'package:drift/native.dart';"
@@ -44,23 +44,24 @@ def patch_database(path: Path) -> None:
     path.write_text(src, encoding="utf-8", newline="\n")
 
 
-def build_package() -> Path:
-    if WORK.exists():
-        shutil.rmtree(WORK)
-    shutil.copytree(ROOT / "lib", WORK / "lib")
-    (WORK / ".dart_tool").mkdir(parents=True)
+def build_package(script: Path) -> Path:
+    work = ROOT / ".dart_tool" / script.stem
+    if work.exists():
+        shutil.rmtree(work)
+    shutil.copytree(ROOT / "lib", work / "lib")
+    (work / ".dart_tool").mkdir(parents=True)
     shutil.copy2(ROOT / ".dart_tool" / "package_config.json",
-                 WORK / ".dart_tool" / "package_config.json")
-    shutil.copy2(ROOT / "tool" / "data_layer_probe.dart", WORK / "data_layer_probe.dart")
-    patch_database(WORK / "lib" / "core" / "db" / "database.dart")
+                 work / ".dart_tool" / "package_config.json")
+    shutil.copy2(ROOT / script, work / script.name)
+    patch_database(work / "lib" / "core" / "db" / "database.dart")
 
     # 包配置里 yanxin 的 rootUri 是相对 `.dart_tool` 的 `../` → 正好指向临时包，
     # 其余依赖仍是 pub cache 的绝对路径，所以无需改任何一条。
-    cfg = json.loads((WORK / ".dart_tool" / "package_config.json").read_text(encoding="utf-8"))
+    cfg = json.loads((work / ".dart_tool" / "package_config.json").read_text(encoding="utf-8"))
     yanxin = next(p for p in cfg["packages"] if p["name"] == "yanxin")
     if yanxin["rootUri"] != "../":
         sys.exit(f"[probe] yanxin.rootUri 不再是 '../'（{yanxin['rootUri']}），需改脚本")
-    return WORK / "data_layer_probe.dart"
+    return work / script.name
 
 
 def resolve_dart(explicit: str | None) -> str:
@@ -89,17 +90,26 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dart", default=None,
                     help="dart.exe 路径（默认自动定位 Flutter 的 dart-sdk）")
+    ap.add_argument("--script", default="tool/data_layer_probe.dart",
+                    help="要跑的探针脚本（默认数据层验收探针；"
+                         "临时包目录 = .dart_tool/<脚本名去后缀>）")
     ap.add_argument("--keep", action="store_true", help="保留临时包")
     args = ap.parse_args()
 
+    script = Path(args.script)
+    if not script.is_absolute():
+        script = ROOT / script
+    if not script.is_file():
+        sys.exit(f"[probe] 脚本不存在：{script}")
+
     dart = resolve_dart(args.dart)
-    entry = build_package()
+    entry = build_package(script)
     print(f"[probe] dart：{dart}")
-    print(f"[probe] 临时包：{WORK}")
+    print(f"[probe] 临时包：{entry.parent}")
     proc = subprocess.run([dart, str(entry)], cwd=str(ROOT),
                           text=True, encoding="utf-8", errors="replace")
     if not args.keep:
-        shutil.rmtree(WORK, ignore_errors=True)
+        shutil.rmtree(entry.parent, ignore_errors=True)
     return proc.returncode
 
 

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/features/export/presentation/export_sheet.dart';
 
 /// 我的。
 class ProfilePage extends ConsumerWidget {
@@ -46,13 +47,14 @@ class ProfilePage extends ConsumerWidget {
                       dashedTop: true,
                       onTap: () => context.push('/import'),
                     ),
-                    const _Entry(
+                    _Entry(
                       icon: Icons.download_outlined,
                       title: '数据导出',
                       sub: '导出 csv / 备份文件',
                       iconBg: Tok.greenTint,
                       iconFg: Tok.green,
                       dashedTop: true,
+                      onTap: () => showExportSheet(context, ref),
                     ),
                     const _Entry(
                       icon: Icons.tune_rounded,
@@ -232,7 +234,7 @@ class _BrandTip extends StatelessWidget {
           Row(
             children: <Widget>[
               Text(
-                '下一站：数据导出',
+                '这一版覆盖到哪',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -241,7 +243,7 @@ class _BrandTip extends StatelessWidget {
               ),
               Spacer(),
               Text(
-                'Backlog',
+                'v0.7.8',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -252,7 +254,7 @@ class _BrandTip extends StatelessWidget {
           ),
           SizedBox(height: 6),
           Text(
-            '已覆盖：记一笔 → 按月看账 → 导入账单 → 统计 / 预算 / 资产',
+            '已覆盖：记一笔 → 按月看账 → 导入账单 → 统计 / 预算 / 资产 → 数据导出',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
