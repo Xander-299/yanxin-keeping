@@ -314,7 +314,8 @@
   `report_group_list.dart` 相对路径少一层（`../application/` → `../../application/`）、`home_page.dart` 重复 import、
   `reports_page_test.dart` 的 `_seed` 返回类型不匹配。
 
-**commit / tag**：commit 见下方「本轮提交」；**tag `v0.7.7` 暂缓** —— 待 `flutter analyze` + `flutter test` + 真机走查三条门禁补齐后再打。
+**commit / tag**：**`2f6db4c`**（feat(reports): F7.7 A 批 —— 报表明细清单 `/reports` + A.0 记一笔选账户；19 文件 +2400/−98）
+已推 `origin/master`。**tag `v0.7.7` 暂缓** —— 待 `flutter analyze` + `flutter test` + 真机走查三条门禁补齐后再打。
 
 > 备注：实现过程中还**提前自查修掉 3 处渲染 / 状态风险**（未依赖门禁）——
 > ① `_reload` 不置 `AsyncLoading`（否则 AppBar 月份切换器因 `async.value == null` 整条消失）；

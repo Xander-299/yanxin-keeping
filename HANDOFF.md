@@ -20,6 +20,7 @@
 >   **tag `v0.7.7` 暂缓**。已用「同一套分析服务器（Python 托管 + LSP）」+ `package:analyzer` 进程内诊断
 >   做替代验证：`lib` + `test` 共 114 文件 **error 0 / warning 0**，并据此修掉 3 个真错。
 > - 回写：`docs/SPEC-F7.7-backlog.md`（§F 签字表 + §G 实施记录）、`CHANGELOG.md`（`[Unreleased]`）。
+> - **提交 `2f6db4c`**（19 文件 +2400/−98），已推 `origin/master`。
 >
 > **上一轮（F7.6 卡通视觉改版 P3 —— 末批，视觉改版至此收尾）**：用户给定页面原型 `D:\new file\modao\yanxin\`（卡通浅色），
 > 三项决策 —— **全站硬替换为浅色 / 分 3 批交付 / 零新依赖**；小 SPEC `docs/SPEC-F7.6-cartoon-ui.md`（已签字）。
@@ -37,7 +38,7 @@
 > - **`docs/SPEC-F7.7-backlog.md` 已起草并入库**（`909c3dc`）：把 backlog 剩的 5 项一次写清，A→E 顺次交付，各打一个 tag（`v0.7.7`…`v0.7.11`）。
 > - 用户表态「**全都做，按顺序**」→ **但 SPEC 正文尚未逐条确认**（A.0 前置 / D.5 拼音 / E.5 农历 三处默认处理需点头），
 >   **按项目规则未签字不动产品代码 → 开工前先确认**。
-> - 工作区干净，**代码基线 = `8f1058b`**（= `origin/master`）；本文档自身的提交在它之后，查 `git log -- HANDOFF.md`。
+> - 工作区干净，**代码基线 = `2f6db4c`**（= `origin/master`，含 F7.7 A 批）；文档提交查 `git log -- HANDOFF.md`。
 >
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
@@ -104,7 +105,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-23 F7.6 P3 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`）。<br>⚠️ **2026-09-23 起本机 Dart 起不了子进程** → 上述命令当前**跑不了**（见「未解决问题」第 1 条） |
-| git | 本机**代码基线** = **`8f1058b`** = `origin/master`；工作区干净；**最新 tag = `v0.7.6`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| git | 本机**代码基线** = **`2f6db4c`** = `origin/master`（含 F7.7 A 批）；工作区干净；**最新 tag = `v0.7.6`**（`v0.7.7` 待门禁补齐后打；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
 | 源码规模 | `lib/` 72 个 `.dart`，`test/` 34 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -122,7 +123,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **A 机接手续做（当前线）**：`94bbb33`（走查截图不再入库）→ `1f6f690`（**F7.6 P1**）
   → `3d4e749`（**F7.6 P2**）→ `aa96f01`（P2 走查修复）→ `5f0d369`（**F7.6 P3**）
   → `d3b2076`（P3 走查补做 + **版本记录机制 `v0.7.6`**）→ `909c3dc`（**F7.7 backlog SPEC**）
-  → **`8f1058b`（代码基线；走查技能补「run-as + 设备 sqlite3 改库」一节）** → 其后为 HANDOFF 交接文档提交（`c7cd43f` / `42abab1`）
+  → **`8f1058b`（走查技能补「run-as + 设备 sqlite3 改库」一节）** → `c7cd43f` / `42abab1` / `26169b1`（HANDOFF 交接文档）
+  → **`2f6db4c`（F7.7 A 批：报表明细 /reports + A.0 记一笔选账户；门禁待跑）**
 
 # 当前方案与关键决策
 
@@ -206,8 +208,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **F7.7 A 批「报表明细清单」代码 + 测试已落地，但未提交 / 未打 tag**（门禁未跑，见下）。
-- **本机（A 机）代码基线 = `8f1058b` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC 已入库；
+- **F7.7 A 批「报表明细清单」代码 + 测试 + 文档已提交并推送**（**`2f6db4c`**，= `origin/master`），但**未打 tag**（门禁未跑，见下）。
+- **本机（A 机）代码基线 = `2f6db4c` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC + **F7.7 A 批** 已入库；
   **tag = `v0.7.6`**）；交接文档在其后单独提交（`c7cd43f` / `42abab1`）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
   工作区另有 **F7.7 A 批未提交改动**（报表明细 + A.0 记一笔选账户）。
@@ -219,7 +221,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端**，工作区干净；**代码基线 `8f1058b`**（交接文档在其后单独提交）；tag `v0.7.1`…`v0.7.6` 已推远端。
+- **本机 = 远端**（`2f6db4c`），工作区只剩两个临时目录（`.qa-probe/`、`tool/`，未入库）；tag `v0.7.1`…`v0.7.6` 已推远端，**`v0.7.7` 待补**。
 
 # 未解决问题
 
@@ -429,7 +431,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `flutter analyze / test / pub / build_runner` **全废**。A 批门禁未跑通 → **tag `v0.7.7` 暂缓**。
   替代验证：同一套分析服务器（Python 托管 + LSP）+ `package:analyzer` 进程内诊断 → `lib`+`test` 114 文件 **error 0 / warning 0**。
   **解除**：在自己的 Git Bash 终端跑 `source env.sh && fx-qa`（终端不在沙箱内）→ 或重启 Windows / WorkBuddy。
-- **代码基线 `8f1058b`**（= 远端；其后为 HANDOFF 文档提交 + **F7.7 A 批未提交改动**）；**最新 tag `v0.7.6`**。
+- **代码基线 = `2f6db4c`**（= 远端；含 **F7.7 A 批改动**，tag 待补）；**最新 tag `v0.7.6`**。
 - 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 269 全过 0 skip**（⚠️ **2026-09-23 起本机跑不了门禁**，见上「环境阻塞」）；
   F7.7 A 批新增 20 例（11 纯函数 + 7 页面 widget + 2 A.0）**尚未执行**。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
