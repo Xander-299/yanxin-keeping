@@ -297,7 +297,8 @@
 - `python tool/dart_analyze_fallback.py` → **`No issues found!`**（全项目，含新增 4 个文件）。
 - `python tool/dart_test_fallback.py csv_export_test budget_repository_test` → **+31 全绿**（21s）。
 - `python tool/data_layer_probe.py --script tool/export_probe.dart` → 探针断言全过。
-- ⏳ 用户终端全量 `flutter test`（含 3 例新 testWidgets）+ 真机走查（导出弹层两条路径 + SAF 文件名）→ 之后 **`v0.7.8`**。
+- ✅ **真机走查（2026-09-23，AI 经 adb 全包完成**——构建用 `gradlew assembleDebug` 直连绕开本机 Dart 231，已验 kernel_blob 含 B 批代码）：装机 Success → 冷启动无崩溃 → 我的页入口 / `_BrandTip` / `v0.7.8` 角标 ✅ → 弹层两选项 + 脚注 ✅ → **CSV**：SAF 预填名 `颜芯记账_默认账本_20260923.csv`，718B，BOM / CRLF / 表头 / 两位小数 / RFC4180 转义（含逗号备注）/ 来源英文 全对 ✅ → **JSON**：schemaVersion 2、七段结构齐、金额整数分、`budgets` 1 条（`listByBook` 真跑通）✅ → SnackBar「已导出 9 笔到 …」✅ → 取消静默 ✅ → 报表页回归 ✅ → logcat 无崩溃 ✅。证据：`.workbuddy/shots/b0*.png` + `export_test.csv/.json`；设备 `/sdcard/Download/` 留有导出原件。
+- ⏳ 用户终端全量 `flutter test`（本机 flutter test 直连仍撞 231；含 3 例新 testWidgets）→ 之后 **`v0.7.8`**。
 
 
 ### A 批 —— 报表明细清单（`v0.7.7`）· ✅ 已交付（`v0.7.7` 已打 tag）

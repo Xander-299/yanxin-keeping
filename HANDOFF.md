@@ -11,8 +11,11 @@
 >   `budget_repository.listByBook(bookId)` 补取数缺口（只读，不改 schema）。
 > - **门禁**：analyze 等效 **0 issue**；新增纯测试 **31 例全绿**（budget +11、csv_export +20，等效工具实测）；
 >   新增 widget 测试 3 例（`export_sheet_test.dart`）本机跑不了 → **用户终端 `flutter test` 预期总数 289 → 315**。
-> - ⏳ 剩项：用户终端全量回归 + 真机走查（导出弹层两条路径 + SAF 文件名）→ **打 `v0.7.8`**。
+> - ⏳ 剩项：**仅剩用户终端 `flutter test` 全量回归（预期 315）→ 打 `v0.7.8`**。
 >   实施记录详见 `docs/SPEC-F7.7-backlog.md` §G「B 批」。
+> - 🔥 **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：发现 **`flutter build` 撞 231 但
+>   `cd android && ./gradlew assembleDebug` 直连能通**（Java 进程链不吃 Dart 管道；须验 kernel_blob 新鲜度防旧码）——
+>   构建装机走查一条龙全在本机完成，CSV / JSON 两路径全过、无崩溃。已写入 `dart-toolchain-python-fallback` skill。
 >
 > **上一轮（A 批门禁补齐 + 交接，零产品代码改动）**：
 >

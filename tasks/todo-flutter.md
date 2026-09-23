@@ -265,7 +265,9 @@
       `csv_export.dart`（CSV 表头 日期,类型,金额,分类,账户,备注,来源 + BOM/CRLF/RFC4180；备份 JSON schemaVersion 2 金额整数分）+
       `export_sheet.dart` 底部弹层（SAF 保存、取消静默）+ 我的页入口 + `_BrandTip` 文案 + `budget_repository.listByBook`；
       新增测试 34 例（纯 31 全绿 ✅ 等效实测 + testWidgets 3 本机跑不了）；
-      ⏳ **用户终端 `flutter test` 全量回归（预期 315）+ 真机走查导出两条路径 → 打 `v0.7.8`**
+      ✅ **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：`gradlew assembleDebug` 直连构建（绕开 231）+ 装 +
+      语义树/截图走查，CSV 与 JSON 两路径、SnackBar、取消静默、报表回归全过；
+      ⏳ **仅剩用户终端 `flutter test` 全量回归（预期 315）→ 打 `v0.7.8`**
 - [ ] C 账户图标 / 颜色（待签字）
 - [ ] D 搜索增强（待签字；**动 schema v2→v3**）
 - [ ] E 日历增强（待签字）
