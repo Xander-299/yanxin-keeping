@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
+import 'package:yanxin/features/reports/application/reports_controller.dart';
 
 import '../application/calendar_controller.dart';
 
@@ -48,12 +49,20 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
       appBar: AppBar(
         title: Text('$_year年'),
         actions: <Widget>[
-          // 原型这里只有一个 muted 的「报表」占位（月选择页没有统计入口）
-          const _PickerIcon(
+          // 「明细」档；月份对齐本页当前年月（SPEC-F7.7 §A.2.3）
+          ToonIconButton(
             icon: Icons.receipt_long_rounded,
-            tooltip: '报表（建设中）',
-            muted: true,
+            tooltip: '报表',
+            onPressed: () => context.push(
+              '/reports',
+              extra: ReportsArgs(
+                tab: kReportTabDetail,
+                year: _year,
+                month: current?.month ?? DateTime.now().month,
+              ),
+            ),
           ),
+          const SizedBox(width: 12),
         ],
       ),
       body: Container(
@@ -273,29 +282,6 @@ class _MiniMonth extends StatelessWidget {
 
 /// 迷你月历的星期表头（原型 `.m-wk`）。
 const List<String> _weekHeads = <String>['日', '一', '二', '三', '四', '五', '六'];
-
-/// 子页 appbar 占位图标（muted = 三级灰）。
-class _PickerIcon extends StatelessWidget {
-  const _PickerIcon({
-    required this.icon,
-    required this.tooltip,
-    this.muted = false,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final bool muted;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      color: muted ? Tok.ink3 : Tok.ink,
-      onPressed: () => showWipToast(context, '报表 · 建设中'),
-      icon: Icon(icon, size: 22),
-    );
-  }
-}
 
 /// 底部胶囊按钮（上一年 / 下一年）。
 class _PillButton extends StatelessWidget {

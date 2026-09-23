@@ -119,27 +119,35 @@ class _GroupChip extends StatelessWidget {
 }
 
 /// 单条流水。
+///
+/// [onTap] / [onLongPress] 传空 = **只读行**（报表页用：只展示，不进编辑、不删）。
 class TxTile extends StatelessWidget {
   const TxTile({
     super.key,
     required this.tx,
     required this.categoryName,
-    required this.onTap,
-    required this.onLongPress,
+    this.onTap,
+    this.onLongPress,
+    this.neutral = false,
   });
 
   final TxRow tx;
   final String categoryName;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+
+  /// 转账行：不算收支方向 → 金额用次级灰、不带 ± 号（SPEC-F7.7 §A.3 口径）。
+  final bool neutral;
 
   @override
   Widget build(BuildContext context) {
     final bool isIncome = tx.type == 'income';
     final String initial = categoryName.isEmpty ? '?' : categoryName.substring(0, 1);
     // 中国习惯：支出红 / 收入绿（糖果色，对齐原型）
-    final Color amountColor = isIncome ? Tok.green : Tok.red;
-    final String sign = isIncome ? '+' : '-';
+    final Color amountColor = neutral
+        ? Tok.ink2
+        : (isIncome ? Tok.green : Tok.red);
+    final String sign = neutral ? '' : (isIncome ? '+' : '-');
     return ToonPress(
       dx: 0,
       dy: 0,
@@ -151,7 +159,9 @@ class TxTile extends StatelessWidget {
           children: <Widget>[
             ToonAvatar(
               text: initial,
-              bg: isIncome ? Tok.greenTint : Tok.redTint,
+              bg: neutral
+                  ? Tok.track
+                  : (isIncome ? Tok.greenTint : Tok.redTint),
               fg: amountColor,
             ),
             const SizedBox(width: 12),

@@ -20,8 +20,46 @@
 
 ## [Unreleased]
 
-_（空。下一次功能更新的条目写在这里；发版时把 `## [Unreleased]` 下方内容移到新的 `## [v0.7.N] — 日期` 段，
-并往上面的 tag 表补一行 + `git tag -a v0.7.N`。）_
+> **F7.7 A 批已实施，但门禁未跑通 → 暂不打 tag。** 本机 Dart VM 起不了子进程（见下），
+> `flutter analyze` / `flutter test` / 真机走查三条门禁待补；补齐后再移到 `## [v0.7.7]` 段并 `git tag -a v0.7.7`。
+
+### 新增 — F7.7 A 批 · 报表明细清单 `/reports`（2026-09-23）
+
+- **范围**：`docs/SPEC-F7.7-backlog.md` §A（**A 批已签字**：A.0 前置做；D.5 拼音 / E.5 农历不做；
+  报表页流水行由用户裁定为**只读不可点**，按 A.4）。
+- **A.0 前置 —— 记一笔支持选账户**：`record_page.dart` 原先写死 `accounts.first.id`，用户无法选账户
+  （不改这条，「按账户报表」永远只有一行）。现加第 4 个 `ToonField`「账户」+ 底部弹层
+  `showAccountPicker()`（抓手 + `ToonAvatar` 行列表 + 选中对勾）；**默认仍是列表首个账户**（老行为不变）。
+  选中的账户若在编辑态已被软删，自动退回首个账户。
+- **新页 `/reports`**：AppBar「报表」+ 右侧月份切换（`‹ 2026年9月 ›`，未来月禁用）；
+  `ToonSeg` 三档 **明细 · 分类 · 账户**；**独立记月份**（翻月不带动首页 / 日历 / 统计）。
+- **4 处「报表（建设中）」占位全部点亮**：首页 header「报表」→ **分类档**；
+  首页「全部账单 ›」→ **明细档**（文案不变）；日历页 header → **明细档 + 月份对齐日历页**；
+  月份选择页 header → **明细档 + 月份对齐该页**。
+- **口径**：取数用 `transactionRepository.listByMonth()`（与首页 / 日历 / 统计同一句 SQL）；
+  分类档分支出 / 收入两段（复用 `categoryBreakdown` 口径）+ 转账单列一段；
+  账户档按 `account_id` 聚合支出 / 收入 / 转账 / 笔数；已软删账户或空 `accountId` 归「其他账户」。
+- **明细档**：按日倒序分组，组头「今天 / 昨天 / M月D日 周X · N 笔 · 支出 ¥x」。
+- **空态**：虚线圆 + `PigMascot` + 「这个月还没有记账」+ 「去记一笔」。
+- **展示限制**：每展开组最多 200 行 + 尾注（与搜索浮层同一做法）。
+- **只读改造**：`TxTile` 的 `onTap` / `onLongPress` 改为可空（空 = 只读行），新增 `neutral`（转账行配色）；
+  首页 / 日历 / 搜索三处既有调用点行为不变。
+- **文档**：`docs/SPEC-F7.7-backlog.md` §F 签字表 + §G 实施记录已回写。
+
+### 已知环境阻塞 — 本机（A 机）Dart 无法创建子进程（2026-09-23）
+
+- 现象：一切 `flutter` / `dart` 子进程启动失败 → `ProcessException: 所有的管道范例都在使用中
+  (CreateFile failed 231)`（`runtime/bin/process_win.cc:744`）。受影响：`flutter analyze`、
+  `flutter test`、`dart analyze`、`dart pub get`、`dart run build_runner`。
+- 根因（已定位到 Win32 调用级）：Dart 在 Windows 上用命名管道做 stdio，先
+  `CreateNamedPipe(PIPE_ACCESS_OUTBOUND | OVERLAPPED, nMaxInstances=1)` 再
+  `CreateFileW(pipe, GENERIC_READ, ...)`；本机第二步恒返回 **ERROR_PIPE_BUSY (231)**，
+  而 stdin 是第一个建的管道 → 任何 spawn 立刻死。复现矩阵（Python ctypes 直调 Win32）：
+  只读语义的管道客户端打开被拒，`GENERIC_READ|GENERIC_WRITE` 或 `PIPE_ACCESS_INBOUND`+`GENERIC_WRITE` 正常。
+  纯主机行为，与项目代码无关。
+- 替代验证：同一套分析服务器（`analysis_server_aot.dart.snapshot` + LSP，由 Python 托管）
+  + `package:analyzer` 进程内诊断（`lib`+`test` 114 文件 **error 0 / warning 0**）。
+- 解除方式见 `HANDOFF.md`「未解决问题」。
 
 ## [v0.7.6] — 2026-09-23 · F7.6 卡通浅色视觉改版（P1 + P2 + P3）
 

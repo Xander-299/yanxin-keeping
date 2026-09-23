@@ -6,6 +6,8 @@
 /// 性能约定：分类列表 watch 已缓存的 `categoriesProvider`（首页加载时就绪），
 /// push 首帧即渲染完整页面——**不允许**再加 initState 异步门闩（spinner→二次
 /// build 会在转场动画中途换内容，肉眼可见卡顿）；编辑模式的流水详情异步填充。
+///
+/// F7.7 A.0：新增第 4 个字段「账户」（默认仍是账户列表首个，老行为不变）。
 library;
 
 import 'dart:async';
@@ -14,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/providers/account_providers.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
@@ -27,6 +30,7 @@ import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/amount_input.dart';
+import 'widgets/account_picker_sheet.dart';
 import 'widgets/amount_keyboard.dart';
 import 'widgets/category_picker.dart';
 import 'widgets/date_picker_sheet.dart';
@@ -53,6 +57,9 @@ class _RecordPageState extends ConsumerState<RecordPage> {
   String _type = 'expense';
   String _amount = '';
   String? _categoryId;
+
+  /// 所选账户 id；为空 = 沿用账户列表首个（老行为不变）。
+  String? _accountId;
   late int _occurredAtMs;
   bool _saving = false;
 
@@ -79,6 +86,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       _amount = centsToYuan(tx.amountCents);
       _noteController.text = tx.note;
       _categoryId = tx.categoryId;
+      _accountId = tx.accountId;
       _occurredAtMs = tx.occurredAt;
     });
   }
@@ -119,6 +127,18 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     return null;
   }
 
+  /// 当前生效的账户：显式选过就用选的，否则沿用列表首个。
+  ///
+  /// 选过的账户若已不存在（被软删）也退回首个 —— `transactions.account_id`
+  /// 是 NOT NULL，保存时必须给一个**存在**的账户。
+  Account? _effectiveAccount(List<Account> accounts) {
+    if (accounts.isEmpty) return null;
+    for (final Account a in accounts) {
+      if (a.id == _accountId) return a;
+    }
+    return accounts.first;
+  }
+
   /// 选分类。弹层内部可切支出/收入，故传全量分类，并以选中项的 kind 回写类型。
   Future<void> _pickCategory(List<Category> all) async {
     final picked = await showCategoryPicker(
@@ -134,6 +154,21 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     });
   }
 
+  /// 选账户（F7.7 A.0）。
+  Future<void> _pickAccount(List<Account> accounts) async {
+    if (accounts.isEmpty) {
+      _toast('账本无账户');
+      return;
+    }
+    final Account? picked = await showAccountPicker(
+      context,
+      accounts: accounts,
+      selectedId: _effectiveAccount(accounts)?.id,
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _accountId = picked.id);
+  }
+
   Future<void> _save() async {
     if (!isParsableAmount(_amount) || yuanToCents(_amount) <= 0) {
       _toast('请输入金额');
@@ -145,10 +180,9 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     }
     final bookId = await ref.read(activeBookIdProvider.future);
     if (bookId == null) return;
-    final accounts = await ref
-        .read(accountRepositoryProvider)
-        .listByBook(bookId);
-    if (accounts.isEmpty) {
+    final List<Account> accounts = await ref.read(accountsProvider.future);
+    final Account? account = _effectiveAccount(accounts);
+    if (account == null) {
       _toast('账本无账户');
       return;
     }
@@ -162,6 +196,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
           widget.txId!,
           type: _type,
           categoryId: _categoryId,
+          accountId: account.id,
           amountCents: amountCents,
           occurredAt: _occurredAtMs,
           note: _noteController.text.trim(),
@@ -169,7 +204,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       } else {
         await repo.create(
           bookId: bookId,
-          accountId: accounts.first.id,
+          accountId: account.id,
           type: _type,
           categoryId: _categoryId,
           amountCents: amountCents,
@@ -204,7 +239,9 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     // 编辑模式的极端情况），这一帧退化为轻量占位，provider 完成后自动重渲染
     final categories =
         ref.watch(categoriesProvider).value ?? const <Category>[];
+    final accounts = ref.watch(accountsProvider).value ?? const <Account>[];
     final selected = _selectedCategory(categories);
+    final selectedAccount = _effectiveAccount(accounts);
 
     return Scaffold(
       appBar: AppBar(
@@ -309,6 +346,22 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                       focusedErrorBorder: InputBorder.none,
                     ),
                   ),
+                ),
+                // F7.7 A.0：第 4 个字段「账户」；默认沿用列表首个（老行为不变）
+                ToonField(
+                  label: '账户',
+                  value: selectedAccount?.name ?? '请选择账户',
+                  placeholder: selectedAccount == null,
+                  onTap: () => _pickAccount(accounts),
+                  dashedTop: true,
+                  trailing: selectedAccount == null
+                      ? null
+                      : ToonAvatar(
+                          text: selectedAccount.name.isEmpty
+                              ? '?'
+                              : selectedAccount.name.substring(0, 1),
+                          small: true,
+                        ),
                 ),
                 const SizedBox(height: 16),
                 ToonButton(

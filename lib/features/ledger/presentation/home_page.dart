@@ -17,6 +17,7 @@ import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
+import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
@@ -167,10 +168,13 @@ class _Header extends StatelessWidget {
           ),
           ToonIconButton(
             icon: Icons.receipt_long_rounded,
-            tooltip: '报表（建设中）',
+            tooltip: '报表',
             boxed: true,
-            muted: true,
-            onPressed: () => _toast(context, '报表 · 建设中'),
+            // 首页 header 的「报表」默认落在「分类」档（SPEC-F7.7 §A.2.3）
+            onPressed: () => context.push(
+              '/reports',
+              extra: const ReportsArgs(tab: kReportTabCategory),
+            ),
           ),
           ToonIconButton(
             icon: Icons.bar_chart_rounded,
@@ -184,7 +188,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-/// 「本月账单」区头 + 全部账单占位入口。
+/// 「本月账单」区头 + 全部账单入口（→ 报表页「明细」档，文案不变）。
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader();
 
@@ -195,7 +199,10 @@ class _SectionHeader extends StatelessWidget {
       trailing: ToonPress(
         dx: 2,
         dy: 2,
-        onTap: () => _toast(context, '全部账单 · 建设中'),
+        onTap: () => context.push(
+          '/reports',
+          extra: const ReportsArgs(tab: kReportTabDetail),
+        ),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -218,15 +225,6 @@ class _SectionHeader extends StatelessWidget {
       ),
     );
   }
-}
-
-/// 统一的占位提示。
-void _toast(BuildContext context, String message) {
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
-    );
 }
 
 /// 空态：必须「不用滚动就能看到」。

@@ -20,6 +20,7 @@ import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/tx_delete_dialog.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/tx_group_list.dart';
+import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/calendar_controller.dart';
@@ -173,10 +174,17 @@ class _HeaderBody extends ConsumerWidget {
           ),
           ToonIconButton(
             icon: Icons.receipt_long_rounded,
-            tooltip: '报表（建设中）',
+            tooltip: '报表',
             boxed: true,
-            muted: true,
-            onPressed: () => showWipToast(context, '报表 · 建设中'),
+            // 「明细」档 + 月份对齐日历页当前月（SPEC-F7.7 §A.2.3）
+            onPressed: () => context.push(
+              '/reports',
+              extra: ReportsArgs(
+                tab: kReportTabDetail,
+                year: year,
+                month: month,
+              ),
+            ),
           ),
           ToonIconButton(
             icon: Icons.pie_chart_outline_rounded,
