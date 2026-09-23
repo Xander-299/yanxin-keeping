@@ -69,6 +69,12 @@ class Accounts extends Table {
 
   TextColumn get ownerId => text().nullable()();
 
+  // 自选装饰（F7.7 C 批，schema v3 新增）：空串 = 跟随账户类型；
+  // 取值约定见 lib/features/assets/application/account_meta.dart。
+  TextColumn get icon => text().withDefault(const Constant(''))();
+
+  TextColumn get color => text().withDefault(const Constant(''))();
+
   IntColumn get createdAt => integer()();
 
   IntColumn get updatedAt => integer()();

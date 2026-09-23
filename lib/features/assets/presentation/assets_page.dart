@@ -182,15 +182,16 @@ class _AccountTile extends StatelessWidget {
                 height: 42,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Tok.brandTint,
+                  // 自选颜色优先；空串 / 非法值 = 类型默认底色（老数据行为不变）
+                  color: accountAvatarColor(item.account.color),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Tok.ink, width: 2),
                   boxShadow: Tok.hard(d: 2),
                 ),
                 child: Icon(
-                  accountTypeIcon(item.account.type),
+                  accountIcon(item.account.icon, item.account.type),
                   size: 21,
-                  color: Tok.brandDeep,
+                  color: Tok.ink,
                 ),
               ),
               const SizedBox(width: 12),

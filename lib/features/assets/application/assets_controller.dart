@@ -32,11 +32,13 @@ class AssetsController extends AsyncNotifier<AssetSummary> {
     return buildAssetSummary(accounts, txs);
   }
 
-  /// 新增账户。返回新建的账户。
+  /// 新增账户。返回新建的账户。[icon] / [color] 为自选装饰（'' = 跟随类型）。
   Future<Account> addAccount({
     required String name,
     required String type,
     required int initialBalanceCents,
+    String icon = '',
+    String color = '',
   }) async {
     final String? bookId = await ref.read(activeBookIdProvider.future);
     if (bookId == null) {
@@ -51,23 +53,29 @@ class AssetsController extends AsyncNotifier<AssetSummary> {
       type: type,
       initialBalanceCents: initialBalanceCents,
       sortOrder: existing.length,
+      icon: icon,
+      color: color,
     );
     _bump();
     return created;
   }
 
-  /// 编辑账户（改名 / 改类型 / 改初始余额）。
+  /// 编辑账户（改名 / 改类型 / 改初始余额 / 改图标颜色）。
   Future<void> updateAccount(
     String id, {
     required String name,
     required String type,
     required int initialBalanceCents,
+    String? icon,
+    String? color,
   }) async {
     await ref.read(accountRepositoryProvider).update(
       id,
       name: name,
       type: type,
       initialBalanceCents: initialBalanceCents,
+      icon: icon,
+      color: color,
     );
     _bump();
   }

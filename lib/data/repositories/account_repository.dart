@@ -23,6 +23,8 @@ class AccountRepository {
     int sortOrder = 0,
     String? ownerId,
     String? id,
+    String icon = '',
+    String color = '',
   }) {
     if (bookId.isEmpty) {
       throw ArgumentError.value(bookId, 'bookId', 'account.bookId 为必填');
@@ -44,6 +46,8 @@ class AccountRepository {
             initialBalanceCents: Value(initialBalanceCents),
             sortOrder: Value(sortOrder),
             ownerId: Value(ownerId),
+            icon: Value(icon),
+            color: Value(color),
           ),
         );
   }
@@ -75,6 +79,8 @@ class AccountRepository {
     String? type,
     int? initialBalanceCents,
     int? sortOrder,
+    String? icon,
+    String? color,
   }) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     final changed = await (_db.update(_db.accounts)
@@ -89,6 +95,8 @@ class AccountRepository {
             sortOrder: sortOrder == null
                 ? const Value.absent()
                 : Value(sortOrder),
+            icon: icon == null ? const Value.absent() : Value(icon),
+            color: color == null ? const Value.absent() : Value(color),
             updatedAt: Value(now),
             dirty: const Value(1),
           ),

@@ -20,6 +20,8 @@ Account _account(
     type: type,
     initialBalanceCents: initialCents,
     sortOrder: 0,
+    icon: '',
+    color: '',
     createdAt: now,
     updatedAt: now,
     dirty: 1,

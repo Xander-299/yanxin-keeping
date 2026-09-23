@@ -5,6 +5,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/db/schema_v1.dart';
 import 'package:yanxin/core/db/schema_v2.dart';
+import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/budget_repository.dart';
 
 import '../../helpers/test_database.dart';
@@ -96,9 +97,9 @@ void main() {
       await insert('g4', 1); // 已删的可以有任意多条
     });
 
-    test('schemaVersion 落库为 2（PRAGMA user_version）', () async {
+    test('schemaVersion 落库为 3（PRAGMA user_version）', () async {
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 2);
+      expect(row.read<int>('user_version'), 3);
     });
 
     test('建表/建索引 DDL 幂等：重复执行不报错且版本不变', () async {
@@ -106,7 +107,7 @@ void main() {
         await db.customStatement(sql);
       }
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 2);
+      expect(row.read<int>('user_version'), 3);
     });
 
     test('指纹部分唯一索引：同样指纹两条 → UNIQUE 冲突', () async {
@@ -205,7 +206,7 @@ void main() {
       expect(await _objects(v2, 'index'), contains('idx_budget_book_period'));
       final int after = (await v2.customSelect('PRAGMA user_version').getSingle())
           .read<int>('user_version');
-      expect(after, 2);
+      expect(after, 3); // 一次走完 1→2→3 两条迁移
 
       // 老数据仍在
       final book = await v2
@@ -227,6 +228,60 @@ void main() {
         amountCents: 100000,
       );
       expect((await repo.getForMonth('b1', 2026, 9))!.amountCents, 100000);
+    });
+  });
+
+  // F7.7 C 批：accounts 加自选图标 / 颜色两列。v2 老库升级必须只「加列」，
+  // 带默认空串，不改任何既有行。
+  group('v2 → v3 迁移', () {
+    test('老库升级：accounts 加出 icon / color（默认空串），既有数据不丢', () async {
+      final sqlite.Database raw = sqlite.sqlite3.openInMemory();
+
+      // 用当前代码建出完整 schema，再「退回 v2」：删掉两列 + 版本号改回 2。
+      final AppDatabase v2 = AppDatabase(
+        NativeDatabase.opened(raw, closeUnderlyingOnClose: false),
+      );
+      await v2.customSelect('SELECT 1').get(); // 触发建表
+      await v2.customStatement(
+        'INSERT INTO books(id, name, created_at, updated_at) '
+        "VALUES('b1','旧账本',1,1)",
+      );
+      await v2.customStatement(
+        'INSERT INTO accounts(id, book_id, name, type, initial_balance_cents, '
+        'sort_order, created_at, updated_at) '
+        "VALUES('a1','b1','现金','cash',0,0,1,1)",
+      );
+      await v2.customStatement('ALTER TABLE accounts DROP COLUMN icon');
+      await v2.customStatement('ALTER TABLE accounts DROP COLUMN color');
+      await v2.customStatement('PRAGMA user_version = 2');
+      await v2.close();
+
+      // 用「新版本代码」打开同一个库 → 走 onUpgrade(from 2, to 3)
+      final AppDatabase v3 = AppDatabase(NativeDatabase.opened(raw));
+      addTearDown(v3.close);
+
+      final int after = (await v3.customSelect('PRAGMA user_version').getSingle())
+          .read<int>('user_version');
+      expect(after, 3);
+
+      // 既有行数据不丢，且新列落默认空串（= 跟随类型）
+      final row = await v3
+          .customSelect("SELECT name, icon, color FROM accounts WHERE id = 'a1'")
+          .getSingle();
+      expect(row.read<String>('name'), '现金');
+      expect(row.read<String>('icon'), '');
+      expect(row.read<String>('color'), '');
+
+      // 升级后的库能正常带 icon / color 写账户
+      final repo = AccountRepository(v3);
+      final created = await repo.create(
+        bookId: 'b1',
+        name: '新卡',
+        icon: 'piggy',
+        color: '#FF6B8A',
+      );
+      expect(created.icon, 'piggy');
+      expect(created.color, '#FF6B8A');
     });
   });
 }

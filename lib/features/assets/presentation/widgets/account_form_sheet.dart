@@ -50,6 +50,9 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
   late final TextEditingController _name;
   late final TextEditingController _balance;
   late String _type;
+  // 自选图标 / 颜色（null = 跟随账户类型，存库时落空串）。
+  String? _icon;
+  String? _color;
   String? _error;
   bool _busy = false;
 
@@ -61,6 +64,10 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
     final Account? a = widget.account;
     _name = TextEditingController(text: a?.name ?? '');
     _type = a?.type ?? 'cash';
+    // 回填自选值：空串 / 不在候选集 / 非法 hex → 一律视为「跟随类型」。
+    _icon = a != null && kAccountIcons.containsKey(a.icon) ? a.icon : null;
+    final Color? savedColor = parseHexColor(a?.color);
+    _color = savedColor == null ? null : colorToHex(savedColor);
     // 回填金额：1000.00 → 1000（去掉无意义的 .00，方便直接改）
     _balance = TextEditingController(
       text: (a?.initialBalanceCents ?? 0) > 0
@@ -111,7 +118,13 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
       if (a == null) {
         await ref
             .read(assetsProvider.notifier)
-            .addAccount(name: name, type: _type, initialBalanceCents: cents);
+            .addAccount(
+              name: name,
+              type: _type,
+              initialBalanceCents: cents,
+              icon: _icon ?? '',
+              color: _color ?? '',
+            );
       } else {
         await ref
             .read(assetsProvider.notifier)
@@ -120,6 +133,8 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
               name: name,
               type: _type,
               initialBalanceCents: cents,
+              icon: _icon ?? '',
+              color: _color ?? '',
             );
       }
     } on Object catch (e) {
@@ -292,6 +307,55 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                 ),
 
                 const SizedBox(height: 14),
+                const _FieldLabel('图标'),
+                // 自选图标只是装饰，不参与筛选 / 口径；null = 跟随账户类型。
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    _FollowTypeChip(
+                      label: '跟随类型',
+                      selected: _icon == null,
+                      onTap: _busy ? null : () => setState(() => _icon = null),
+                    ),
+                    for (final MapEntry<String, IconData> e
+                        in kAccountIcons.entries)
+                      _IconOption(
+                        key: ValueKey<String>('acct-icon-${e.key}'),
+                        icon: e.value,
+                        selected: _icon == e.key,
+                        onTap: _busy
+                            ? null
+                            : () => setState(() => _icon = e.key),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+                const _FieldLabel('颜色'),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    _FollowTypeChip(
+                      label: '跟随类型',
+                      selected: _color == null,
+                      onTap: _busy ? null : () => setState(() => _color = null),
+                    ),
+                    for (final String hex in kAccountColors)
+                      _ColorOption(
+                        key: ValueKey<String>('acct-color-$hex'),
+                        color: parseHexColor(hex)!,
+                        selected: _color == hex,
+                        onTap: _busy
+                            ? null
+                            : () => setState(() => _color = hex),
+                      ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
                 const _FieldLabel('账户类型'),
                 // 原型用 chips 选类型（不是下拉）；6 个类型实测两行放得下
                 Wrap(
@@ -459,6 +523,126 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// 「跟随类型」文字 chip（ToonChip 同款视觉：胶囊 + 墨描边 + 硬阴影）。
+class _FollowTypeChip extends StatelessWidget {
+  const _FollowTypeChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ToonPress(
+      dx: 2,
+      dy: 2,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? Tok.brand : Tok.paper,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Tok.ink, width: 2),
+          boxShadow: Tok.hard(d: 2.5),
+        ),
+        alignment: Alignment.center,
+        height: 40,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w800,
+            color: selected ? Tok.ink : Tok.ink2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 图标选择块（40×40 方块，选中 = 品牌浅底 + 加重阴影）。
+class _IconOption extends StatelessWidget {
+  const _IconOption({
+    super.key,
+    required this.icon,
+    required this.selected,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ToonPress(
+      dx: 1.5,
+      dy: 1.5,
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected ? Tok.brandTint : Tok.paper,
+          borderRadius: BorderRadius.circular(Tok.rMd),
+          border: Border.all(color: Tok.ink, width: 2),
+          boxShadow: Tok.hard(d: selected ? 3 : 2),
+        ),
+        child: Icon(
+          icon,
+          size: 21,
+          color: selected ? Tok.brandDeep : Tok.ink2,
+        ),
+      ),
+    );
+  }
+}
+
+/// 颜色圆点（32×32，选中 = 墨色外圈 + 对勾）。
+class _ColorOption extends StatelessWidget {
+  const _ColorOption({
+    super.key,
+    required this.color,
+    required this.selected,
+    this.onTap,
+  });
+
+  final Color color;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ToonPress(
+      dx: 1.5,
+      dy: 1.5,
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Tok.ink,
+            width: selected ? 2.5 : 2,
+          ),
+          boxShadow: Tok.hard(d: selected ? 3 : 2),
+        ),
+        child: selected
+            ? const Icon(Icons.check_rounded, size: 18, color: Tok.ink)
+            : null,
       ),
     );
   }

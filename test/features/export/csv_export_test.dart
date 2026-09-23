@@ -61,6 +61,8 @@ Account _account({String id = 'a1', String name = '现金'}) => Account(
   name: name,
   type: 'cash',
   initialBalanceCents: 0,
+  icon: '',
+  color: '',
   sortOrder: 0,
   createdAt: _nowMs,
   updatedAt: _nowMs,

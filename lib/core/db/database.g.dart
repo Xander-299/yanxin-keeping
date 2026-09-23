@@ -970,6 +970,26 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+    'icon',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
+  static const VerificationMeta _colorMeta = const VerificationMeta('color');
+  @override
+  late final GeneratedColumn<String> color = GeneratedColumn<String>(
+    'color',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(''),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1022,6 +1042,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     initialBalanceCents,
     sortOrder,
     ownerId,
+    icon,
+    color,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1085,6 +1107,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(
         _ownerIdMeta,
         ownerId.isAcceptableOrUnknown(data['owner_id']!, _ownerIdMeta),
+      );
+    }
+    if (data.containsKey('icon')) {
+      context.handle(
+        _iconMeta,
+        icon.isAcceptableOrUnknown(data['icon']!, _iconMeta),
+      );
+    }
+    if (data.containsKey('color')) {
+      context.handle(
+        _colorMeta,
+        color.isAcceptableOrUnknown(data['color']!, _colorMeta),
       );
     }
     if (data.containsKey('created_at')) {
@@ -1152,6 +1186,14 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.string,
         data['${effectivePrefix}owner_id'],
       ),
+      icon: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}icon'],
+      )!,
+      color: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}color'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}created_at'],
@@ -1185,6 +1227,8 @@ class Account extends DataClass implements Insertable<Account> {
   final int initialBalanceCents;
   final int sortOrder;
   final String? ownerId;
+  final String icon;
+  final String color;
   final int createdAt;
   final int updatedAt;
   final int? deletedAt;
@@ -1197,6 +1241,8 @@ class Account extends DataClass implements Insertable<Account> {
     required this.initialBalanceCents,
     required this.sortOrder,
     this.ownerId,
+    required this.icon,
+    required this.color,
     required this.createdAt,
     required this.updatedAt,
     this.deletedAt,
@@ -1214,6 +1260,8 @@ class Account extends DataClass implements Insertable<Account> {
     if (!nullToAbsent || ownerId != null) {
       map['owner_id'] = Variable<String>(ownerId);
     }
+    map['icon'] = Variable<String>(icon);
+    map['color'] = Variable<String>(color);
     map['created_at'] = Variable<int>(createdAt);
     map['updated_at'] = Variable<int>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -1234,6 +1282,8 @@ class Account extends DataClass implements Insertable<Account> {
       ownerId: ownerId == null && nullToAbsent
           ? const Value.absent()
           : Value(ownerId),
+      icon: Value(icon),
+      color: Value(color),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -1258,6 +1308,8 @@ class Account extends DataClass implements Insertable<Account> {
       ),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       ownerId: serializer.fromJson<String?>(json['ownerId']),
+      icon: serializer.fromJson<String>(json['icon']),
+      color: serializer.fromJson<String>(json['color']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
       deletedAt: serializer.fromJson<int?>(json['deletedAt']),
@@ -1275,6 +1327,8 @@ class Account extends DataClass implements Insertable<Account> {
       'initialBalanceCents': serializer.toJson<int>(initialBalanceCents),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'ownerId': serializer.toJson<String?>(ownerId),
+      'icon': serializer.toJson<String>(icon),
+      'color': serializer.toJson<String>(color),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
       'deletedAt': serializer.toJson<int?>(deletedAt),
@@ -1290,6 +1344,8 @@ class Account extends DataClass implements Insertable<Account> {
     int? initialBalanceCents,
     int? sortOrder,
     Value<String?> ownerId = const Value.absent(),
+    String? icon,
+    String? color,
     int? createdAt,
     int? updatedAt,
     Value<int?> deletedAt = const Value.absent(),
@@ -1302,6 +1358,8 @@ class Account extends DataClass implements Insertable<Account> {
     initialBalanceCents: initialBalanceCents ?? this.initialBalanceCents,
     sortOrder: sortOrder ?? this.sortOrder,
     ownerId: ownerId.present ? ownerId.value : this.ownerId,
+    icon: icon ?? this.icon,
+    color: color ?? this.color,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
     deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -1318,6 +1376,8 @@ class Account extends DataClass implements Insertable<Account> {
           : this.initialBalanceCents,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
+      icon: data.icon.present ? data.icon.value : this.icon,
+      color: data.color.present ? data.color.value : this.color,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -1335,6 +1395,8 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('initialBalanceCents: $initialBalanceCents, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('ownerId: $ownerId, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -1352,6 +1414,8 @@ class Account extends DataClass implements Insertable<Account> {
     initialBalanceCents,
     sortOrder,
     ownerId,
+    icon,
+    color,
     createdAt,
     updatedAt,
     deletedAt,
@@ -1368,6 +1432,8 @@ class Account extends DataClass implements Insertable<Account> {
           other.initialBalanceCents == this.initialBalanceCents &&
           other.sortOrder == this.sortOrder &&
           other.ownerId == this.ownerId &&
+          other.icon == this.icon &&
+          other.color == this.color &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -1382,6 +1448,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<int> initialBalanceCents;
   final Value<int> sortOrder;
   final Value<String?> ownerId;
+  final Value<String> icon;
+  final Value<String> color;
   final Value<int> createdAt;
   final Value<int> updatedAt;
   final Value<int?> deletedAt;
@@ -1395,6 +1463,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.initialBalanceCents = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.ownerId = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -1409,6 +1479,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.initialBalanceCents = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.ownerId = const Value.absent(),
+    this.icon = const Value.absent(),
+    this.color = const Value.absent(),
     required int createdAt,
     required int updatedAt,
     this.deletedAt = const Value.absent(),
@@ -1427,6 +1499,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<int>? initialBalanceCents,
     Expression<int>? sortOrder,
     Expression<String>? ownerId,
+    Expression<String>? icon,
+    Expression<String>? color,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
     Expression<int>? deletedAt,
@@ -1442,6 +1516,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
         'initial_balance_cents': initialBalanceCents,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (ownerId != null) 'owner_id': ownerId,
+      if (icon != null) 'icon': icon,
+      if (color != null) 'color': color,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -1458,6 +1534,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<int>? initialBalanceCents,
     Value<int>? sortOrder,
     Value<String?>? ownerId,
+    Value<String>? icon,
+    Value<String>? color,
     Value<int>? createdAt,
     Value<int>? updatedAt,
     Value<int?>? deletedAt,
@@ -1472,6 +1550,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       initialBalanceCents: initialBalanceCents ?? this.initialBalanceCents,
       sortOrder: sortOrder ?? this.sortOrder,
       ownerId: ownerId ?? this.ownerId,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -1504,6 +1584,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (ownerId.present) {
       map['owner_id'] = Variable<String>(ownerId.value);
     }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
+    if (color.present) {
+      map['color'] = Variable<String>(color.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<int>(createdAt.value);
     }
@@ -1532,6 +1618,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('initialBalanceCents: $initialBalanceCents, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('ownerId: $ownerId, ')
+          ..write('icon: $icon, ')
+          ..write('color: $color, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -4252,6 +4340,8 @@ typedef $$AccountsTableCreateCompanionBuilder =
       Value<int> initialBalanceCents,
       Value<int> sortOrder,
       Value<String?> ownerId,
+      Value<String> icon,
+      Value<String> color,
       required int createdAt,
       required int updatedAt,
       Value<int?> deletedAt,
@@ -4267,6 +4357,8 @@ typedef $$AccountsTableUpdateCompanionBuilder =
       Value<int> initialBalanceCents,
       Value<int> sortOrder,
       Value<String?> ownerId,
+      Value<String> icon,
+      Value<String> color,
       Value<int> createdAt,
       Value<int> updatedAt,
       Value<int?> deletedAt,
@@ -4315,6 +4407,16 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<String> get ownerId => $composableBuilder(
     column: $table.ownerId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get color => $composableBuilder(
+    column: $table.color,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4383,6 +4485,16 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get icon => $composableBuilder(
+    column: $table.icon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get color => $composableBuilder(
+    column: $table.color,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -4436,6 +4548,12 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<String> get ownerId =>
       $composableBuilder(column: $table.ownerId, builder: (column) => column);
 
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<String> get color =>
+      $composableBuilder(column: $table.color, builder: (column) => column);
+
   GeneratedColumn<int> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -4484,6 +4602,8 @@ class $$AccountsTableTableManager
                 Value<int> initialBalanceCents = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<String?> ownerId = const Value.absent(),
+                Value<String> icon = const Value.absent(),
+                Value<String> color = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
                 Value<int?> deletedAt = const Value.absent(),
@@ -4497,6 +4617,8 @@ class $$AccountsTableTableManager
                 initialBalanceCents: initialBalanceCents,
                 sortOrder: sortOrder,
                 ownerId: ownerId,
+                icon: icon,
+                color: color,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
@@ -4512,6 +4634,8 @@ class $$AccountsTableTableManager
                 Value<int> initialBalanceCents = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<String?> ownerId = const Value.absent(),
+                Value<String> icon = const Value.absent(),
+                Value<String> color = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
                 Value<int?> deletedAt = const Value.absent(),
@@ -4525,6 +4649,8 @@ class $$AccountsTableTableManager
                 initialBalanceCents: initialBalanceCents,
                 sortOrder: sortOrder,
                 ownerId: ownerId,
+                icon: icon,
+                color: color,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 deletedAt: deletedAt,
