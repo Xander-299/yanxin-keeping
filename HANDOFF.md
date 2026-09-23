@@ -26,6 +26,7 @@
 >   F4「设置」副标题承诺未实现项 / F5 入口「全部账单」vs 标题「报表」（待裁定）/ F6 记一笔页返回丢输入。
 > - 新增工具 `tool/data_layer_probe.py` + `tool/data_layer_probe.dart`（`flutter test` 不可用时的数据层替代）。
 > - 顺手修正文档误记：**A 批新增用例实为 18**（9+7+2），不是「20」→ 全仓 **289** = 269 + 18 + 2（预期总数不变）。
+> - **提交 `47e1bf6`**（10 文件 +771/−10），已推 `origin/master`。
 >
 > **上一轮（F7.7 A 批「报表明细清单」，代码 + 测试已落地）**：
 > - 用户逐条签了 SPEC 三点：**A.0 做（按 SPEC）** / **D.5 拼音不做** / **E.5 农历不做**；
@@ -249,7 +250,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端**（`2f6db4c`，随后 `bd65f21`）；`.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`；
+- **本机 = 远端**（`47e1bf6` = 首次使用验收修复 + 报告 + 数据层探针工具；前一提交 `bd65f21`）；
+  `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`；
   工作区现在只有两个**已入库**的门禁替代工具：`tool/dart_analyze_fallback.py`（analyze）+ `tool/data_layer_probe.py`（数据层实跑）。
   tag `v0.7.1`…`v0.7.6` 已推远端，**`v0.7.7` 待补**。
 
