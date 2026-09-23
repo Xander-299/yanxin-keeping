@@ -18,7 +18,7 @@
 >   详见「未解决问题」第 2 条。
 > - 提交线：`2f6db4c`（A 批）→ `bd65f21`（analyze 等效工具）→ `47e1bf6`（F1 阻断修复 + 验收报告）
 >   → `e8804a4`（3 个失败用例）→ `ecf5e09`（test 等效工具 + `real_bills_test` 加固）；文档回写 `67bed1a` / `cc222cb`。
-> - **代码基线 = `ecf5e09`**（= `origin/master`，已推）；工作区干净；**最新 tag 仍是 `v0.7.6`**。
+> - **代码基线 = `ecf5e09`**（已推远端；本次交接的文档提交在其后）；工作区干净；**最新 tag 仍是 `v0.7.6`**。
 > - 结论：**A 批实现完成、analyze + test 门禁通过，唯一剩项 = 真机走查 → 打 `v0.7.7`**。
 >
 > **同一轮（F7.7 A 批「报表明细清单」+ 首次使用验收 F7.7-a）**：
@@ -122,7 +122,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-23 · F7.7 A 批）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **用户终端整个套件全部通过**（预期 **289 passed / 0 skipped**，含 63 个 `testWidgets`）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 226/226 实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）。<br>⏳ **唯一未跑的门禁 = 真机走查** |
-| git | 本机**代码基线** = **`ecf5e09`** = `origin/master`（含 F7.7 A 批 + F1 修复 + 三个门禁等效工具）；工作区干净；**最新 tag = `v0.7.6`**（`v0.7.7` **待真机走查后打** —— 用户 2026-09-23 明确「先不打」；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| git | 本机**代码基线** = **`ecf5e09`**（F7.7 A 批 + F1 修复 + 三个门禁等效工具均已入库）；**文档提交在其后** —— 查最新用 `git log -- HANDOFF.md`，别死记哈希；工作区干净；**最新 tag = `v0.7.6`**（`v0.7.7` **待真机走查后打** —— 用户 2026-09-23 明确「先不打」；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
 | 源码规模 | `lib/` **78** 个 `.dart`，`test/` **37** 个 `.dart`（其中 **11** 个文件含 `testWidgets`），`tool/` **4** 个门禁 / 验证脚本；用例静态计数 **289** = `test()` 226 + `testWidgets` 63；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -240,8 +240,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **F7.7 A 批「报表明细清单」+ F1 阻断修复：代码 / 测试 / 文档全部已提交并推送**（HEAD **`ecf5e09`** = `origin/master`），
-  **但未打 tag** —— 用户 2026-09-23 明确：**等真机走查后再打 `v0.7.7`**。
+- **F7.7 A 批「报表明细清单」+ F1 阻断修复：代码 / 测试 / 文档全部已提交并推送**（代码基线 **`ecf5e09`**；
+  本次交接的文档提交在其后），**但未打 tag** —— 用户 2026-09-23 明确：**等真机走查后再打 `v0.7.7`**。
 - **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
   `flutter test` ✅ **用户在自己终端已跑通、整个套件全部通过**（2026-09-23 下午；预期 **289 passed / 0 skipped**）；
   ⏳ **真机走查未做 —— 唯一剩项**。
@@ -259,7 +259,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端 = `ecf5e09`**（已用 `git ls-remote origin refs/heads/master` 核对哈希）；
+- **本机 = 远端（代码线同步）** —— 已用 `git ls-remote origin refs/heads/master` 核对：**代码基线 `ecf5e09`**，
+  其后只有交接文档提交；
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）。
@@ -607,7 +608,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   （2026-09-23 下午；预期 **289 passed / 0 skipped** = 269 + A 批 18 + 2 修 F1）；⏳ **只剩真机走查**
   → **`v0.7.7` 待走查后打**（用户已明确「先不打」）。
   期间报回的两轮失败（保存按钮点错 / 目标在绘制区外 / `real_bills_test` 加载失败）**均已修**（见「未解决问题」第 2 条）。
-- **代码基线 = `ecf5e09`**（= `origin/master`；含 **F7.7 A 批 + F1 修复**，tag 待补）；**最新 tag `v0.7.6`**。
+- **代码基线 = `ecf5e09`**（含 **F7.7 A 批 + F1 修复**；本次交接的文档提交在其后，tag 待补）；**最新 tag `v0.7.6`**。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
