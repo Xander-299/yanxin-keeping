@@ -20,6 +20,20 @@
 | `v0.7.7` | F7.7 A 批 报表明细清单 `/reports`（含 A.0 记一笔选账户 + 4 处占位点亮）+ 首次使用验收 F1 阻断修复 | `2f6db4c` / `47e1bf6` |
 | `v0.7.8` | F7.7 B 批 数据导出（流水 CSV + 备份 JSON，SAF 免权限；真机走查 AI 经 adb 全包完成） | 本段所在提交 |
 
+## [Unreleased] · F7.7 C 批（账户图标 / 颜色选择）
+
+> **schema v2 → v3**：`accounts` 新增 `icon` / `color`（TEXT NOT NULL DEFAULT ''）。
+> ⚠️ SPEC §C.1 前提有误（两列原以为已存在，实际在 books/categories 上）→ 本批带迁移。
+> 门禁：analyze 等效 0 issue ✅；新增纯测试 +14 全绿 ✅（等效工具）；widget 测试待用户终端全量回归（预期 329）。
+> 真机走查需含**覆盖安装验迁移**（v0.7.8 → 新包，老数据不丢、图标颜色落默认）。
+
+### Added
+
+- 账户表单（新增 / 编辑）加「图标」「颜色」两块：8 个语义图标 + 8 色（取 `Tok.pie` 前 8），
+  均可「跟随账户类型」（存空串，默认）；新增账户默认跟随类型。
+- 资产页账户头像：自选图标优先；自选色做底色（前景墨色）；空串 / 非法值行为与老版本完全一致。
+- `schema v3`：`accounts.icon` / `accounts.color` 迁移（`ALTER TABLE ADD COLUMN`，带存在性防御）。
+
 ## [v0.7.8] — 2026-09-23 · F7.7 B 批 数据导出
 
 > **门禁全闭合**：`flutter analyze` 等效 **0 issue**；`flutter test` **315 passed / 0 skipped**

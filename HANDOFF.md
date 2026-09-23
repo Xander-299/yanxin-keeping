@@ -1,4 +1,4 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **`v0.7.8` 已打 tag（F7.7 A/B 两批全交付）· 下一批 = C/D/E 待用户签字**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **`v0.7.8` 已打 tag（F7.7 A/B 全交付）· C 批已实现（含 schema v3），待用户终端回归 + 走查后打 `v0.7.9`**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
 > 最后更新：2026-09-23 17:40 · 更新人：AI 助手（**本机 = A 机**）
@@ -260,7 +260,12 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 - **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
 - **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
-- **下一批 = C / D / E 三批待用户签字**（`docs/SPEC-F7.7-backlog.md`；D 批动 schema v2→v3，签字后需重跑 build_runner）。
+- **C 批「账户图标 / 颜色」已实现（本工作区，待提交推送）**：用户签字「C 按 C.3 默认开工」。
+  ⚠️ **SPEC §C.1 前提有误**：accounts 表本来没有 icon/color（在 books/categories 上）→ 实际做了 **schema v2→v3**
+  （ALTER TABLE ADD COLUMN DEFAULT ''，onUpgrade 带 PRAGMA table_info 防御）。
+  门禁：analyze 等效 ✅ 0 issue + 新增纯测试 +14 全绿 ✅（等效工具）；⏳ **用户终端 `flutter test` 全量（预期 329）
+  + 真机走查（改图标/颜色 + 覆盖安装验迁移）→ 打 `v0.7.9`**。
+- **下一批 = D / E 两批待用户签字**；**D 批迁移改 v3→v4**（C 批已用掉 v3）。
 - **门禁（B 批前基线）**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
   `flutter test` ✅ **用户在自己终端已跑通、整个套件全部通过**（2026-09-23 下午；A 批预期 **289 passed / 0 skipped**）。
 - **本机（A 机）代码基线 = `ecf5e09` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC
@@ -282,7 +287,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）。
-  tag `v0.7.1`…`v0.7.8` 已推远端，**`v0.7.9` 待 C 批（待签字）**。
+  tag `v0.7.1`…`v0.7.8` 已推远端，**`v0.7.9` 待 C 批收尾（测试回归 + 走查）**。
 
 # 未解决问题
 

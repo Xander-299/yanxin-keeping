@@ -269,8 +269,13 @@
       语义树/截图走查，CSV 与 JSON 两路径、SnackBar、取消静默、报表回归全过；
       ✅ **全部收尾（2026-09-23）**：`flutter test` 用户终端 **315 passed / 0 skipped**（达预期）+
       真机走查由 AI 经 adb 全包完成（`gradlew assembleDebug` 直连构建绕开 231）→ **`v0.7.8` 已打 tag 推远端**
-- [ ] C 账户图标 / 颜色（待签字）
-- [ ] D 搜索增强（待签字；**动 schema v2→v3**）
+- [x] C 账户图标 / 颜色（已签字开工，2026-09-23）：⚠️ SPEC 前提有误——accounts 表本来**没有** icon/color
+      （在 books/categories 上）→ 实际做了 **schema v2→v3**（ALTER TABLE ADD COLUMN DEFAULT ''，
+      onUpgrade 带 PRAGMA table_info 存在性防御）；表单加图标/颜色两块（跟随类型 + 8 候选）、
+      资产页头像接自选值、仓储/controller 透传；新增纯测试 +14（account_meta 9 / account_repo 4 /
+      db 迁移 1，等效实测全绿）+ analyze 0 issue；
+      ⏳ 用户终端 flutter test 全量（预期 315+14=**329**）+ 真机走查（改图标颜色 + **覆盖安装验迁移**）→ 打 v0.7.9
+- [ ] D 搜索增强（待签字；原计划动 schema v2→v3，**C 批已用掉 → 改 v3→v4**）
 - [ ] E 日历增强（待签字）
 
 ### F7.7-a 首次使用验收（2026-09-23，报告 `docs/acceptance-first-run.md`）

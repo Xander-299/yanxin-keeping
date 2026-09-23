@@ -461,3 +461,35 @@ flutter_tools 生成的 listener 把 `main()` 的异常转成 `IsolateSpawnExcep
   与静态计数自洽：`testWidgets` 63 + 纯 `test()` 226 = **289** ✔。
 - **边界**：`testWidgets` 跑不了（需要真运行器驱动帧）。含 widget 的文件报「未跑完」而**不会假绿**。
 - **校准**：用「必然失败」的探针验证过能抓到失败并打印堆栈（否则第一版曾对空文件假绿过）。
+
+### C 批 —— 账户图标 / 颜色选择 · 已实现（v0.7.9）
+
+**日期**：2026-09-23 · **签字**：用户确认「C 按 C.3 默认开工」 · **状态**：实现完成，
+analyze ✅ 0 issue；新增纯测试全绿（等效工具实测），widget 测试待用户终端全量回归。
+
+**⚠️ SPEC 前提修正（重要）**：§C.1 写「`accounts.icon` / `accounts.color` 两列**已存在**」——**不成立**。
+经查 `tables.dart`，这两列在 **Books**（账本）与 **Categories**（分类）上，`Accounts` 表本来没有。
+因此本批实际做了 **schema v2 → v3**（原计划 C 批不动 schema）：
+
+- `accounts` 表新增 `icon` / `color`（TEXT NOT NULL DEFAULT ''），`onUpgrade` 走 `ALTER TABLE ADD COLUMN`，
+  不改既有行；加列前用 `PRAGMA table_info` 做存在性防御（容忍半迁移态）。
+- **内存库单测已证 `onUpgrade` 逻辑本身；真机覆盖安装验迁移仍必须做**（见 mumu-flutter-ui-smoke skill 对应小节）。
+
+**实现（全按 C.1 DoD）**：
+
+- `account_meta.dart`：`kAccountIcons`（8 个语义图标 key）/ `kAccountColors`（8 色，取 `Tok.pie` 前 8）+
+  `accountIcon`（空串/未知 key → 跟随类型）/ `parseHexColor`（`#RRGGBB`，8 位 ARGB 兼容，非法返回 null）
+  / `colorToHex`（大写 `#RRGGBB`）/ `accountAvatarColor`（空/非法 → `Tok.brandTint`，与老数据行为一致）。
+- `account_form_sheet.dart`：「账户名称」与「账户类型」之间插**图标**（8 块 + 「跟随类型」）与
+  **颜色**（8 圆点 + 「跟随类型」）两块；新增账户默认「跟随类型」（存空串），用户可改。
+- `assets_page.dart`：头像用 `accountIcon` / `accountAvatarColor`；自选色时前景改 `Tok.ink`（DoD 要求）。
+- `account_repository` / `assets_controller`：`create` / `update` / `addAccount` / `updateAccount` 透传 icon / color。
+- 自选图标只是装饰，不参与筛选 / 口径（C.3 风险条款照办）。
+
+**门禁**：`dart_analyze_fallback` ✅ No issues found!；纯测试等效全绿
+（新增 `account_meta_test` 9 例 + `account_repository_test` 4 例（icon/color 落库与局部更新）+
+`database_test` v2→v3 迁移用例 +1，共 +14）；`test/features/assets/account_meta_test.dart` 的
+纯函数层还抓到 `parseHexColor` 不带 `#` 误删首字符的 bug（已修）。
+widget 测试（`assets_page_test` / 表单弹层等 3 个文件）本机跑不了 → 待用户终端。
+
+**⚠️ D 批注意**：schema 已到 **v3**，D 批的 `app_meta` 表迁移应写 **v3 → v4**。
