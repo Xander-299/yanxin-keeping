@@ -1,49 +1,50 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；**F7.7 A 批已实现 + 首次使用验收已做，门禁待跑**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；**F7.7 A 批已实现，分析 + 测试门禁已过，仅剩真机走查**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-23 11:05 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-23 15:00 · 更新人：AI 助手（**本机 = A 机**）
 >
-> ⚠️ **本轮最重要的事**：**本机 Dart VM 起不了「需要管道 stdio」的子进程** →
-> `flutter analyze` / `flutter test` / `dart pub get` / `build_runner` 全部不可用。
-> 根因已定位到 Win32 调用级（命名管道 `CreateFile failed 231`），**与项目代码无关**。
-> - ✅ **`flutter analyze` 已用等效手段解决**：`python tool/dart_analyze_fallback.py` → **`No issues found!`**
->   （脚本已入库，原理与协议三坑见「未解决问题」第 1 条）。
-> - ❌ **仍跑不了**：`flutter test`、真机走查（`flutter_tools` 内部满地 `Process.runSync`，包装器救不了）
->   → 需在正常环境（用户自己终端）跑。
+> ⚠️ **本机 Dart VM 起不了「需要管道 stdio」的子进程**（命名管道 `CreateFile failed 231`，
+> 根因已定位到 Win32 调用级，**与项目代码无关**）→ `flutter analyze` / `flutter test` / `dart pub get` /
+> `build_runner` / **构建** 在本机**直连跑不了**。影响面已收窄到「只剩真机走查」：
+> - ✅ **`flutter analyze`**：等效手段 **`python tool/dart_analyze_fallback.py` → `No issues found!`**（脚本已入库）。
+> - ✅ **`flutter test`**：**用户在自己的 Git Bash 终端已跑通、整个套件全部通过**（2026-09-23 下午）。
+>   本机另有 `python tool/dart_test_fallback.py`（纯 `test()` 226 例实测全绿，`testWidgets` 跑不了）作自查。
+> - ⏳ **唯一剩项 = 真机走查**（须先在能跑 flutter 的环境构建 APK —— **现有 APK 不含 A 批**）
+>   → **用户已明确：`v0.7.7` 先不打，等走查后再打**。
 >
-> **本轮（首次使用验收 F7.7-a「零配置新用户能不能独立拿到第一个有效结果」，报告 `docs/acceptance-first-run.md`）**：
-> - 手法：**数据层真跑**（`python tool/data_layer_probe.py` —— 复制 `lib/` 到 `.dart_tool/` 临时包、把
->   `database.dart` 的 drift_flutter 换成内存库，用**真实仓储 + 真实聚合代码**跑冷启动 → 记第一笔 → 报表三档 → 边界，
->   **13/13 断言通过**）+ **UI 层静态走查**（逐行读实现，因本机跑不了 UI）。
-> - **结论**：D2 运行前缺项 **通过**（A 类前置 = 0：冷启动 100ms 自动建「默认账本」+ 现金账户 + 15 预置分类）；
->   D1/D4 通过；**D5 不通过**（8 处 `加载失败：$e` 直出异常、无重试）；D6 部分。
-> - **修掉 1 个阻断级缺陷（F1）**：报表页不随写操作刷新 —— `reportsProvider` 是**常驻** provider 且 `/record`
->   push 在报表页**上面**，而 `ReportsController.refresh()`（注释写着「记一笔 / 删除后刷新用」）**全库零调用**；
->   5 个写点都只刷 ledger/calendar/stats。→ 新用户顺着报表空态「去记一笔」记完第一笔，**回报表仍是空态**。
->   修法：`build()` 里 `ref.listen(dataEpochProvider) → refresh()`（一处覆盖全部写点，且保留档位 / 月份；
->   **不能用 `watch`** —— 会让 build 重跑并把月份 / 档位重置回「当月 + 明细」）。新增 2 例测试，analyze 等效门禁 0 issue。
-> - 另登记 4 项（未改）：F2 首页两个报表入口**不带年月**（**待裁定**，SPEC §A.2.3 没写）/ F3 失败无重试 /
->   F4「设置」副标题承诺未实现项 / F5 入口「全部账单」vs 标题「报表」（待裁定）/ F6 记一笔页返回丢输入。
-> - 新增工具 `tool/data_layer_probe.py` + `tool/data_layer_probe.dart`（`flutter test` 不可用时的数据层替代）。
-> - 顺手修正文档误记：**A 批新增用例实为 18**（9+7+2），不是「20」→ 全仓 **289** = 269 + 18 + 2（预期总数不变）。
-> - **提交 `47e1bf6`**（10 文件 +771/−10），已推 `origin/master`。
+> **本轮（A 批门禁补齐 + 交接，零产品代码改动）**：
+> - 用户终端 `flutter test` **全部通过**（预期 **289** = `test()` 226 + `testWidgets` 63）。
+> - 前两轮反馈的失败用例（保存按钮点错 / Sliver onstage 搜不到 / `real_bills_test` 加载失败）**均已修**，
+>   详见「未解决问题」第 2 条。
+> - 提交线：`2f6db4c`（A 批）→ `bd65f21`（analyze 等效工具）→ `47e1bf6`（F1 阻断修复 + 验收报告）
+>   → `e8804a4`（3 个失败用例）→ `ecf5e09`（test 等效工具 + `real_bills_test` 加固）；文档回写 `67bed1a` / `cc222cb`。
+> - **代码基线 = `ecf5e09`**（= `origin/master`，已推）；工作区干净；**最新 tag 仍是 `v0.7.6`**。
+> - 结论：**A 批实现完成、analyze + test 门禁通过，唯一剩项 = 真机走查 → 打 `v0.7.7`**。
 >
-> **上一轮（F7.7 A 批「报表明细清单」，代码 + 测试已落地）**：
+> **同一轮（F7.7 A 批「报表明细清单」+ 首次使用验收 F7.7-a）**：
 > - 用户逐条签了 SPEC 三点：**A.0 做（按 SPEC）** / **D.5 拼音不做** / **E.5 农历不做**；
 >   另裁定 SPEC 内部冲突：**报表页流水行只读、不可点**（按 A.4，不做长按删除）。
 > - 已实现：**A.0 记一笔支持选账户**（第 4 个 `ToonField`「账户」+ 底部弹层，默认仍首个账户）；
 >   **新页 `/reports`**（AppBar「报表」+ 月份切换 + `ToonSeg` 三档 明细·分类·账户 + 独立记月份 + 卡通空态）；
 >   **4 处「报表（建设中）」占位全部点亮**（首页 header→分类档 / 首页「全部账单」→明细档 /
 >   日历页 header→明细档+月份对齐 / 月份选择页 header→明细档+月份对齐）。
-> - 新增测试 20 例（11 纯函数 + 7 页面 widget + 2 A.0）；`TxTile` 回调改可空以支持只读行（三处既有调用点行为不变）。
-> - **门禁状态**：`flutter analyze` ✅ **已等效达成（0 issue）**；`flutter test` ❌ 不可替代（**未跑**）；
->   真机走查 ❌ **未走查** → **tag `v0.7.7` 暂缓**（差后两条，必须在正常环境跑）。
->   等效手段 = **`tool/dart_analyze_fallback.py`**：Python 起**同一个** `analysis_server_aot.dart.snapshot` +
->   同一套 `analysis_options.yaml` + **Dart 原生协议**（`dart analyze` 的真实执行路径）；
->   已用探针文件校准（能报出 `prefer_single_quotes`）确认 **lint 规则在线**。
->   过程中修掉 3 个真错（相对路径少一层 / 重复 import / 测试 `_seed` 返回类型不匹配）。
-> - 回写：`docs/SPEC-F7.7-backlog.md`（§F 签字表 + §G 实施记录）、`CHANGELOG.md`（`[Unreleased]`）。
-> - **提交 `2f6db4c`**（19 文件 +2400/−98）已推 `origin/master`；文档回写 `67bed1a` 随后同推。
+> - **首次使用验收**（`first-run-acceptance`，报告 `docs/acceptance-first-run.md`）：
+>   手法 = **数据层真跑**（`python tool/data_layer_probe.py` —— 复制 `lib/` 到 `.dart_tool/` 临时包、把
+>   `database.dart` 的 drift_flutter 换成内存库，用**真实仓储 + 真实聚合代码**跑冷启动 → 记第一笔 → 报表三档 → 边界，
+>   **13/13 断言通过**）+ **UI 层静态走查**（逐行读实现，本机跑不了 UI）。
+>   **结论**：**D2 通过**（A 类前置 = 0：冷启动 100ms 自动建「默认账本」+ 现金账户 + 15 预置分类）、D1/D4 通过、
+>   **D5 不通过**（8 处 `加载失败：$e` 直出异常、无重试）、D6 部分。
+> - **修掉 1 个阻断级缺陷（F1）**：报表页不随写操作刷新 —— `reportsProvider` 是**常驻** provider 且 `/record`
+>   push 在报表页**上面**，而 `ReportsController.refresh()`（注释写着「记一笔 / 删除后刷新用」）**全库零调用**；
+>   5 个写点都只刷 ledger/calendar/stats。→ 新用户顺着报表空态「去记一笔」记完第一笔，**回报表仍是空态**。
+>   修法：`build()` 里 `ref.listen(dataEpochProvider) → refresh()`（一处覆盖全部写点，且保留档位 / 月份；
+>   **不能用 `watch`** —— 会让 build 重跑并把月份 / 档位重置回「当月 + 明细」）。新增 2 例测试。
+> - 另登记 4 项（未改）：F2 首页两个报表入口**不带年月**（**待裁定**，SPEC §A.2.3 没写）/ F3 失败无重试 /
+>   F4「设置」副标题承诺未实现项 / F5 入口「全部账单」vs 标题「报表」（待裁定）/ F6 记一笔页返回丢输入。
+> - 新增工具：`tool/dart_analyze_fallback.py`（等效 analyze）、`tool/dart_test_fallback.py`（等效 test）、
+>   `tool/data_layer_probe.py` + `.dart`（数据层脱离 Flutter 真跑）。
+> - 顺手修正文档误记：**A 批新增用例实为 18**（9 纯函数 + 7 widget + 2 A.0），不是「20」
+>   → 全仓 **289** = 269 + 18 + 2（**预期总数不变**）。
 >
 > **上一轮（F7.6 卡通视觉改版 P3 —— 末批，视觉改版至此收尾）**：用户给定页面原型 `D:\new file\modao\yanxin\`（卡通浅色），
 > 三项决策 —— **全站硬替换为浅色 / 分 3 批交付 / 零新依赖**；小 SPEC `docs/SPEC-F7.6-cartoon-ui.md`（已签字）。
@@ -54,14 +55,7 @@
 >   资产页空态 / 日历留白微调；**裸色值清零**。走查中补做 2 处（见「未解决问题」下面的「本轮已清」）。
 > - 门禁：`flutter analyze` **0 issue**；`flutter test` **269 全过 0 skip**。真机走查（MuMu 12 / 900×1600 / 320dpi）**阻断 0**。
 > - **版本记录**：F7 阶段起一版一 tag，`v0.7.<N>` ↔ `F7.<N>`，回滚用 `git checkout v0.7.5`。当前 **`v0.7.6`**，
->   tag 表写在 `CHANGELOG.md` 顶部。
->
-> **本轮（收尾 + 交接准备，零产品代码改动）**：
-> - 走查残留账本 **`QA-Temp` 已软删**（改库前已备份），模拟器恢复干净；走查造的流水 / 预算数据保留。
-> - **`docs/SPEC-F7.7-backlog.md` 已起草并入库**（`909c3dc`）：把 backlog 剩的 5 项一次写清，A→E 顺次交付，各打一个 tag（`v0.7.7`…`v0.7.11`）。
-> - 用户表态「**全都做，按顺序**」→ **但 SPEC 正文尚未逐条确认**（A.0 前置 / D.5 拼音 / E.5 农历 三处默认处理需点头），
->   **按项目规则未签字不动产品代码 → 开工前先确认**。
-> - 工作区干净，**代码基线 = `2f6db4c`**（= `origin/master`，含 F7.7 A 批）；文档提交查 `git log -- HANDOFF.md`。
+>   tag 表写在 `CHANGELOG.md` 顶部。走查残留账本 **`QA-Temp` 已软删**（改库前已备份）。
 >
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
@@ -127,9 +121,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 2** |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（2026-09-23 F7.6 P3 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令本身现在**跑不了**（见「未解决问题」第 1 条）。<br>✅ 绕法（均已入库）：`python tool/dart_analyze_fallback.py`（等效 `flutter analyze`）+ `python tool/dart_test_fallback.py`（等效 `flutter test`，**纯 `test()` 用例已实测 226/226 全绿**；`testWidgets` 63 例仍需真运行器） |
-| git | 本机**代码基线** = **`2f6db4c`** = `origin/master`（含 F7.7 A 批）；工作区干净；**最新 tag = `v0.7.6`**（`v0.7.7` 待门禁补齐后打；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
-| 源码规模 | `lib/` 72 个 `.dart`，`test/` 34 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
+| **门禁（2026-09-23 · F7.7 A 批）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **用户终端整个套件全部通过**（预期 **289 passed / 0 skipped**，含 63 个 `testWidgets`）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 226/226 实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）。<br>⏳ **唯一未跑的门禁 = 真机走查** |
+| git | 本机**代码基线** = **`ecf5e09`** = `origin/master`（含 F7.7 A 批 + F1 修复 + 三个门禁等效工具）；工作区干净；**最新 tag = `v0.7.6`**（`v0.7.7` **待真机走查后打** —— 用户 2026-09-23 明确「先不打」；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| 源码规模 | `lib/` **78** 个 `.dart`，`test/` **37** 个 `.dart`（其中 **11** 个文件含 `testWidgets`），`tool/` **4** 个门禁 / 验证脚本；用例静态计数 **289** = `test()` 226 + `testWidgets` 63；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
@@ -146,8 +140,12 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **A 机接手续做（当前线）**：`94bbb33`（走查截图不再入库）→ `1f6f690`（**F7.6 P1**）
   → `3d4e749`（**F7.6 P2**）→ `aa96f01`（P2 走查修复）→ `5f0d369`（**F7.6 P3**）
   → `d3b2076`（P3 走查补做 + **版本记录机制 `v0.7.6`**）→ `909c3dc`（**F7.7 backlog SPEC**）
-  → **`8f1058b`（走查技能补「run-as + 设备 sqlite3 改库」一节）** → `c7cd43f` / `42abab1` / `26169b1`（HANDOFF 交接文档）
-  → **`2f6db4c`（F7.7 A 批：报表明细 /reports + A.0 记一笔选账户；门禁待跑）**
+  → `8f1058b`（走查技能补「run-as + 设备 sqlite3 改库」一节）→ `c7cd43f` / `42abab1` / `26169b1`（HANDOFF 交接文档）
+  → **`2f6db4c`（F7.7 A 批：报表明细 `/reports` + A.0 记一笔选账户）** → `67bed1a`（A 批文档回写）
+  → **`bd65f21`（新增 `tool/dart_analyze_fallback.py`：analyze 等效门禁 0 issue）**
+  → **`47e1bf6`（修 F1 阻断：报表随写操作刷新；+ `tool/data_layer_probe.*` + 首用验收报告）** → `cc222cb`（文档回写哈希）
+  → **`e8804a4`（修首轮 `flutter test` 报回的 3 个用例：点错保存按钮 / 目标在绘制区外）**
+  → **`ecf5e09`（当前 HEAD：新增 `tool/dart_test_fallback.py`，test 等效门禁打通 + `real_bills_test` 加载期加固）**
 
 # 当前方案与关键决策
 
@@ -198,7 +196,16 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   预算 sheet 重写（¥ 描边裸输入框 + 预设 chips）、账户 sheet 补做、搜索浮层（示例 chips + 结果条 + 小猪空态）、
   资产页空态（虚线圆 + 小猪）、日历留白微调；**产品代码裸色值清零**。新增令牌 `Tok.redInk`。
 - **F7.7 backlog SPEC 起草** ✅（2026-09-23，`909c3dc`）：`docs/SPEC-F7.7-backlog.md` —— 5 批 A→E
-  （A 报表明细 / B 数据导出 / C 账户图标 / D 搜索增强 / E 日历增强），**⬜ 待签字**。
+  （A 报表明细 / B 数据导出 / C 账户图标 / D 搜索增强 / E 日历增强）；**A 批已签字（2026-09-23）**，**B–E 仍待签字**。
+- **F7.7 A 批「报表明细清单」+ A.0 前置** ✅（2026-09-23，`2f6db4c`）：新页 `/reports`（`ToonSeg` 三档 明细·分类·账户 +
+  月份切换 + 独立记月份 + 卡通空态 + 每组最多 200 行）；**A.0 记一笔支持选账户**（第 4 个 `ToonField` + 底部弹层）；
+  **4 处「报表（建设中）」占位全部点亮**；`TxTile` 回调改可空以支持只读行。新增测试 **18 例**
+  （`report_aggregate_test` 9 + `reports_page_test` 7 + `record_account_test` 2）。
+- **首次使用验收 F7.7-a** ✅（2026-09-23，`47e1bf6`）：报告 `docs/acceptance-first-run.md`；数据层实跑 13/13 断言；
+  **修掉阻断级缺陷 F1**（报表页不随写操作刷新）；另登记 F2–F6。新增测试 2 例。
+- **三个门禁等效工具** ✅（2026-09-23）：`tool/dart_analyze_fallback.py`（`bd65f21`）、
+  `tool/dart_test_fallback.py`（`ecf5e09`）、`tool/data_layer_probe.py` + `.dart`（`47e1bf6`）——
+  本机 Dart 起不了管道 stdio 子进程时的替代手段，**均只作本机自查，真门禁仍在用户终端**。
 - **F7.5-b 资产页** ✅（`lib/features/assets/`）：净资产卡（≥0 琥珀橙 / <0 红）+ 账户列表（类型图标 / 名称 /「类型 · 收 X / 支 Y」/ 余额）+ 空态；底部 sheet 做账户增 / 改 / 软删，**有流水的账户禁止删除**；口径 = **初始余额 + Σ收入 − Σ支出，transfer 不计**；**不改 schema**（仍 v2）。新增 `dataEpochProvider`（数据版本号），5 个写操作点 bump 代替逐个 `refresh()`
 - **F7.5-a 搜索浮层化 + 类型筛选** ✅：`/search` 路由与 `SearchPage` **删除**，改 `showGeneralDialog` 打开 `SearchOverlay`（首页留在页面栈当背景）；`BackdropFilter(sigma 12)` 毛玻璃；**类型 chips「仅支出 / 仅收入 / 转账」** → `parsePlan` 解析成 `Transactions.type` 条件（独立成词才生效，多词取最后）；chip 填入输入框并补**尾随空格**；三种关闭方式（按钮 / 点玻璃空白 / 系统返回）
 - **本机（A 机）重新接入 + env 双机器化** ✅（2026-09-17）：仓库快进 13 提交到 `f95ba97`；`env.sh` 改自动识别；本机门禁 analyze 0 / test **253 全过 0 skip**
@@ -233,16 +240,18 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **F7.7 A 批「报表明细清单」代码 + 测试 + 文档已提交并推送**（**`2f6db4c`** 已在 `origin/master`），但**未打 tag**：
-  `flutter analyze` ✅ 已等效达成（`python tool/dart_analyze_fallback.py` → `No issues found!`），
-  ⏳ 仍差 **`flutter test`** 与**真机走查**（都必须正常环境）。
-- **本机（A 机）代码基线 = `2f6db4c` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC + **F7.7 A 批** 已入库；
-  **tag = `v0.7.6`**）；交接文档在其后单独提交（`c7cd43f` / `42abab1`）。
+- **F7.7 A 批「报表明细清单」+ F1 阻断修复：代码 / 测试 / 文档全部已提交并推送**（HEAD **`ecf5e09`** = `origin/master`），
+  **但未打 tag** —— 用户 2026-09-23 明确：**等真机走查后再打 `v0.7.7`**。
+- **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
+  `flutter test` ✅ **用户在自己终端已跑通、整个套件全部通过**（2026-09-23 下午；预期 **289 passed / 0 skipped**）；
+  ⏳ **真机走查未做 —— 唯一剩项**。
+- **本机（A 机）代码基线 = `ecf5e09` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC
+  + **F7.7 A 批** + **F1 修复** + 三个门禁等效工具 已入库；**tag = `v0.7.6`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
   工作区干净；**F7.7 A 批**（报表明细 + A.0 记一笔选账户）已入库。
-- **本机门禁（2026-09-23 F7.6 P3 后复跑）**：`flutter analyze` No issues found；`flutter test` **269 passed, 0 skipped**。
-  ⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程 → 上述命令当前都跑不了**（见「未解决问题」第 1 条）。
-  ✅ **F7.7 A 批的 analyze 已用等效手段补跑**：`python tool/dart_analyze_fallback.py` → **`No issues found!`**。
+- **本机门禁历史**：F7.6 P3 后曾复跑 `flutter analyze` No issues found + `flutter test` **269 passed / 0 skipped**；
+  ⚠️ 2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程 → 这两条命令在本机**直连跑不了**（见「未解决问题」第 1 条），
+  已由三个等效工具接管（analyze / test / 数据层实跑）；**用户自己的终端不受影响**。
 - `lib/core/db/database.g.dart` 已入库；**改表结构必须重跑 `dart run build_runner build`**。
 - ⚠️ **深色主题已被 F7.6 彻底移除**（用户确认）：全站只有一套卡通浅色主题，`app_template/*.jpg` 旧参考图作废。
 - APK：A 机 debug APK 已用 F7.6 P3（含账户弹层补做）代码构建过（`build/app/outputs/flutter-apk/app-debug.apk`）；release 仍是 F7.1 时期产物。
@@ -250,16 +259,17 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端**（`47e1bf6` = 首次使用验收修复 + 报告 + 数据层探针工具；前一提交 `bd65f21`）；
-  `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`；
-  工作区现在有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
+- **本机 = 远端 = `ecf5e09`**（已用 `git ls-remote origin refs/heads/master` 核对哈希）；
+  `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
+  工作区有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）。
-  tag `v0.7.1`…`v0.7.6` 已推远端，**`v0.7.7` 待补**。
+  tag `v0.7.1`…`v0.7.6` 已推远端，**`v0.7.7` 待真机走查后补**。
 
 # 未解决问题
 
-> 说明：第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程 → 门禁跑不了），**最高优先**；
-> 第 2 条是 F7.7 A 批**未跑的门禁 + 待打 tag**；第 4 条是纯体验项。
+> 说明：**最高优先 = 第 2 条的「真机走查 → 打 `v0.7.7`」**（analyze / test 两条门禁已闭合）；
+> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机**、已由 3 个等效工具绕开；
+> 第 4–5 条是体验项与待裁定项。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
    - **现象**：`ProcessException: 所有的管道范例都在使用中 (CreateFile failed 231)`（`runtime/bin/process_win.cc:744`）。
@@ -308,23 +318,28 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      参数一律**抄 flutter_tools 源码**：`compile.dart`（编译）、`test/flutter_platform.dart:143
      generateTestBootstrap`（引导文件）、`test/flutter_tester_device.dart`（tester 参数）。
      关键发现：真身的引导文件会连 websocket 拉结果，**不连也能跑**（无远程监听器时 flutter_test 自己跑完并打 `+N:`）。
-     - **实测结果（本机全量 35 文件）**：**纯 `test()` 226 例全绿、0 失败 0 跳过**。
+     - **实测结果（本机全量 37 个测试文件）**：**纯 `test()` 226 例全绿、0 失败 0 跳过**。
      - ⚠️ **能力边界**：`testWidgets` 跑不了 —— `AutomatedTestWidgetsFlutterBinding` 需要真运行器驱动帧，
        只给 bootstrap 时它会「启动首例后**永不完成**」（计数停 0、rc 仍 0）。故含 widget 的文件报「未跑完」
-       而**不会假绿**（终态汇总行是硬门槛）。**63 个 widget 用例仍需用户终端跑 `flutter test`。**
+       而**不会假绿**（终态汇总行是硬门槛）。
+     - ✅ **那 63 个 `testWidgets` 已由用户在自己的终端补齐（2026-09-23 下午）：整个套件全部通过。**
+       即 **`flutter test` 门禁已闭合**；本机这个脚本从此只作「本机自查」手段，**不再算门禁前置**。
      - ⚠️ 解析坑：计数顺序是 `+通过 ~跳过 -失败`（不是 `+ - ~`）且只打非零项；进度行时间戳自带冒号，
        先剥 `^\d\d:\d\d ` 再切。**上线前务必用「必然失败」的探针校准**。
    - ❌ **构建（`flutter build`）/ 真机走查仍无替代方案** —— 那条链路是多层 spawn（`flutter_tools` → Gradle
      → 插件里的 `dart`），`inheritStdio` 包装器只救第一层（堆栈见 `flutter_08.log`）。**只能在正常环境跑**。
-2. 【**待补门禁 + 待打 tag**】F7.7 **A 批** + 本轮首次使用验收的修复已落地 → **`v0.7.7` 暂缓**：
-   - ✅ `flutter analyze` 0 issue：**已等效达成**（`python tool/dart_analyze_fallback.py` → `No issues found!`；
-     本轮改动后复跑仍是 0 issue）。
-   - 🟡 `flutter test`：**本机已用等效手段跑通**（原理见第 1 条）——
-     ✅ **纯 `test()` 226 例全绿、0 失败 0 跳过**（全量 35 文件，`python tool/dart_test_fallback.py`）；
-     ⏳ **63 个 `testWidgets` 用例跑不了**（该封装喂不了真运行器）→ **仍需用户终端跑一次收尾**。
-     预期总数 **289 passed / 0 skipped** = 基线 269 + A 批 18（9 纯函数 + 7 页面 widget + 2 A.0）+ 本轮 2（报表刷新）。
-     静态计数已复核：`testWidgets` **63** + 纯 `test()` **226** = **289** ✔。
+2. 【**只剩真机走查 + 待打 tag**】F7.7 **A 批** + 首次使用验收的修复已落地 → **`v0.7.7` 待走查后打**
+   （用户 2026-09-23 明确「先不打」）：
+   - ✅ `flutter analyze` 0 issue：**已闭合**（`python tool/dart_analyze_fallback.py` → `No issues found!`）。
+   - ✅ `flutter test`：**已闭合** —— 用户在自己的 Git Bash 终端跑 `flutter test`，**整个套件全部通过**
+     （2026-09-23 下午）。预期总数 **289 passed / 0 skipped** = 基线 269 + A 批 18（9 纯函数 + 7 页面 widget + 2 A.0）
+     + 本轮 2（报表刷新）；静态计数自洽：`testWidgets` **63** + 纯 `test()` **226** = **289** ✔。
+     本机等效工具 `python tool/dart_test_fallback.py` 可跑纯 `test()` 那 226 例（`testWidgets` 跑不了），
+     仅作本机自查，**不再是门禁前置**。
      ⚠️ 之前文档写「A 批 +20（11 纯函数 + 7 widget + 2 A.0）」是**误记**，实为 18（总数预期不变，仍 289）。
+     ⚠️ 用户只报了「全部通过」，**未回贴 `+N ~M` 汇总行** → 「是否 0 skip」按预期推定：
+     本机有真实账单样本（B 机才缺），正常应 **0 skip**；`real_bills_test` 的 `markTestSkipped`
+     只在缺件 / 读不出 / 解析失败时触发，本轮未触发。
 
      **首轮反馈的 4 个失败（2026-09-23，用户终端）**：
      - `record_account_test.dart` ×2（A.0 选账户）：**测试写法错**。`tester.tap(find.widgetWithText(AppBar, '保存'))`
@@ -356,11 +371,16 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
        改后复验 **`+8-0~0` 全绿**。
      - **若仍复现**：需要那行 `loading` 的**完整 `[E]` 块**（含异常文本 / 堆栈）才能继续定位 ——
        本机已排除「编译错」与「加载期抛异常」两类，剩下的只能靠原文。
-   - ⏳ 真机走查（MuMu 12 / 900×1600 / 320dpi）**阻断 0**：**未走查**，且现有 APK 不含 A 批 → 需先重新构建。
+     - ✅ **2026-09-23 复跑结论：未再复现** —— 用户随后一整轮 `flutter test` 全部通过，该加固生效，**本项关闭**。
+   - ⏳ **真机走查（MuMu 12 / 900×1600 / 320dpi）：未走查 —— 唯一剩项**（用户 2026-09-23 明确「留到下一轮」）。
+     现有 `build/app/outputs/flutter-apk/app-debug.apk` **不含 A 批** → 须先在**能跑 flutter 的环境**（用户终端）
+     `flutter build apk --debug` 再走查。本机构建链路是多层 spawn，**做不了**（见第 1 条）。
      5 条路径 —— 首页 header「报表」→**分类档**；首页「全部账单 ›」→**明细档**；日历页 header→明细档 + 核对月份；
      月份选择页 header→明细档 + 核对月份；再核对空态 / 翻月 / 展开 / **A.0 记一笔选账户**。
      **外加本轮 F1 的动作**：报表空态 →「去记一笔」→ 保存 → 回报表应**立刻看到**那笔（修复前是仍显示空态）。
-   - 后两条补齐后：把 `CHANGELOG.md` 的 `[Unreleased]` 内容移成 `## [v0.7.7]` 段 + tag 表补一行 → `git tag -a v0.7.7` → `git push && git push --tags`。
+   - **走查通过后（收尾三步）**：① 把 `CHANGELOG.md` 的 `[Unreleased]` 内容移成 `## [v0.7.7]` 段（并把段首那句
+     「门禁未跑通 → 暂不打 tag」的说明改掉）+ tag 表补一行；② `git tag -a v0.7.7`；
+     ③ `git push && git push --tags`（**直推、不加管道**，推完 `git ls-remote --tags origin` 核对）。
 3. 【已并入 A 批并**已实现**】**报表** 4 处「建设中」占位 → 现已全部接真实入口（首页 header / 首页 `全部账单 ›` /
    日历页 header / 月份选择页 header）。实现细节见 `docs/SPEC-F7.7-backlog.md` §G。
 4. 【低】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）—— 属预期行为，除非要专门为横屏排一版布局。
@@ -393,10 +413,11 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 待确认事项
 
-- 【待确认 · **开工前必答**】**F7.7 SPEC 的三处默认处理**：① **A.0** 记一笔加第 4 个字段「账户」
-  （默认仍是列表首个账户，老行为不变，老用例不受影响）—— 不加这步「按账户报表」永远只有一行、C 批账户图标也白做；
-  ② **D.5 拼音 / 首字母匹配默认不做**（要引 `lpinyin` 或内置字表，包体 +~60KB）；③ **E.5 农历 / 节假日默认不做**（要引 `lunar` 类包 + 每年手工更新节假日表）
-- 【待确认 · **D 批动 schema**】搜索历史要持久化，但 **`shared_preferences` 不在依赖里**（已核对 `pubspec.yaml`）→
+- 【**已裁定（2026-09-23）**】**F7.7 SPEC 的三处默认处理**：① **A.0 做** —— 记一笔加第 4 个字段「账户」
+  （默认仍是列表首个账户，老行为不变，老用例不受影响）**已实现**；② **D.5 拼音 / 首字母匹配：不做**；
+  ③ **E.5 农历 / 节假日：不做**。另裁定：**报表页流水行只读、不可点**（按 §A.4）。
+  → 这三条**不用再问用户**；**B–E 四批的 SPEC 正文仍待签字**。
+- 【**执行中注意 · D 批动 schema**】搜索历史要持久化，但 **`shared_preferences` 不在依赖里**（已核对 `pubspec.yaml`）→
   改为落现有 drift 库（新增 KV 表 `app_meta`，schema **v2 → v3**）；**动 schema 必须走「真机覆盖安装验迁移」**，
   内存库单测只能证明 `onUpgrade` 逻辑本身
 - 【待确认】`android/gradle.properties` 里 `org.gradle.jvmargs=-Xmx8G` 是 B 机调大的；**A 机内存未知**，若构建 OOM 可改回 `-Xmx4G`
@@ -408,7 +429,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 - **「功能需求文档」在哪**：`docs/PRD-yanxin-flutter.md` —— 汇总稿（FR 编号 + 状态图例 + 口径 + backlog），
   **只看这一份就能知道 App 现在该有哪些行为**。注意它是**汇总不是签字件**，新需求仍要另出小 SPEC。
-- `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`、**`docs/SPEC-F7.6-cartoon-ui.md`（F7.6 视觉改版，已交付）**、**`docs/SPEC-F7.7-backlog.md`（F7.7 五批 backlog，⬜ 待签字 —— 报表明细 / 数据导出 / 账户图标 / 搜索增强 / 日历增强）**
+- `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`、**`docs/SPEC-F7.6-cartoon-ui.md`（F7.6 视觉改版，已交付）**、**`docs/SPEC-F7.7-backlog.md`（F7.7 五批 backlog —— **A 批已签字并已交付**，B–E ⬜ 待签字：报表明细 / 数据导出 / 账户图标 / 搜索增强 / 日历增强）；其 §G 是实施记录 + 环境阻塞原理**
 - **页面原型（视觉唯一依据）**：`D:\new file\modao\yanxin\`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）；
   改任何 UI 前先并排对拍。旧参考图 `app_template/*.jpg`（深色）**已被取代**。
 - `tasks/todo-flutter.md`（F0–F7.6 已勾选；F7.5 剩余项已并进 `docs/SPEC-F7.7-backlog.md`）、`CHANGELOG.md`（**含版本规则与 tag 表**）、`README.md`
@@ -417,7 +438,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - `android/gradle.properties` — 含 **`kotlin.incremental=false`**（修跨盘 Kotlin 崩溃，**勿删**）与 `android.builder.sdkDownload=false`
 - 参考图 `app_template/*.jpg`；旧栈资产 `D:\Tencent\yanxin\src\{db,repositories,modules/bill-import,utils}`
 - 真机走查：`.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md`；`uiautomator` 语义树脚本 `.workbuddy/ui_dump.py`
-- 验收报告：`docs/acceptance-M1-M2.md`（首用验收 M1/M2）、`docs/acceptance-F7.5b-assets.md`（资产页真机走查）
+- 验收报告：`docs/acceptance-M1-M2.md`（首用验收 M1/M2）、`docs/acceptance-F7.5b-assets.md`（资产页真机走查）、
+  **`docs/acceptance-first-run.md`（首次使用验收 F7.7-a，2026-09-23）**
+- **本机门禁等效工具**（Dart 起不了子进程时用）：`tool/dart_analyze_fallback.py`（≡ analyze）、
+  `tool/dart_test_fallback.py`（≡ test，纯 `test()` 226 例）、`tool/data_layer_probe.py` + `.dart`（数据层实跑）
 - **常用命令**：
   - 门禁：`source env.sh && fx-qa`（analyze + 去代理 test）
   - 仅测试：`source env.sh && fx-test`
@@ -479,52 +503,54 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 31. **`tester.tap(find.widgetWithText(AppBar, '保存'))` 是陷阱**：它命中 **AppBar 自身**，`tap` 取 AppBar 的
     **中心点**（标题区）→ 点不到右上角按钮，而且 `warnIfMissed` 不报警（中心点确实在 AppBar 内）→ **静默无操作**。
     要点按钮里的 `Text`：`tap(find.text('保存'))`（`record_save_entry_test.dart` 就是这么写的）。
-30. **真机 adb 命令一律加 `MSYS_NO_PATHCONV=1`**：Git Bash 会把 `/sdcard/...` 转成 Windows 路径 →
+32. **真机 adb 命令一律加 `MSYS_NO_PATHCONV=1`**：Git Bash 会把 `/sdcard/...` 转成 Windows 路径 →
     `adb push` 报 `remote secure_mkdirs failed`、`uiautomator dump` + `pull` 找不到文件（**报错文案完全不提路径转换，极难联想**）
-31. **`.workbuddy/ui_dump.py` 报的坐标可能是「整张卡的容器中心」而不是真实按钮** → 点了没反应时别怀疑没改包，
+33. **`.workbuddy/ui_dump.py` 报的坐标可能是「整张卡的容器中心」而不是真实按钮** → 点了没反应时别怀疑没改包，
     用原始语义树按 node `bounds` 自己换算（踩过：投放卡的 `选择文件` 按钮真实 y=639，dump 报 y=483）
-32. **清走查残留 / 造数据**：`run-as com.teacodeman.yanxin sqlite3 app_flutter/yanxin.sqlite "..."`（设备自带 sqlite3 可用）；
+34. **清走查残留 / 造数据**：`run-as com.teacodeman.yanxin sqlite3 app_flutter/yanxin.sqlite "..."`（设备自带 sqlite3 可用）；
     **改前先 `cp` 备份**成 `app_flutter/yanxin.sqlite.bak-<日期>`。详见 `mumu-flutter-ui-smoke` 对应小节
-33. **`git push -q 2>&1 | tail -N` 在本沙箱会静默失败**（远端没更新、退出码仍 0）→ **直接 `git push` 不加重定向**，
+35. **`git push -q 2>&1 | tail -N` 在本沙箱会静默失败**（远端没更新、退出码仍 0）→ **直接 `git push` 不加重定向**，
     推完用 `git ls-remote origin refs/heads/master` 核对哈希（别信 `git status -sb` 的 `[ahead N]`）
-34. **本机（2026-09-23 起）Dart 起不了任何子进程** → `flutter analyze / test / pub / build_runner` 全废。
+36. **本机（2026-09-23 起）Dart 起不了「需要管道 stdio」的子进程** → `flutter analyze / test / pub / build_runner`
+    在本机直连**全废**（**仅限本机** —— 用户在自己的 Git Bash 终端里这些命令**正常**，已实测跑通 `flutter test`）。
     看到 `CreateFile failed 231 (所有的管道范例都在使用中)` + `process_win.cc:744` **别怀疑代码**，是主机级命名管道问题；
     **别去换 Dart 版本、别去杀进程、别去开 `dangerouslyDisableSandbox`**（都试过，无效）。
-    临时替代（**均已入库，优先用这两个**）：
-    ① `python tool/dart_analyze_fallback.py` —— 等效 `flutter analyze`（Python 起同一个
-    `analysis_server_aot.dart.snapshot` + Dart **原生协议**，含全部 lint，全项目 19s）；
-    ② `python tool/dart_test_fallback.py` —— 等效 `flutter test`（Python 起 `frontend_server` 编译
-    + `flutter_tester.exe` 执行；**纯 `test()` 226/226 实测全绿**，⚠️ `testWidgets` 跑不了）。
-    另有 `python tool/data_layer_probe.py`（数据层脱离 Flutter 真跑）。
+    本机自查用替代（**均已入库**）：① `python tool/dart_analyze_fallback.py` —— ≡ `flutter analyze`
+    （Python 起同一个 `analysis_server_aot.dart.snapshot` + Dart **原生协议**，含全部 lint，全项目 19s）；
+    ② `python tool/dart_test_fallback.py` —— ≡ `flutter test`（Python 起 `frontend_server` 编译 + `flutter_tester.exe`
+    执行；**纯 `test()` 226/226 实测全绿**，⚠️ `testWidgets` 跑不了）；③ `python tool/data_layer_probe.py`（数据层脱离 Flutter 真跑）。
     **注意**：`analysis_server.dart.snapshot` 要 `dart.exe` 跑，`analysis_server_aot.dart.snapshot` 要 `dartaotruntime` 跑；
     ⚠️ **别再走 LSP / 进程内 analyzer 这两条老路**：LSP 全量推送极慢（116 文件 30min 仍未收敛），
     进程内 analyzer 拿不到 lint（analyzer 10 已把 lint 规则移到 `package:linter`）。原生协议的三坑见第 1 条。
-35. **进程内跑单测的边界**：只有**不（间接）import `package:flutter`** 的测试才能脱离 `flutter_tester` 跑；
+37. **进程内跑单测的边界**：只有**不（间接）import `package:flutter`** 的测试才能脱离 `flutter_tester` 跑；
     `core/db/database.dart` 会把 drift + Flutter 一起拉进来 → 纯 Dart VM 没有 `dart:ui`，必失败。
-36. **测试文件别在 `main()` 里做 IO / 解析**（2026-09-23 踩到）：加载期的任何异常都会被
+38. **测试文件别在 `main()` 里做 IO / 解析**（2026-09-23 踩到）：加载期的任何异常都会被
     flutter_tools 的 listener 转成 `IsolateSpawnException` → 整个文件报成 `loading <路径>`，
     **真实原因和其余用例结果全丢**。真实件按需读（懒 + 记忆化 + `try/catch` 降级为 `markTestSkipped`）。
-37. **`testWidgets` 需要真正的 test 运行器驱动帧**：给一个自造 bootstrap 时它会「启动首例后永不完成」
+39. **`testWidgets` 需要真正的 test 运行器驱动帧**：给一个自造 bootstrap 时它会「启动首例后永不完成」
     （计数停在 `+0`、进程 `rc=0`）—— 极易误判成「全绿」。**判绿必须要求终态汇总行**
     （`All tests passed!` / `Some tests failed.`），只看计数会假绿。
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：**补 F7.7 A 批剩下的门禁 → 打 `v0.7.7` tag**。
-   - `flutter analyze` ✅ **已等效达成**（`python tool/dart_analyze_fallback.py` → `No issues found!`），**不用再跑**。
-   - `flutter test` 🟡 **本机已用等效手段跑了一半**：`python tool/dart_test_fallback.py` →
-     **纯 `test()` 226 例全绿 / 0 失败 0 跳过**（全量 35 文件，约 15min）；
-     ⏳ 但 **63 个 `testWidgets` 用例跑不了**（该封装喂不了真运行器）→ **仍需用户在自己终端补这一半**：
-     `source env.sh && flutter test --no-pub`（预期 **289 passed / 0 skipped**）。
-   - ⏳ **真机走查**（MuMu 12）**本机做不了**（构建链路多层 spawn，见「未解决问题」第 1 条）→
-     用户终端 `flutter build apk --debug` 后走查。若终端同样报 `CreateFile failed 231` → 重启 Windows / WorkBuddy。
+1. **当前最重要的事（只剩一件）**：**做 F7.7 A 批的真机走查 → 打 `v0.7.7` tag**（用户已明确：走查前不打）。
+   - ✅ `flutter analyze` **已闭合**（`python tool/dart_analyze_fallback.py` → `No issues found!`），**不用再跑**。
+   - ✅ `flutter test` **已闭合** —— 用户在自己的 Git Bash 终端跑，**整个套件全部通过**（2026-09-23 下午；
+     预期 **289 passed / 0 skipped**）。**不需要重复跑**；若确实要在本机自查，可用
+     `python tool/dart_test_fallback.py`（只覆盖纯 `test()` 226 例，含 widget 的文件会报「未跑完」——
+     **它不是门禁替代品**，别把它当最终判据）。
+   - ⏳ **真机走查 —— 唯一剩项**（用户 2026-09-23 明确「留到下一轮」，且 **`v0.7.7` 先不打**）：
+     本机做不了（构建链路多层 spawn，见「未解决问题」第 1 条）→ 在**用户自己的 Git Bash 终端**：
+     `source env.sh && flutter build apk --debug` → `adb -s emulator-5554 install -r -t <apk>` → 走查 5 条路径
+     （清单见「未解决问题」第 2 条）。若终端同样报 `CreateFile failed 231` → 重启 Windows / WorkBuddy。
    - **F7.7 A 批的代码与测试已经写完并已落地**（报表明细页 + A.0 记一笔选账户），
      实现细节、等效门禁原理与「已放弃的替代路线」都在 `docs/SPEC-F7.7-backlog.md` §G，**别重复写一遍**，
      也别重试那些已否掉的路线（LSP 全量 / `Content-Length` 帧 / 迷你 `flutter_test` 替身 / `inheritStdio` 包装器）。
-   - **本轮新反馈**：`real_bills_test.dart` 报过 `loading ...` 失败 —— 已定性为「**唯一在加载期做 IO 的文件**」
-     并加固（改为懒读 + 降级跳过）。细节见「未解决问题」第 2 条；**若再复现，要那行 `loading` 的完整 `[E]` 块**。
-   门禁过了之后按 A→B→C→D→E 顺序继续（B 数据导出 `v0.7.8` → C 账户图标 `v0.7.9` →
-   D 搜索增强 `v0.7.10`（**动 schema v2→v3**）→ E 日历增强 `v0.7.11`；B–E 四批**仍待用户签字**）。
+   - **已关闭的测试反馈**：`real_bills_test.dart` 曾报 `loading ...`（它是全仓**唯一在加载期做 IO 的文件**）
+     → 已加固为懒读 + 降级 `markTestSkipped`，**复跑未再出现**（见「未解决问题」第 2 条）。
+     **若再复现，要那行 `loading` 的完整 `[E]` 块**。
+   - **走查 + 打 tag 之后**按 A→B→C→D→E 顺序继续（B 数据导出 `v0.7.8` → C 账户图标 `v0.7.9` →
+     D 搜索增强 `v0.7.10`（**动 schema v2→v3**）→ E 日历增强 `v0.7.11`；**B–E 四批仍待用户签字**）。
 2. **要真机走查**：先 `source env.sh && flutter build apk --debug`（**必须在能跑 flutter 的环境**；A 机增量构建快），再
    `adb -s emulator-5554 install -r -t <apk>` 装到 MuMu 12，然后照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走。
    ⚠️ 现有 `build/app/outputs/flutter-apk/app-debug.apk` **不含 A 批**，先重新构建。
@@ -570,19 +596,18 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   **深色主题已彻底移除**；原型在 `D:\new file\modao\yanxin\`。
 - **F7.7 backlog SPEC**（`docs/SPEC-F7.7-backlog.md`）：**A 报表明细（含 A.0 记一笔选账户）→ B 数据导出 →
   C 账户图标 / 颜色 → D 搜索增强（动 schema **v2→v3**）→ E 日历增强**，各打一个 tag `v0.7.7`…`v0.7.11`。
-  **A 批已签字并已实现**（报表明细页三档 + 4 处占位点亮 + A.0 选账户；新增测试 20 例）；**B–E 四批仍待签字**。
-- ⚠️ **本轮环境阻塞**：本机 Dart 起不了「需要管道 stdio」的子进程（命名管道 `CreateFile failed 231`；
-  `inheritStdio` / `detached` 不受影响）→ `flutter analyze / test / pub / build_runner` **全废**。
-  ✅ **`flutter analyze` 已用等效手段达成**：**`python tool/dart_analyze_fallback.py` → `No issues found!`**
-  （Python 起**同一个** `analysis_server_aot.dart.snapshot` + 同一套 `analysis_options.yaml` + Dart 原生协议；
-  已用探针校准确认 lint 规则在线）。⏳ 仍差 **`flutter test`** 与**真机走查** → **tag `v0.7.7` 暂缓**。
-  ❌ 后两条**无替代方案**（`flutter_tools` 内部满地 `Process.runSync`）→ 只能在正常环境跑。
+  **A 批已签字并已实现**（报表明细页三档 + 4 处占位点亮 + A.0 选账户；**新增测试 18 例**）；**B–E 四批仍待签字**。
+- ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（命名管道 `CreateFile failed 231`；
+  `inheritStdio` / `detached` 不受影响）→ `flutter analyze / test / pub / build_runner` / 构建 **在本机直连全废**。
+  三个等效工具（已入库，本机自查用）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
+  `python tool/dart_test_fallback.py`（≡ test，纯 `test()` 226 例）、`python tool/data_layer_probe.py`（数据层实跑）。
+  **用户自己的 Git Bash 终端不受影响** —— 已实测跑通 `flutter test`。
   **协议三坑**见 `docs/SPEC-F7.7-backlog.md` §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
-- **代码基线 = `2f6db4c`**（= 远端；含 **F7.7 A 批改动**，tag 待补）；**最新 tag `v0.7.6`**。
-- 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 269 全过 0 skip**（⚠️ **2026-09-23 起本机跑不了这两个命令**，见上「环境阻塞」）；
-  用户终端已跑过一轮 F7.7 A 批 + 首次使用验收，报回 4 个失败 → **3 个是测试写法问题（已修）、1 个（GBK 解码）无法复现**（见「未解决问题」第 2 条）；
-  预期 **289 passed / 0 skipped**；
-  ✅ A 批的 analyze 已等效补跑：`No issues found!`。
+- **门禁状态**：`flutter analyze` ✅ **0 issue**（等效手段）；`flutter test` ✅ **用户终端整个套件全部通过**
+  （2026-09-23 下午；预期 **289 passed / 0 skipped** = 269 + A 批 18 + 2 修 F1）；⏳ **只剩真机走查**
+  → **`v0.7.7` 待走查后打**（用户已明确「先不打」）。
+  期间报回的两轮失败（保存按钮点错 / 目标在绘制区外 / `real_bills_test` 加载失败）**均已修**（见「未解决问题」第 2 条）。
+- **代码基线 = `ecf5e09`**（= `origin/master`；含 **F7.7 A 批 + F1 修复**，tag 待补）；**最新 tag `v0.7.6`**。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
@@ -590,8 +615,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 搜索：入口是**覆盖首页的浮层**（`showSearchOverlay`，不是路由）；口径 = 当前账本全量 + 内存过滤；命中 = 分类名 / 备注 / 金额子串并集 + 类型指令「仅支出 / 仅收入 / 转账」（`parsePlan`）。
 - 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
 - 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.5`。
-- 下一步：**补 A 批剩下两条门禁 → 打 `v0.7.7`**。analyze ✅ 已等效达成（`python tool/dart_analyze_fallback.py`）；
-  还差 **`flutter test`**（预期 289）与**真机走查**（本机跑不了）→ 在**用户自己的 Git Bash 终端**：
-  `source env.sh` → `flutter test --no-pub` → `flutter build apk --debug` → MuMu 12 走查 → 打 `v0.7.7`。
+- **下一步（只剩一件）**：**真机走查 → 打 `v0.7.7`**。analyze ✅、test ✅ 都已闭合；走查本机做不了 →
+  在**用户自己的 Git Bash 终端**：`source env.sh` → `flutter build apk --debug` →
+  `adb -s emulator-5554 install -r -t <apk>` → MuMu 12 走查 5 条报表路径 + A.0 选账户
+  + F1（报表空态记一笔后应**立刻可见**）→ CHANGELOG `[Unreleased]` 转 `## [v0.7.7]` + tag 表补行 →
+  `git tag -a v0.7.7` → `git push && git push --tags`。
   A 批代码已写完（报表明细三档 + 4 处占位点亮 + A.0 记一笔选账户），**别重写**；实现细节见 `docs/SPEC-F7.7-backlog.md` §G。
-  之后按 A→B→C→D→E 继续（B–E 仍待用户签字）。改完 `git push` + `git push --tags`。
+  之后按 A→B→C→D→E 继续（B–E 仍待用户签字）。

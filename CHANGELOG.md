@@ -20,8 +20,9 @@
 
 ## [Unreleased]
 
-> **F7.7 A 批已实施，但门禁未跑通 → 暂不打 tag。** 本机 Dart VM 起不了子进程（见下），
-> `flutter analyze` / `flutter test` / 真机走查三条门禁待补；补齐后再移到 `## [v0.7.7]` 段并 `git tag -a v0.7.7`。
+> **F7.7 A 批已实施；`flutter analyze`（0 issue）与 `flutter test`（用户在自建终端跑，整个套件全部通过）
+> 两条门禁已闭合，仅剩真机走查** → 用户 2026-09-23 明确 **`v0.7.7` 先不打，等走查通过后再打**。
+> 走查通过后：把本段移到 `## [v0.7.7] — <日期> · F7.7 A 批`，tag 表补一行，再 `git tag -a v0.7.7` + `git push --tags`。
 
 ### 新增 — F7.7 A 批 · 报表明细清单 `/reports`（2026-09-23）
 
@@ -104,7 +105,11 @@
   加固：`main()` 里**零 IO** —— 改 `RealBill`（懒读 + 懒解析 + `on Exception` 降级）+ `markTestSkipped`，
   缺件 / 读不出 / 解析失败**只跳过该例**并给出可读原因。复验 **`+8-0~0` 全绿**。
 - **文档**：`docs/SPEC-F7.7-backlog.md` §G 补「第二轮反馈」与工具说明；`HANDOFF.md` 未解决问题第 1 条改写
-  （`flutter test` 已解决一半）、盲区防护新增 2 条（加载期 IO / `testWidgets` 假绿）。
+  （`flutter test` 本机自查 + 用户终端复跑）、盲区防护新增 2 条（加载期 IO / `testWidgets` 假绿）。
+- **门禁闭合（2026-09-23 下午）**：用户在**自己的 Git Bash 终端**跑 `flutter test` → **整个套件全部通过**
+  （预期 **289 passed / 0 skipped** = 基线 269 + A 批 18 + 修 F1 的 2 例），
+  首轮报回的 3 个失败用例与第二轮的 `loading` 失败**均已修且未再复现**。
+  → **`flutter analyze` + `flutter test` 两条门禁全部闭合**；**仅剩真机走查**（故本段暂留 `[Unreleased]`）。
 
 ### 已知环境阻塞 — 本机（A 机）Dart 无法创建子进程（2026-09-23）
 
