@@ -304,10 +304,26 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 2. 【**待补门禁 + 待打 tag**】F7.7 **A 批** + 本轮首次使用验收的修复已落地 → **`v0.7.7` 暂缓**：
    - ✅ `flutter analyze` 0 issue：**已等效达成**（`python tool/dart_analyze_fallback.py` → `No issues found!`；
      本轮改动后复跑仍是 0 issue）。
-   - ⏳ `flutter test` 全绿 0 skip：**未跑**。**基线 269 + A 批 18**（9 纯函数 + 7 页面 widget + 2 A.0）
-     **+ 本轮 2**（报表刷新）→ 全仓静态计数 **289**，预期 **289 passed / 0 skipped**。
+   - ⏳ `flutter test` 全绿 0 skip：**用户已在自己终端跑过一轮**（2026-09-23），报回 **4 个失败**，
+     已定位并修掉 **3 个测试自身写法问题**（见下），**1 个（GBK 解码）无法复现** → 需复跑确认。
+     预期 **289 passed / 0 skipped** = 基线 269 + A 批 18（9 纯函数 + 7 页面 widget + 2 A.0）+ 本轮 2（报表刷新）。
      ⚠️ 之前文档写「A 批 +20（11 纯函数 + 7 widget + 2 A.0）」是**误记**，实为 18（总数预期不变，仍 289）。
-     本机跑不了（见第 1 条），**需在正常环境跑**。
+     本机跑不了（见第 1 条），**必须在正常环境跑**。
+
+     **首轮反馈的 4 个失败（2026-09-23，用户终端）**：
+     - `record_account_test.dart` ×2（A.0 选账户）：**测试写法错**。`tester.tap(find.widgetWithText(AppBar, '保存'))`
+       命中的是 **AppBar 自身**，`tap` 取它的中心点（标题区）→ 点不到右上角按钮，而且 `warnIfMissed`
+       不报警（中心点确实在 AppBar 内）→ **静默不保存**、库里 0 条。已改 `_tapSave()`：
+       `ensureVisible` + `tap(find.text('保存'))`（与既有 `record_save_entry_test.dart` 同款）。
+     - `reports_page_test.dart`「转账单列一段」：**目标在绘制区之外**。
+       `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren`（`widgets/sliver.dart:1289`）只把
+       **落在绘制区内**的子项算 onstage，finder 默认 `skipOffstage: true` → 转账段在分类档最下面，
+       800×600 视口里正好卡边缘（内容高度与视口只差几像素）→ 搜不到。已改为先
+       `scrollUntilVisible(find.text('转账', skipOffstage: false), 200)` 再断言。
+     - `bill_decode_test.dart`「GBK 字节回退解码不乱码」：**未能复现** —— 纯 Dart VM 直跑真实
+       `decodeBillBytes([0xd6,0xd0,0xce,0xc4])` → `gbk` / `中文`（`codeUnits=[20013,25991]`）全部成立；
+       同文件「混合内容」用同样 4 个 GBK 字节且未失败。判定为**环境 / 编译缓存**问题 →
+       复跑前先 `flutter clean && flutter pub get`，并把失败原文贴回来。
    - ⏳ 真机走查（MuMu 12 / 900×1600 / 320dpi）**阻断 0**：**未走查**，且现有 APK 不含 A 批 → 需先重新构建。
      5 条路径 —— 首页 header「报表」→**分类档**；首页「全部账单 ›」→**明细档**；日历页 header→明细档 + 核对月份；
      月份选择页 header→明细档 + 核对月份；再核对空态 / 翻月 / 展开 / **A.0 记一笔选账户**。
@@ -422,6 +438,15 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
     会按「还没到位」的视口算滚动，把按钮顶到屏幕外 → tap 报 offset 越界（像「按钮不存在」，极具误导性）
 29. **写操作刷新优先用 `dataEpochProvider`**（`ref.read(dataEpochProvider.notifier).bump()`），
     别再逐个 provider 手工 `refresh()` —— 已因漏刷 `statsProvider` 出过 bug
+30. **`find.text` 默认 `skipOffstage: true`，会跳过「视口之外」的列表子项**（不只是 `Offstage`）：
+    `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren`（`widgets/sliver.dart:1289`）只把
+    `layoutOffset ∈ [scrollOffset, scrollOffset+remainingPaintExtent)` 的子项算 onstage → 800×600 视口里
+    **滚不到的内容即使已构建也搜不到**。断言长页面靠下的元素前先
+    `scrollUntilVisible(find.xxx(..., skipOffstage: false), 200)`。
+    注意 `tester.ensureVisible` 的 finder **必须**带 `skipOffstage: false`，否则它自己就找不到目标。
+31. **`tester.tap(find.widgetWithText(AppBar, '保存'))` 是陷阱**：它命中 **AppBar 自身**，`tap` 取 AppBar 的
+    **中心点**（标题区）→ 点不到右上角按钮，而且 `warnIfMissed` 不报警（中心点确实在 AppBar 内）→ **静默无操作**。
+    要点按钮里的 `Text`：`tap(find.text('保存'))`（`record_save_entry_test.dart` 就是这么写的）。
 30. **真机 adb 命令一律加 `MSYS_NO_PATHCONV=1`**：Git Bash 会把 `/sdcard/...` 转成 Windows 路径 →
     `adb push` 报 `remote secure_mkdirs failed`、`uiautomator dump` + `pull` 找不到文件（**报错文案完全不提路径转换，极难联想**）
 31. **`.workbuddy/ui_dump.py` 报的坐标可能是「整张卡的容器中心」而不是真实按钮** → 点了没反应时别怀疑没改包，
@@ -507,7 +532,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   **协议三坑**见 `docs/SPEC-F7.7-backlog.md` §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
 - **代码基线 = `2f6db4c`**（= 远端；含 **F7.7 A 批改动**，tag 待补）；**最新 tag `v0.7.6`**。
 - 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 269 全过 0 skip**（⚠️ **2026-09-23 起本机跑不了这两个命令**，见上「环境阻塞」）；
-  F7.7 A 批新增 20 例（11 纯函数 + 7 页面 widget + 2 A.0）**尚未执行**（预期合计 **289**）；
+  用户终端已跑过一轮 F7.7 A 批 + 首次使用验收，报回 4 个失败 → **3 个是测试写法问题（已修）、1 个（GBK 解码）无法复现**（见「未解决问题」第 2 条）；
+  预期 **289 passed / 0 skipped**；
   ✅ A 批的 analyze 已等效补跑：`No issues found!`。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。

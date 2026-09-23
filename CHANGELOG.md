@@ -66,6 +66,28 @@
 - **文档修正**：A 批新增用例实为 **18** 例（9 纯函数 + 7 widget + 2 A.0），此前文档写「+20（11+7+2）」有误。
   全仓静态计数 **289** = 基线 269 + A 批 18 + 本次 2 → 门禁预期仍是 **289 passed / 0 skipped**（数字巧合一致）。
 
+### 修复 — 首轮 `flutter test` 反馈（A 批 + F7.7-a，2026-09-23）
+
+> 用户在自己的终端跑通了 `flutter test`（本机沙箱仍被 `CreateFile failed 231` 阻塞），报回 4 个失败用例。
+> 逐条定位后：**3 例是测试自身写法问题（已修）**，**1 例无法复现（判定环境 / 缓存，待复跑）**。
+
+- **`record_account_test.dart` 两例（A.0 选账户）** —— 测试写法错误：`tester.tap(find.widgetWithText(AppBar, '保存'))`
+  命中的是 **AppBar 自身**，`tap` 取它的**中心点**（标题区），根本点不到右上角那个按钮；`warnIfMissed`
+  也不会警告（中心点确实落在 AppBar 内）→ **静默不保存**，库里始终 0 条 → `rows.length` 断言失败。
+  改为点按钮里的那段 `Text`（`find.text('保存')`，与既有 `record_save_entry_test.dart` 同款），
+  收敛为 `_tapSave()` 助手并把这个坑写进注释。
+- **`reports_page_test.dart`「转账单列一段（不计入支出 / 收入）」** —— 目标落在**绘制区之外**：
+  `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren`（`packages/flutter/lib/src/widgets/sliver.dart:1289`）
+  **只把「落在绘制区内」的子项算 onstage**，而 finder 默认 `skipOffstage: true` → 转账段在分类档最下面，
+  800×600 的默认测试视口里正好卡在边缘（分类档内容高度与视口只差几像素）→ `find.text('转账')` 搜不到。
+  改为先 `scrollUntilVisible(find.text('转账', skipOffstage: false), 200)` 再断言，
+  结果不再依赖字号 / 间距的微小变化。
+- **`bill_decode_test.dart`「GBK 字节回退解码不乱码」** —— **未能复现**：用纯 Dart VM 直接跑**真实**
+  `decodeBillBytes(<int>[0xd6, 0xd0, 0xce, 0xc4])` → `encoding=gbk`、`text=中文`（`codeUnits=[20013, 25991]`），
+  断言逐条成立；同文件的「混合内容（GBK 中文 + ASCII）」用的是**同样 4 个 GBK 字节**且未出现在失败列表。
+  在 `gbk_codec` 锁 0.4.0（+ `dependency_overrides`，sha256 固定）的当前状态下该用例**不可能失败**。
+  → 建议 `flutter clean && flutter pub get` 后复跑并回贴失败原文。
+
 ### 已知环境阻塞 — 本机（A 机）Dart 无法创建子进程（2026-09-23）
 
 - 现象：一切 `flutter` / `dart` 子进程启动失败 → `ProcessException: 所有的管道范例都在使用中

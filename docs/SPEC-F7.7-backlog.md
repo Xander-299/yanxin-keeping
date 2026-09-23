@@ -280,7 +280,7 @@
 | 门禁 | 结果 |
 |---|---|
 | `flutter analyze` 0 issue | ✅ **已达成（等效手段）** —— `python tool/dart_analyze_fallback.py` → **`No issues found!`**（全项目，分析 19s，退出码 0）。见下「等效门禁」。 |
-| `flutter test` 全绿 0 skip（基线 269，只增不删） | ❌ **本机跑不了，且已确认不可替代** —— A 批新增用例 **+18**（9 纯函数 + 7 widget + 2 A.0）**未执行**（⚠️ 原文写「+20（11+7+2）」为误记，2026-09-23 静态计数修正：全仓 **289** = 基线 269 + A 批 18 + 首次使用验收 2）。<br>`inheritStdio` 包装器能把 `flutter` 拉起来，但 `flutter_tools` 内部满地 `Process.runSync`（`LocalProcessManager.runSync`）→ 第二层就断。**只能在正常环境跑**。 |
+| `flutter test` 全绿 0 skip（基线 269，只增不删） | ⏳ **用户终端已跑一轮（2026-09-23）：4 个失败** —— 其中 **3 例是测试自身写法问题，已修**：<br>① `record_account_test` ×2：`tap(find.widgetWithText(AppBar, '保存'))` 命中的是 **AppBar 自身**，取中心点（标题区）→ 点不到右上角按钮且**不报警** → 静默不保存、库里 0 条（此坑 `tasks/todo-flutter.md` 在 F5.5 就记过，A 批又踩）；已改 `_tapSave()` → `tap(find.text('保存'))`。<br>② `reports_page_test`「转账单列一段」：转账段在分类档最下面，800×600 视口里卡在绘制区边缘，而 `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren` 只把**绘制区内**子项算 onstage → 默认 finder 搜不到；已改为先 `scrollUntilVisible(..., skipOffstage: false)` 再断言。<br>③ `bill_decode_test`「GBK 字节回退解码不乱码」：**未能复现** —— 纯 Dart VM 直跑真实 `decodeBillBytes([0xd6,0xd0,0xce,0xc4])` 得 `gbk` / `中文`，断言全成立，判定环境 / 编译缓存，需 `flutter clean` 后复跑。<br>用例数 **+18**（9 纯函数 + 7 widget + 2 A.0，⚠️ 原文写「+20（11+7+2）」为误记；全仓静态计数 **289** = 基线 269 + A 批 18 + 首次使用验收 2）。<br>`inheritStdio` 包装器能把 `flutter` 拉起来，但 `flutter_tools` 内部满地 `Process.runSync`（`LocalProcessManager.runSync`）→ 第二层就断。**只能在正常环境跑**。 |
 | 真机走查（MuMu 12 / 900×1600 / 320dpi）阻断 0 | ❌ **未走查** —— 构建链路（`flutter build` → Gradle 插件 → `dart`）同样断在 `flutter_tools`，无法产出含 A 批代码的 APK。**只能在正常环境做**。 |
 
 **环境阻塞（本机 · 2026-09-23）**

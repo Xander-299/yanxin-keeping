@@ -218,6 +218,14 @@ void main() {
 
     await _openFromHeader(tester, db);
 
+    // 转账段在分类档的**最下面**：800×600 的默认测试视口里它正好卡在绘制区边缘
+    // （分类档内容与视口高度只差几像素），而默认 finder 会跳过 offstage ——
+    // `SliverMultiBoxAdaptorElement.debugVisitOnstageChildren` 只把「落在绘制区
+    // 内」的子项算 onstage，视口外的列表子项即使已构建也搜不到。
+    // 先滚到这一段再断言，结果就不依赖字号 / 间距的微小变化。
+    await tester.scrollUntilVisible(find.text('转账', skipOffstage: false), 200);
+    await tester.pumpAndSettle();
+
     expect(find.text('转账'), findsOneWidget);
     expect(find.text('1 笔 · ¥50.00'), findsOneWidget);
     expect(find.textContaining('转账不计入支出 / 收入'), findsOneWidget);

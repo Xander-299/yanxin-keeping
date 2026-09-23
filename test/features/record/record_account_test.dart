@@ -4,7 +4,6 @@
 /// → 「按账户报表」永远只有一行。这里验证「选的账户真的落到 transactions.account_id」。
 library;
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/db/database.dart';
@@ -21,6 +20,20 @@ import '../../helpers/pump_app.dart';
 /// 输入 '8' 之后 `find.text('8')` 会同时命中「显示区」和「按键」→ tap 报多命中。
 /// 按键外面包着 `ToonPress`，显示区没有 → 用 `widgetWithText` 精确定位。
 Finder _key(String label) => find.widgetWithText(ToonPress, label);
+
+/// 点 AppBar 右上角常驻的「保存」。
+///
+/// ⚠️ **不能**写 `tester.tap(find.widgetWithText(AppBar, '保存'))` —— 那个 finder
+/// 命中的是 **AppBar 自身**，`tap` 取它的中心点（标题区那一带），根本点不到
+/// 右上角的按钮 → 静默不生效（`warnIfMissed` 也不会警告，因为中心点确实在
+/// AppBar 内），表现为「保存没反应、库里没有这笔」。
+/// 要点的是按钮里的那段 `Text`（对齐 `record_save_entry_test.dart` 的写法）。
+Future<void> _tapSave(WidgetTester tester) async {
+  final Finder save = find.text('保存');
+  await tester.ensureVisible(save);
+  await tester.tap(save);
+  await tester.pumpAndSettle();
+}
 
 /// 造账本（自带「现金」）+ 第二个账户「招行」。
 Future<({String bookId, String bankId})> _seed(AppDatabase db) async {
@@ -79,8 +92,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // 5) 保存（AppBar 常驻入口）
-    await tester.tap(find.widgetWithText(AppBar, '保存'));
-    await tester.pumpAndSettle();
+    await _tapSave(tester);
 
     // 6) 库里那笔的账户必须是「招行」（写库是真实异步 → 轮询到出现为止）
     final DateTime now = DateTime.now();
@@ -117,8 +129,7 @@ void main() {
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(AppBar, '保存'));
-    await tester.pumpAndSettle();
+    await _tapSave(tester);
 
     final DateTime now = DateTime.now();
     List<TxRow> rows = <TxRow>[];
