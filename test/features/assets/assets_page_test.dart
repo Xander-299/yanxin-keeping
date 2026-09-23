@@ -87,6 +87,9 @@ void main() {
     // 先让 sheet 的滑入动画跑完再找按钮（动画途中按错的视口算滚动会把按钮顶出屏幕）
     await tester.pumpAndSettle();
     await pumpUntil(tester, find.text('编辑账户'));
+    // C 批加了图标/颜色两块，表单变高 → 删除按钮可能折到屏外，先滚到可见
+    await tester.ensureVisible(find.text('删除账户'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('删除账户'));
     await pumpUntil(tester, find.text('删不了这个账户'));
 
@@ -110,6 +113,9 @@ void main() {
     await tester.tap(find.text('支付宝'));
     await tester.pumpAndSettle();
     await pumpUntil(tester, find.text('编辑账户'));
+    // C 批加了图标/颜色两块，表单变高 → 删除按钮可能折到屏外，先滚到可见
+    await tester.ensureVisible(find.text('删除账户'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('删除账户'));
     await pumpUntil(tester, find.text('删除账户「支付宝」后不再计入净资产，确定删除？'));
     await tester.tap(find.text('删除'));
@@ -180,7 +186,9 @@ void main() {
     await pumpUntil(tester, find.text('编辑账户'));
 
     // 遮罩在弹窗上方，点它应关闭弹窗（真机同样行为，不是 bug）
-    await tester.tapAt(const Offset(400, 80));
+    // C 批加了图标/颜色两块，弹窗顶边超过了写死的 y=80 → 按弹窗实际顶边算遮罩点
+    final double sheetTop = tester.getTopLeft(find.byType(BottomSheet)).dy;
+    await tester.tapAt(Offset(400, (sheetTop - 20).clamp(0.0, double.infinity)));
     await tester.pumpAndSettle();
     expect(find.text('编辑账户'), findsNothing);
     expect(find.text('现金'), findsWidgets);
