@@ -236,7 +236,7 @@
 - [x] 走查补做：① 账户弹层其实没卡通化（P2 只取色，SPEC 误记「已复核」）；② 资产页 AppBar `+` 换 `ToonIconButton`
 - [x] 版本记录：`v0.7.6` tag + `CHANGELOG.md` 顶部版本规则与 tag 表（F7 阶段一版一 tag）
 
-### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A、B 已交付（v0.7.7 / v0.7.8）· C–E 待签字**）
+### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A、B、C 已交付（v0.7.7 / v0.7.8 / v0.7.9）· D–E 待签字**）
 
 - [x] 小 SPEC 起草（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.11`
 - [x] **A 批签字**（2026-09-23）：A.0 做 / D.5 拼音不做 / E.5 农历不做；且裁定「报表页流水行只读不可点」
@@ -274,7 +274,9 @@
       onUpgrade 带 PRAGMA table_info 存在性防御）；表单加图标/颜色两块（跟随类型 + 8 候选）、
       资产页头像接自选值、仓储/controller 透传；新增纯测试 +14（account_meta 9 / account_repo 4 /
       db 迁移 1，等效实测全绿）+ analyze 0 issue；
-      ⏳ 用户终端 flutter test 全量（预期 315+14=**329**）+ 真机走查（改图标颜色 + **覆盖安装验迁移**）→ 打 v0.7.9
+      ✅ **全部收尾（2026-09-24）**：用户终端 `flutter test` **329 passed / 0 skipped**（达预期）+
+      真机走查（MuMu 12，AI 经 adb 全包）**含 v0.7.8 老库覆盖安装验迁移**（老数据原样、新列落默认、
+      改图标/颜色后重启仍持久、0 崩溃）→ **`v0.7.9` 已打 tag 推远端**（`f782ec2`）
 - [ ] D 搜索增强（待签字；原计划动 schema v2→v3，**C 批已用掉 → 改 v3→v4**）
 - [ ] E 日历增强（待签字）
 

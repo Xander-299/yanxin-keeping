@@ -1,19 +1,23 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **`v0.7.8` 已打 tag（F7.7 A/B 全交付）· C 批已实现（含 schema v3），待用户终端回归 + 走查后打 `v0.7.9`**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **`v0.7.9` 已打 tag（F7.7 A/B/C 全交付）· 剩余 D / E 两批待签字**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-23 17:40 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-24 05:45 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **本轮（F7.7 B 批「数据导出」已实现 —— 用户签字「全部按 B.4 默认」）**：
-> - 先收尾 A 批：用户真机走查（MuMu 12）**通过、无阻断** → CHANGELOG `[Unreleased]` 转 `## [v0.7.7]`
->   → **`v0.7.7` 已打 tag 并推远端**（F2 / F5 两项「待裁定」用户裁定**保持现状**，SPEC 没写就不动代码）。
-> - **B 批已实现**：`lib/features/export/`（纯函数 `csv_export.dart` + 底部弹层 `export_sheet.dart`）、
->   我的页「数据导出」接入口 + `_BrandTip` 文案按 B.4.8 更新、
->   `budget_repository.listByBook(bookId)` 补取数缺口（只读，不改 schema）。
-> - **门禁**：analyze 等效 **0 issue**；新增纯测试 **31 例全绿**（budget +11、csv_export +20，等效工具实测）；
->   新增 widget 测试 3 例（`export_sheet_test.dart`）本机跑不了 → **用户终端 `flutter test` 预期总数 289 → 315**。
-> - ✅ **B 批已收尾（2026-09-23 傍晚）**：用户终端 `flutter test` **315 passed / 0 skipped**（达预期）
->   → CHANGELOG 转 `## [v0.7.8]` → **`v0.7.8` 已打 tag 并推远端**（`08d8362`，`ls-remote --tags` 已核对）。
->   A / B 两批至此全部交付；**剩余 = C（账户图标/颜色）/ D（搜索增强，动 schema v3）/ E（日历增强）三批待用户签字**。
+> **本轮（F7.7 C 批「账户图标 / 颜色选择」已收尾 ✅）**：
+> - 用户终端 `flutter test` **329 passed / 0 skipped**（= `test()` 263 + `testWidgets` 66；C 批新增纯测试 **+14**）
+>   → CHANGELOG `[Unreleased]` 转 `## [v0.7.9]` → **`v0.7.9` 已打 tag 并推远端**
+>   （tag 对象 `1cc9340` → 提交 `f782ec2`，`git ls-remote --tags` 已核对）。
+> - **真机走查（MuMu 12，AI 经 adb 全包）**：**v0.7.8 老库覆盖安装验迁移** —— 老数据 ¥286.88 原样、
+>   新列落默认空串；改图标（存钱罐）+ 改颜色（粉红）→ 头像即时变更 → **重启后仍持久** ✅ → logcat 0 崩溃。
+> - 走查发现并修：「跟随类型」chip 在 `Wrap` 宽松约束下被 `Container.alignment` 撑满整行（去掉 alignment）。
+> - 3 例 widget 测试因表单加高失败（「删除账户」折屏外 / 遮罩点被弹窗吃掉）→ 已修：
+>   tap 前 `ensureVisible`；「点遮罩关弹窗」用例改**竖屏视口**（默认 800×600 太矮，弹窗顶边会贴到 y=0）
+>   + `sheet.top > 100` 几何硬断言。
+> - 收尾时把我的页 `_BrandTip` 版本角标 `v0.7.8` → `v0.7.9`（等宽字符串替换，无布局变化；D 批走查顺带复验）。
+> - **剩余 = D（搜索增强，动 schema —— 必须写 `v3 → v4`）/ E（日历增强）两批待用户签字**。
+>
+> **上一轮（F7.7 B 批「数据导出」，2026-09-23）**：用户签字「全部按 B.4 默认」→ 已交付并打 `v0.7.8`
+>   （**315 全绿** + 走查无阻断）；A 批已打 `v0.7.7`（F2 / F5 两项「待裁定」用户裁定**保持现状**）。
 > - 🔥 **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：发现 **`flutter build` 撞 231 但
 >   `cd android && ./gradlew assembleDebug` 直连能通**（Java 进程链不吃 Dart 管道；须验 kernel_blob 新鲜度防旧码）——
 >   构建装机走查一条龙全在本机完成，CSV / JSON 两路径全过、无崩溃。已写入 `dart-toolchain-python-fallback` skill。
@@ -258,14 +262,13 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
-- **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
-- **C 批「账户图标 / 颜色」已实现（本工作区，待提交推送）**：用户签字「C 按 C.3 默认开工」。
+- **F7.7 C 批「账户图标 / 颜色」已交付：`v0.7.9` 已打 tag 推远端**（**329 全绿** + 覆盖安装验迁移走查通过，2026-09-24；
+  提交线 `9dd2d9b`（实现）→ `6653988`/`6e192b7`（测试视口修复）→ `079dd09`（角标）→ `f782ec2`（CHANGELOG 转正，= tag 指向）。
   ⚠️ **SPEC §C.1 前提有误**：accounts 表本来没有 icon/color（在 books/categories 上）→ 实际做了 **schema v2→v3**
   （ALTER TABLE ADD COLUMN DEFAULT ''，onUpgrade 带 PRAGMA table_info 防御）。
-  门禁：analyze 等效 ✅ 0 issue + 新增纯测试 +14 全绿 ✅（等效工具）；⏳ **用户终端 `flutter test` 全量（预期 329）
-  + 真机走查（改图标/颜色 + 覆盖安装验迁移）→ 打 `v0.7.9`**。
-- **下一批 = D / E 两批待用户签字**；**D 批迁移改 v3→v4**（C 批已用掉 v3）。
+- **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
+- **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
+- **下一批 = D / E 两批待用户签字**；**D 批迁移动 schema 时改 `v3 → v4`**（C 批已用掉 v3）。
 - **门禁（B 批前基线）**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
   `flutter test` ✅ **用户在自己终端已跑通、整个套件全部通过**（2026-09-23 下午；A 批预期 **289 passed / 0 skipped**）。
 - **本机（A 机）代码基线 = `ecf5e09` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC
@@ -282,16 +285,17 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端（代码线同步）** —— 已用 `git ls-remote origin refs/heads/master` 核对：**代码基线 `ecf5e09`**，
+- **本机 = 远端（代码线同步）** —— 已用 `git ls-remote origin refs/heads/master` 核对：
+  **代码基线 `f782ec2` = `v0.7.9`**（含 F7.7 A/B/C 三批 + 三个门禁等效工具 + `build_drift_runner`），
   其后只有交接文档提交；
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）。
-  tag `v0.7.1`…`v0.7.8` 已推远端，**`v0.7.9` 待 C 批收尾（测试回归 + 走查）**。
+  tag `v0.7.1`…`v0.7.9` 已推远端（**`v0.7.9` = 当前最新**，指向 `f782ec2`），剩 D / E 两批。
 
 # 未解决问题
 
-> 说明：**最高优先 = C / D / E 三批签字**（B 批已全部交付并打 `v0.7.8`）；
+> 说明：**最高优先 = D / E 两批签字**（A / B / C 批已全部交付并分别打 `v0.7.7` / `v0.7.8` / `v0.7.9`）；
 > 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机**、已由 3 个等效工具 + `gradlew` 直连构建绕开；
 > F2 / F5 已裁定保持现状（2026-09-23）。
 
