@@ -19,7 +19,7 @@
 > - **`docs/SPEC-F7.7-backlog.md` 已起草并入库**（`909c3dc`）：把 backlog 剩的 5 项一次写清，A→E 顺次交付，各打一个 tag（`v0.7.7`…`v0.7.11`）。
 > - 用户表态「**全都做，按顺序**」→ **但 SPEC 正文尚未逐条确认**（A.0 前置 / D.5 拼音 / E.5 农历 三处默认处理需点头），
 >   **按项目规则未签字不动产品代码 → 开工前先确认**。
-> - 工作区干净，HEAD = `8f1058b` = `origin/master`。
+> - 工作区干净，**代码基线 = `8f1058b`**（= `origin/master`）；本文档自身的提交在它之后，查 `git log -- HANDOFF.md`。
 >
 > 门禁基线（B 机）：analyze 0 issue / test **247 通过 + 6 skip**（skip = 缺真实账单样本；**样本只在本机，故本机是真跑的**）。
 
@@ -86,7 +86,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-23 F7.6 P3 后复跑）** | `flutter analyze` **No issues found**；`flutter test` **269 passed / 0 skipped**（`All tests passed!`） |
-| git | 本机 HEAD = **`8f1058b`** = `origin/master`；工作区干净；**最新 tag = `v0.7.6`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| git | 本机**代码基线** = **`8f1058b`** = `origin/master`；工作区干净；**最新 tag = `v0.7.6`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
 | 源码规模 | `lib/` 72 个 `.dart`，`test/` 34 个 `.dart`；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -104,7 +104,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **A 机接手续做（当前线）**：`94bbb33`（走查截图不再入库）→ `1f6f690`（**F7.6 P1**）
   → `3d4e749`（**F7.6 P2**）→ `aa96f01`（P2 走查修复）→ `5f0d369`（**F7.6 P3**）
   → `d3b2076`（P3 走查补做 + **版本记录机制 `v0.7.6`**）→ `909c3dc`（**F7.7 backlog SPEC**）
-  → **`8f1058b`（当前 HEAD，走查技能补「run-as + 设备 sqlite3 改库」一节）**
+  → **`8f1058b`（代码基线；走查技能补「run-as + 设备 sqlite3 改库」一节）** → 其后为 HANDOFF 交接文档提交（`c7cd43f` / `42abab1`）
 
 # 当前方案与关键决策
 
@@ -185,7 +185,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **本机（A 机）HEAD = `8f1058b` = `origin/master`，工作区干净**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC 已入库；**tag = `v0.7.6`**）。
+- **本机（A 机）代码基线 = `8f1058b` = `origin/master`，工作区干净**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC 已入库；
+  **tag = `v0.7.6`**）；交接文档在其后单独提交（`c7cd43f` / `42abab1`）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**。
 - **本机门禁（2026-09-23 F7.6 P3 后复跑）**：`flutter analyze` No issues found；`flutter test` **269 passed, 0 skipped**。
 - `lib/core/db/database.g.dart` 已入库；**改表结构必须重跑 `dart run build_runner build`**。
@@ -194,7 +195,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端**：`8f1058b`，工作区干净；tag `v0.7.1`…`v0.7.6` 已推远端。
+- **本机 = 远端**，工作区干净；**代码基线 `8f1058b`**（交接文档在其后单独提交）；tag `v0.7.1`…`v0.7.6` 已推远端。
 
 # 未解决问题
 
@@ -357,7 +358,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   **深色主题已彻底移除**；原型在 `D:\new file\modao\yanxin\`。
 - **F7.7 backlog SPEC 已起草**（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：**A 报表明细（含 A.0 记一笔选账户）→ B 数据导出 →
   C 账户图标 / 颜色 → D 搜索增强（动 schema **v2→v3**）→ E 日历增强**，各打一个 tag `v0.7.7`…`v0.7.11`。
-- HEAD = **`8f1058b`** = 远端，工作区干净；**最新 tag `v0.7.6`**（一版一 tag，回滚 `git checkout v0.7.5`）。
+- **代码基线 `8f1058b`**（= 远端，工作区干净；其后为 HANDOFF 文档提交）；**最新 tag `v0.7.6`**（一版一 tag，回滚 `git checkout v0.7.5`）。
 - 门禁：`flutter analyze` 0 issue；**本机 `flutter test` 269 全过 0 skip**
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`（✅已真机 / 🟡仅门禁 / ⛔占位三种状态标好）。（B 机基线 247 + 6 skip，差在**真实账单样本只在本机**）。
 - 版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
