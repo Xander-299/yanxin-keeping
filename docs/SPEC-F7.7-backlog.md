@@ -135,6 +135,39 @@
 | `lib/features/profile/presentation/profile_page.dart` | 「数据导出」条目接真实入口 |
 | `test/features/export/csv_export_test.dart` **新增** | CSV 转义 / BOM / 金额格式 / 空账本 |
 
+### B.4 实施前置核查 + 待签字裁定（2026-09-23 补，**待签字**）
+
+**前置核查 —— 「零新依赖」成立（已逐项核对源码）**
+
+- `file_picker 12.2.0` 已装，Android 实现 = `android_file_picker 1.1.1`（传递依赖）。
+  `saveFile` 是**静态方法**：`FilePicker.saveFile({required String fileName, required Uint8List bytes, String mimeType})`
+  —— 12.x 起 `fileName` / `bytes` **必填**，且 **没有 `.platform`**（已改为 static）。
+  原生走 **SAF `ACTION_CREATE_DOCUMENT`**，bytes 直写用户选定的 `content://` URI
+  → **不需要任何存储权限**，返回 `Uri?`（**用户取消 = `null`**，按 B.1 第 3 条静默处理）。
+- 取数**全部有现成仓储方法**：`transactionRepository.listByBook(bookId)`（全时间倒序，F7.4 已有）、
+  `accountRepository.listByBook`、`categoryRepository.listByBook`、`bookRepository.getById`。
+  ⚠️ **唯一缺口**：`budgetRepository` **没有** list-by-book → 备份 JSON 的「全量预算」必须**新增**
+  `listByBook(bookId)`（纯只读，**不改 schema**，仍 v2）。
+- 金额格式化直接复用 `core/utils/money.dart` 的 `centsToYuan(cents)`（两位小数、无千分位）。
+
+**待签字裁定（同意则回「B 批按 B.4 默认开工」即可）**
+
+| # | 问题 | 建议默认 |
+|---|---|---|
+| B.4.1 | CSV 金额单位 | **元、两位小数、无符号**（方向由「类型」列表达）；`centsToYuan(cents.abs())` |
+| B.4.2 | `来源` 列取值 | 输出 `transactions.source` **原样英文**（`manual` / `wechat_csv` / `alipay_csv` / …），**不做中文映射** |
+| B.4.3 | 备份 JSON 金额单位 | **整数分**（与库一致、可无损还原；CSV 才是给人看的） |
+| B.4.4 | 备份 JSON 结构 | `{schemaVersion:2, exportedAt:<ISO8601>, book:{…}, accounts:[…], categories:[…], transactions:[…], budgets:[…]}`，字段名与 drift 列名 camelCase 对齐 |
+| B.4.5 | 软删记录 | **不导出**（`deleted_at IS NULL`，与界面口径一致） |
+| B.4.6 | 空账本（0 笔） | **允许导出**：CSV 仅表头 / JSON 空数组，SnackBar「已导出 0 笔到 {文件名}」 |
+| B.4.7 | 入口形式 | 「我的 → 数据导出」`onTap` → `showExportSheet(context)` 底部弹层，**沿用既有 sheet 习惯、不加路由** |
+| B.4.8 | 我的页 `_BrandTip` 已过时（**B.3 漏项，此处补上**） | 现文案「**下一站：数据导出** / Backlog」在 B 批落地后即失真 → 改为「已覆盖：记一笔 → 按月看账 → 导入账单 → 统计 / 预算 / 资产 → **数据导出**」，右下角角标 `Backlog` → `v0.7.8` |
+| B.4.9 | 转账行的列 | `分类` 列留空（`category_id` 为 NULL）；`账户` 列输出该笔 `account_id` 对应账户名（当前 schema 一笔只有一个账户） |
+
+**B.3 文件清单修订（据上）**：追加 —— `lib/data/repositories/budget_repository.dart`（+`listByBook`）、
+`test/data/repositories/budget_repository_test.dart`（**已存在**，只加用例）、
+`lib/features/profile/presentation/profile_page.dart`（除接入入口外，**还要改 `_BrandTip`**）。
+
 ---
 
 ## C. 账户图标 / 颜色选择
