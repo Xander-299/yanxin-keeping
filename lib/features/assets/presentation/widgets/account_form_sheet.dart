@@ -547,6 +547,7 @@ class _FollowTypeChip extends StatelessWidget {
       dy: 2,
       onTap: onTap,
       child: Container(
+        // 不设 alignment：Wrap 的宽松约束下 alignment 会把 Container 撑满整行。
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
         decoration: BoxDecoration(
           color: selected ? Tok.brand : Tok.paper,
@@ -554,8 +555,6 @@ class _FollowTypeChip extends StatelessWidget {
           border: Border.all(color: Tok.ink, width: 2),
           boxShadow: Tok.hard(d: 2.5),
         ),
-        alignment: Alignment.center,
-        height: 40,
         child: Text(
           label,
           style: TextStyle(
