@@ -174,6 +174,13 @@ void main() {
   });
 
   testWidgets('点编辑弹窗外（遮罩）关闭弹窗，账户不变', (WidgetTester tester) async {
+    // ⚠️ 必须用手机竖屏视口。默认 800×600 又宽又矮，而账户表单是**底部弹窗**：
+    //    C 批加了「图标 + 颜色」两块后，弹窗内容高 ≈ 580+ ≈ 整个视口高 →
+    //    弹窗顶边贴到 y=0，遮罩一条缝都不剩，点哪都在弹窗里（点不关，不是 bug）。
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 2.0; // → 逻辑视口 540×1200
+    addTearDown(tester.view.reset);
+
     final db = openTestDatabase();
     await BookRepository(db).ensureDefaultBook();
     addTearDown(db.close);
@@ -184,11 +191,17 @@ void main() {
     await tester.tap(find.text('现金'));
     await tester.pumpAndSettle();
     await pumpUntil(tester, find.text('编辑账户'));
+    // 弹窗确实开出来了（pumpUntil 找不到不会失败，这里补一道硬断言）
+    expect(find.text('编辑账户'), findsOneWidget);
 
     // 遮罩在弹窗上方，点它应关闭弹窗（真机同样行为，不是 bug）
-    // C 批加了图标/颜色两块，弹窗顶边超过了写死的 y=80 → 按弹窗实际顶边算遮罩点
-    final double sheetTop = tester.getTopLeft(find.byType(BottomSheet)).dy;
-    await tester.tapAt(Offset(400, (sheetTop - 20).clamp(0.0, double.infinity)));
+    final Rect sheet = tester.getRect(find.byType(BottomSheet));
+    expect(
+      sheet.top,
+      greaterThan(100),
+      reason: '遮罩区过小：弹窗顶边 y=${sheet.top}、弹窗高 ${sheet.height}（视口 1200 高）',
+    );
+    await tester.tapAt(Offset(sheet.center.dx, sheet.top / 2));
     await tester.pumpAndSettle();
     expect(find.text('编辑账户'), findsNothing);
     expect(find.text('现金'), findsWidgets);
