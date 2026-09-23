@@ -279,9 +279,9 @@
 
 | 门禁 | 结果 |
 |---|---|
-| `flutter analyze` 0 issue | ⚠️ **无法在本会话运行** —— 本机 Dart VM 起不了任何子进程（见下「环境阻塞」）。<br>替代验证：**同一套分析服务器**（`analysis_server_aot.dart.snapshot` 走 LSP，由 Python 托管）→ 见 `工具与替代验证`；<br>另用 `package:analyzer` 进程内诊断：**lib + test 共 114 文件，error 0 / warning 0** |
-| `flutter test` 全绿 0 skip（基线 269，只增不删） | ⚠️ **无法运行**（同因）。新增用例 **+20**（11 纯函数 + 7 widget + 2 A.0），未执行 |
-| 真机走查（MuMu 12 / 900×1600 / 320dpi）阻断 0 | ⚠️ 未走查 |
+| `flutter analyze` 0 issue | ✅ **已达成（等效手段）** —— `python tool/dart_analyze_fallback.py` → **`No issues found!`**（全项目，分析 19s，退出码 0）。见下「等效门禁」。 |
+| `flutter test` 全绿 0 skip（基线 269，只增不删） | ❌ **本机跑不了，且已确认不可替代** —— 新增用例 **+20**（11 纯函数 + 7 widget + 2 A.0）**未执行**。<br>`inheritStdio` 包装器能把 `flutter` 拉起来，但 `flutter_tools` 内部满地 `Process.runSync`（`LocalProcessManager.runSync`）→ 第二层就断。**只能在正常环境跑**。 |
+| 真机走查（MuMu 12 / 900×1600 / 320dpi）阻断 0 | ❌ **未走查** —— 构建链路（`flutter build` → Gradle 插件 → `dart`）同样断在 `flutter_tools`，无法产出含 A 批代码的 APK。**只能在正常环境做**。 |
 
 **环境阻塞（本机 · 2026-09-23）**
 
@@ -289,7 +289,8 @@
   受影响命令：`flutter analyze` / `dart analyze` / `flutter test` / `dart pub get` / `dart run build_runner`。
 - 根因（已定位到 Win32 调用级）：Dart 的 `Process::Start` 在 Windows 上用**命名管道**做 stdio，先建
   `CreateNamedPipe(PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED, nMaxInstances=1)` 再 `CreateFileW(pipe, GENERIC_READ, ...)` 打开客户端。
-  本机**第二步恒返回 `ERROR_PIPE_BUSY (231)`**，而 stdin 管道是第一个被创建的 → **任何 spawn 都在第一步就死**。
+  本机**第二步恒返回 `ERROR_PIPE_BUSY (231)`**，而 stdin 管道是第一个被创建的 → **凡是需要管道 stdio 的 spawn 都在第一步就死**。
+  （**精确边界**：`ProcessStartMode.inheritStdio` 与 `detached` 不建管道，**实测可用**；`normal` / `runSync` 不可用 —— 见下「进程启动模式实测」。）
 - 复现（Python ctypes 直接调 Win32，不经过 Dart）：
 
   | 服务端 access | 客户端 access | 结果 |
@@ -303,19 +304,58 @@
   → **只读语义的管道客户端打开被拒**（`nMaxInstances` 255 无效、`FILE_FLAG_OVERLAPPED` 无关、`dwShareMode` 无关）。
   纯主机行为，**与代码 / 项目无关**；Python 的 `subprocess`（走 `CreatePipe`，无名管道）不受影响，这也是本批替代验证可行的原因。
 - 旁证：`dart.exe`（非本项目的）连 `cmd.exe /c echo` 都起不来；`dangerouslyDisableSandbox` 无效；`schtasks` / WMI 起进程被安全策略拦。
+- **进程启动模式实测**（Dart 脚本内起 `cmd.exe /c echo`，2026-09-23）：
+
+  | `ProcessStartMode` | 结果 | 说明 |
+  |---|---|---|
+  | `inheritStdio` | ✅ 输出正常、`exit=0` | 继承父进程句柄，**不创建命名管道** |
+  | `detached` | ✅ 返回 pid | 无 stdio，同样不建管道 |
+  | `normal`（默认） | ❌ 231 | 需要管道 → 死在第一步 |
+  | `Process.runSync` | ❌ 231 | 同上 |
+
+  → 这意味着**可以**用 inheritStdio 包装器拉起外部命令（已验证能起 `flutter`），
+  但**救不了** `flutter test`：`flutter_tools` 自己那一层用的是 `runSync`。
 - **解除方式（用户侧，任选）**：① 在**自己的 Git Bash 终端**里跑 `source env.sh && fx-qa`（终端不在 WorkBuddy 沙箱内，最可能直接可用）；
   ② 重启 Windows / 重启 WorkBuddy Desktop 后再试；③ 若 WorkBuddy 安全中心可以关闭「文件 / IPC 审计」类拦截，关掉后再试。
 
-**替代验证（脚本属临时产物，不进库）**
+**等效门禁 —— `python tool/dart_analyze_fallback.py`（已入库）**
 
-- `tool/qa_analyze_lsp.py`：用 Python 托管 `dartaotruntime + analysis_server_aot.dart.snapshot`（`--protocol=lsp`），
-  **同一套分析服务器、同一套 `analysis_options.yaml`**，口径与 `flutter analyze` 一致（含 lint）。
-- `tool/analyze_lite.dart`：用 `package:analyzer` 在 `dart.exe` 进程内跑诊断（无子进程）。已据此修掉 3 个真错：
+`dart analyze` 的真实实现就是「起 `dartaotruntime + analysis_server_aot.dart.snapshot` 子进程，
+用 **Dart 原生协议**收诊断」（`package:dartdev/src/commands/analyze.dart` + `analysis_server.dart`）。
+本脚本用 Python 起**同一个 snapshot**、喂**同一套 `analysis_options.yaml`**，
+因此口径（含全部 lint 规则）与 `dart analyze` 一致。
+
+- **结果：`No issues found!`**（整个项目；分析耗时 19s；退出码 0）。
+- **有效性校准（关键，别省）**：临时塞入探针 `lib/_qa_lint_probe.dart`（双引号字符串 + `final int n = 1`），
+  脚本正确报出 `prefer_single_quotes` / `prefer_const_declarations` / `unused_local_variable`（warning 级）
+  → 证明 **lint 规则确实在跑**，而不是「lint 没生效所以 0 issue」。探针已删。
+- **无歧义**：服务器对**干净文件也推空数组**（119 个文件收到推送，其中 116 个是空数组）
+  → 「某文件 0 诊断」是确定结论，而不是「还没分析到」。
+- 过程中还修掉 3 个真错（早前用 `package:analyzer` 进程内诊断抓到的）：
   `report_group_list.dart` 相对路径少一层（`../application/` → `../../application/`）、`home_page.dart` 重复 import、
   `reports_page_test.dart` 的 `_seed` 返回类型不匹配。
 
+**协议三坑（改脚本前必读）**
+
+1. 原生协议在 stdio 上是**行分隔 JSON**（`stdin.writeln(json)` / 按行 `json.loads`），
+   **不是** LSP 的 `Content-Length: N\r\n\r\n` 帧。按帧解析会读到 **0 条消息且不报错**。
+2. `analysis.setAnalysisRoots.included` 必须是 **OS 路径**且**不能有尾斜杠**
+   （有尾斜杠服务器报 `INVALID_FILE_PATH_FORMAT` 且**不回任何响应** → 表现为「挂死」）；传 `file:///…` URI 同样无响应。
+3. 完成信号是 `server.status` 通知里 `analysis.isAnalyzing` **由 true 变 false** —— 不要靠「安静 N 秒」猜。
+
+**已放弃的替代路线（别重走）**
+
+| 路线 | 结果 |
+|---|---|
+| `--protocol=lsp` + Python 托管 | 能跑，但冷启动要解析整个 flutter 依赖图 → **全量 116 文件跑 30min 仍 `converged=False`**；且推送式无法区分「干净」与「未分析」 |
+| `--protocol=analyzer` + `Content-Length` 帧 | ❌ 完全无响应 —— 见上面「协议三坑」第 1 条 |
+| `package:analyzer` 进程内（`tool/analyze_lite.dart`） | 可跑但**抓不到 lint** —— analyzer 10 已把 lint 规则实现移出 analyzer 包（规则在 `package:linter`，是 analyzer 的 dev 依赖）。只能验 error / warning |
+| `inheritStdio` 包装器跑 `flutter test` | ❌ `flutter_tools` 内部大量 `Process.runSync`，第二层就断 |
+| 迷你 `flutter_test` 替身（普通 Dart VM 跑测试） | ❌ 测试经 `core/db/database.dart` 间接依赖 `package:flutter` → 无 `dart:ui` |
+
 **commit / tag**：**`2f6db4c`**（feat(reports): F7.7 A 批 —— 报表明细清单 `/reports` + A.0 记一笔选账户；19 文件 +2400/−98）
-已推 `origin/master`。**tag `v0.7.7` 暂缓** —— 待 `flutter analyze` + `flutter test` + 真机走查三条门禁补齐后再打。
+已推 `origin/master`；文档回写 `67bed1a` 紧随其后。**tag `v0.7.7` 暂缓** —— `flutter analyze` 已用等效手段达成，
+但仍差 **`flutter test`** 与**真机走查**两条（都必须在正常环境跑）→ 补齐后再打。
 
 > 备注：实现过程中还**提前自查修掉 3 处渲染 / 状态风险**（未依赖门禁）——
 > ① `_reload` 不置 `AsyncLoading`（否则 AppBar 月份切换器因 `async.value == null` 整条消失）；

@@ -54,12 +54,20 @@
 - 根因（已定位到 Win32 调用级）：Dart 在 Windows 上用命名管道做 stdio，先
   `CreateNamedPipe(PIPE_ACCESS_OUTBOUND | OVERLAPPED, nMaxInstances=1)` 再
   `CreateFileW(pipe, GENERIC_READ, ...)`；本机第二步恒返回 **ERROR_PIPE_BUSY (231)**，
-  而 stdin 是第一个建的管道 → 任何 spawn 立刻死。复现矩阵（Python ctypes 直调 Win32）：
+  而 stdin 是第一个建的管道 → **凡需要管道 stdio 的 spawn 立刻死**。复现矩阵（Python ctypes 直调 Win32）：
   只读语义的管道客户端打开被拒，`GENERIC_READ|GENERIC_WRITE` 或 `PIPE_ACCESS_INBOUND`+`GENERIC_WRITE` 正常。
   纯主机行为，与项目代码无关。
-- 替代验证：同一套分析服务器（`analysis_server_aot.dart.snapshot` + LSP，由 Python 托管）
-  + `package:analyzer` 进程内诊断（`lib`+`test` 114 文件 **error 0 / warning 0**）。
-- 解除方式见 `HANDOFF.md`「未解决问题」。
+  **边界（2026-09-23 实测）**：`ProcessStartMode.inheritStdio` / `detached` 不建管道、**可用**；
+  `normal` / `Process.runSync` 不可用。
+- **`flutter analyze` 已用等效手段达成**：`python tool/dart_analyze_fallback.py` →
+  **`No issues found!`**（全项目 19s，退出码 0）。原理：`dart analyze` 本身就是
+  「起 `analysis_server_aot.dart.snapshot` 子进程 + Dart 原生协议」，本脚本用 Python 起**同一个 snapshot**、
+  喂**同一套 `analysis_options.yaml`**，故口径一致（含 lint）。已用探针文件校准（能正确报出
+  `prefer_single_quotes` / `prefer_const_declarations`），确认 lint 规则**在线**；
+  服务器对干净文件也推空数组，故「0 诊断」无歧义。
+- **仍跑不了**：`flutter test`（`flutter_tools` 内部大量 `Process.runSync`，`inheritStdio` 包装器
+  救不了第二层）、真机走查（构建链路同上）。
+- 解除方式见 `HANDOFF.md`「未解决问题」；协议三坑见 `docs/SPEC-F7.7-backlog.md` §G。
 
 ## [v0.7.6] — 2026-09-23 · F7.6 卡通浅色视觉改版（P1 + P2 + P3）
 

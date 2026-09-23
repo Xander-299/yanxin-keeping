@@ -247,8 +247,12 @@
 - [x] 口径：`listByMonth` 取数；分类档收支两段 + 转账单列；账户档按 `account_id` 聚合；软删/空 id 归「其他账户」
 - [x] `TxTile` 回调改可空（支持只读行）+ `neutral`（转账行配色）；三处既有调用点行为不变
 - [x] 新增测试 20 例：`report_aggregate_test`（11）/ `reports_page_test`（7）/ `record_account_test`（2）
-- [ ] **门禁未跑通**：analyze / test / 真机走查 —— 环境阻塞（本机 Dart 起不了子进程，命名管道 231）
-- [ ] **tag `v0.7.7` 暂缓**：待三条门禁补齐后把 CHANGELOG `[Unreleased]` 移成 `## [v0.7.7]` + `git tag -a`
+- [x] **`flutter analyze` 0 issue** —— ✅ **等效达成**（2026-09-23）：`python tool/dart_analyze_fallback.py` →
+      `No issues found!`（Python 托管**同一个** `analysis_server_aot.dart.snapshot` + 同一套 `analysis_options.yaml`；
+      已用探针校准确认 lint 规则在线）。原理与协议三坑见 `docs/SPEC-F7.7-backlog.md` §G
+- [ ] **`flutter test` 全绿 0 skip** —— ⏳ **未跑**（预期 **289** = 基线 269 + 本批 20）；本机无替代方案，需正常环境
+- [ ] **真机走查**（MuMu 12 / 900×1600 / 320dpi）**阻断 0** —— ⏳ **未走查**；现有 APK 不含 A 批，需先重建
+- [ ] **tag `v0.7.7` 暂缓**：待上面两条补齐后把 CHANGELOG `[Unreleased]` 移成 `## [v0.7.7]` + `git tag -a`
 - [ ] B 数据导出（待签字）
 - [ ] C 账户图标 / 颜色（待签字）
 - [ ] D 搜索增强（待签字；**动 schema v2→v3**）
