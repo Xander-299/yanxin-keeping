@@ -1,4 +1,4 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；**`v0.7.7` 已打 tag（A 批走查通过）· F7.7 B 批（数据导出）已实现，待用户终端回归 + 真机走查后打 `v0.7.8`**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **`v0.7.8` 已打 tag（F7.7 A/B 两批全交付）· 下一批 = C/D/E 待用户签字**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
 > 最后更新：2026-09-23 17:40 · 更新人：AI 助手（**本机 = A 机**）
@@ -11,8 +11,9 @@
 >   `budget_repository.listByBook(bookId)` 补取数缺口（只读，不改 schema）。
 > - **门禁**：analyze 等效 **0 issue**；新增纯测试 **31 例全绿**（budget +11、csv_export +20，等效工具实测）；
 >   新增 widget 测试 3 例（`export_sheet_test.dart`）本机跑不了 → **用户终端 `flutter test` 预期总数 289 → 315**。
-> - ⏳ 剩项：**仅剩用户终端 `flutter test` 全量回归（预期 315）→ 打 `v0.7.8`**。
->   实施记录详见 `docs/SPEC-F7.7-backlog.md` §G「B 批」。
+> - ✅ **B 批已收尾（2026-09-23 傍晚）**：用户终端 `flutter test` **315 passed / 0 skipped**（达预期）
+>   → CHANGELOG 转 `## [v0.7.8]` → **`v0.7.8` 已打 tag 并推远端**（`08d8362`，`ls-remote --tags` 已核对）。
+>   A / B 两批至此全部交付；**剩余 = C（账户图标/颜色）/ D（搜索增强，动 schema v3）/ E（日历增强）三批待用户签字**。
 > - 🔥 **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：发现 **`flutter build` 撞 231 但
 >   `cd android && ./gradlew assembleDebug` 直连能通**（Java 进程链不吃 Dart 管道；须验 kernel_blob 新鲜度防旧码）——
 >   构建装机走查一条龙全在本机完成，CSV / JSON 两路径全过、无崩溃。已写入 `dart-toolchain-python-fallback` skill。
@@ -257,9 +258,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **F7.7 B 批「数据导出」已实现（本工作区，待提交推送）**：门禁 analyze 等效 ✅ 0 issue + 新增纯测试 31 例全绿 ✅；
-  ⏳ **用户终端 `flutter test` 全量回归（预期 315）+ 真机走查 → 打 `v0.7.8`**。
+- **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
 - **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
+- **下一批 = C / D / E 三批待用户签字**（`docs/SPEC-F7.7-backlog.md`；D 批动 schema v2→v3，签字后需重跑 build_runner）。
 - **门禁（B 批前基线）**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
   `flutter test` ✅ **用户在自己终端已跑通、整个套件全部通过**（2026-09-23 下午；A 批预期 **289 passed / 0 skipped**）。
 - **本机（A 机）代码基线 = `ecf5e09` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC
@@ -281,12 +282,12 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）。
-  tag `v0.7.1`…`v0.7.7` 已推远端，**`v0.7.8` 待 B 批（数据导出）走查后补**。
+  tag `v0.7.1`…`v0.7.8` 已推远端，**`v0.7.9` 待 C 批（待签字）**。
 
 # 未解决问题
 
-> 说明：**最高优先 = F7.7 B 批收尾**（用户终端 `flutter test` 全量回归预期 315 → 真机走查导出两条路径 → 打 `v0.7.8`）；
-> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机**、已由 3 个等效工具绕开；
+> 说明：**最高优先 = C / D / E 三批签字**（B 批已全部交付并打 `v0.7.8`）；
+> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机**、已由 3 个等效工具 + `gradlew` 直连构建绕开；
 > F2 / F5 已裁定保持现状（2026-09-23）。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。

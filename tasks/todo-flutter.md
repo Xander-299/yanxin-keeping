@@ -236,7 +236,7 @@
 - [x] 走查补做：① 账户弹层其实没卡通化（P2 只取色，SPEC 误记「已复核」）；② 资产页 AppBar `+` 换 `ToonIconButton`
 - [x] 版本记录：`v0.7.6` tag + `CHANGELOG.md` 顶部版本规则与 tag 表（F7 阶段一版一 tag）
 
-### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A 已交付（v0.7.7）· B 已实现待收尾 · C–E 待签字**）
+### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A、B 已交付（v0.7.7 / v0.7.8）· C–E 待签字**）
 
 - [x] 小 SPEC 起草（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.11`
 - [x] **A 批签字**（2026-09-23）：A.0 做 / D.5 拼音不做 / E.5 农历不做；且裁定「报表页流水行只读不可点」
@@ -267,7 +267,8 @@
       新增测试 34 例（纯 31 全绿 ✅ 等效实测 + testWidgets 3 本机跑不了）；
       ✅ **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：`gradlew assembleDebug` 直连构建（绕开 231）+ 装 +
       语义树/截图走查，CSV 与 JSON 两路径、SnackBar、取消静默、报表回归全过；
-      ⏳ **仅剩用户终端 `flutter test` 全量回归（预期 315）→ 打 `v0.7.8`**
+      ✅ **全部收尾（2026-09-23）**：`flutter test` 用户终端 **315 passed / 0 skipped**（达预期）+
+      真机走查由 AI 经 adb 全包完成（`gradlew assembleDebug` 直连构建绕开 231）→ **`v0.7.8` 已打 tag 推远端**
 - [ ] C 账户图标 / 颜色（待签字）
 - [ ] D 搜索增强（待签字；**动 schema v2→v3**）
 - [ ] E 日历增强（待签字）

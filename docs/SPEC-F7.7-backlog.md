@@ -275,7 +275,7 @@
 
 ## G. 实施记录
 
-### B 批 —— 数据导出（流水 CSV + 备份 JSON）· 代码 + 测试已落地
+### B 批 —— 数据导出（流水 CSV + 备份 JSON）· ✅ 已交付（`v0.7.8` 已打 tag）
 
 **日期**：2026-09-23 · **签字**：用户确认「全部按 B.4 默认」→ 9 条裁定项全按默认实施 · **状态**：实现完成，analyze ✅ 0 issue，新增 31 例纯测试全绿（`budget_repository_test` +11 = 原 8 新 3、`csv_export_test` +20）；widget 测试 `export_sheet_test.dart`（3 例）本机跑不了，待用户终端 `flutter test` 全量回归（预期总数 289 → **315** = test() 249 + testWidgets 66）
 
@@ -298,7 +298,7 @@
 - `python tool/dart_test_fallback.py csv_export_test budget_repository_test` → **+31 全绿**（21s）。
 - `python tool/data_layer_probe.py --script tool/export_probe.dart` → 探针断言全过。
 - ✅ **真机走查（2026-09-23，AI 经 adb 全包完成**——构建用 `gradlew assembleDebug` 直连绕开本机 Dart 231，已验 kernel_blob 含 B 批代码）：装机 Success → 冷启动无崩溃 → 我的页入口 / `_BrandTip` / `v0.7.8` 角标 ✅ → 弹层两选项 + 脚注 ✅ → **CSV**：SAF 预填名 `颜芯记账_默认账本_20260923.csv`，718B，BOM / CRLF / 表头 / 两位小数 / RFC4180 转义（含逗号备注）/ 来源英文 全对 ✅ → **JSON**：schemaVersion 2、七段结构齐、金额整数分、`budgets` 1 条（`listByBook` 真跑通）✅ → SnackBar「已导出 9 笔到 …」✅ → 取消静默 ✅ → 报表页回归 ✅ → logcat 无崩溃 ✅。证据：`.workbuddy/shots/b0*.png` + `export_test.csv/.json`；设备 `/sdcard/Download/` 留有导出原件。
-- ⏳ 用户终端全量 `flutter test`（本机 flutter test 直连仍撞 231；含 3 例新 testWidgets）→ 之后 **`v0.7.8`**。
+- ✅ 用户终端全量 `flutter test` → **315 passed / 0 skipped**（2026-09-23 傍晚，达预期）→ **`v0.7.8` 已打 tag 推远端**（`08d8362`）。
 
 
 ### A 批 —— 报表明细清单（`v0.7.7`）· ✅ 已交付（`v0.7.7` 已打 tag）
