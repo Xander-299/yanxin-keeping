@@ -4,7 +4,12 @@
 /// **独立记月份**：报表页翻月不带走其它页。
 ///
 /// 取数与首页/日历/统计同一句 `listByMonth`，口径天然一致（软删已过滤）。
+///
+/// 写操作后自动重载：`listen` 数据版本号（见 `core/providers/data_epoch.dart`），
+/// 不用在每个写操作处补一行 `reportsProvider.refresh()`。
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -12,6 +17,7 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/account_providers.dart';
 import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/providers/category_providers.dart';
+import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/features/ledger/application/month_summary.dart';
 
@@ -127,6 +133,15 @@ final reportsProvider = AsyncNotifierProvider<ReportsController, ReportsState>(
 class ReportsController extends AsyncNotifier<ReportsState> {
   @override
   Future<ReportsState> build() async {
+    // 写操作（记一笔 / 删除流水 / 导入账单）成功后都会 bump 版本号 → 这里
+    // 静默重载当前月，**保留用户已选的档位与月份**（`refresh()` 同口径）。
+    //
+    // 用 `listen` 而**不是** `watch`：`watch` 会让 build 重跑，把月份 / 档位
+    // 重置回「当月 + 明细」，等于吞掉用户在报表页翻的月份（SPEC §A.2
+    // 「报表页独立记月份」）。必须放第一个 await 之前，否则事件会丢。
+    ref.listen<int>(dataEpochProvider, (int? previous, int next) {
+      unawaited(refresh());
+    });
     final bookId = await ref.watch(activeBookIdProvider.future);
     if (bookId == null) {
       throw StateError('当前账本未就绪');

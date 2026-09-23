@@ -1,13 +1,19 @@
 /// 报表页 widget 测试：4 处入口、三档切换、展开、转账段、翻月、空态。
+///
+/// 末尾两例锁「写操作后自动刷新」：报表页是**常驻** provider，且会被
+/// `/record` push 在下面，不刷新就会停在旧快照（首次使用验收 F1）。
 library;
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
+import 'package:yanxin/features/reports/presentation/reports_page.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -91,6 +97,48 @@ Future<void> _openFromHeader(WidgetTester tester, AppDatabase db) async {
   await pumpApp(tester, database: db);
   await tester.tap(find.byTooltip('报表'));
   await tester.pumpAndSettle();
+}
+
+/// provider 容器：用来复现「写操作成功」这件事（真实写点落库后 bump 版本号）。
+ProviderContainer _containerOf(WidgetTester tester) =>
+    ProviderScope.containerOf(
+      tester.element(find.byType(ReportsPage)),
+      listen: false,
+    );
+
+/// 写库与重查都是真实异步，`pumpAndSettle` 可能在数据落地前就返回 → 轮询。
+Future<void> _pumpUntil(WidgetTester tester, Finder finder) async {
+  for (int i = 0; i < 40; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  fail('等待超时：$finder');
+}
+
+/// 往默认账本写一笔支出（冷启动空库也可直接调用）。
+Future<void> _addOneTx(
+  AppDatabase db, {
+  required int year,
+  required int month,
+  required int day,
+  required int cents,
+  required String categoryName,
+  required String note,
+}) async {
+  final book = await BookRepository(db).ensureDefaultBook();
+  final cash = (await AccountRepository(db).listByBook(book.id)).first;
+  final Category category =
+      (await CategoryRepository(db).listByBook(book.id, kind: 'expense'))
+          .firstWhere((Category c) => c.name == categoryName);
+  await TransactionRepository(db).create(
+    bookId: book.id,
+    accountId: cash.id,
+    type: 'expense',
+    categoryId: category.id,
+    amountCents: cents,
+    occurredAt: DateTime(year, month, day, 9).millisecondsSinceEpoch,
+    note: note,
+  );
 }
 
 void main() {
@@ -214,5 +262,63 @@ void main() {
     expect(find.text('${now.year}年${now.month}月'), findsOneWidget);
     expect(find.textContaining('笔 · 支出 ¥'), findsWidgets);
     expect(find.text('支出'), findsNothing); // 明细档
+  });
+
+  testWidgets('空月写账（bump 版本号）后 → 报表页自己刷新，且保留当前档位', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+
+    await _openFromHeader(tester, db); // 默认「分类」档
+    expect(find.text('这个月还没有记账'), findsOneWidget);
+
+    final DateTime now = DateTime.now();
+    await _addOneTx(
+      db,
+      year: now.year,
+      month: now.month,
+      day: 5,
+      cents: 3350,
+      categoryName: '餐饮',
+      note: '午餐',
+    );
+    _containerOf(tester).read(dataEpochProvider.notifier).bump();
+
+    await _pumpUntil(tester, find.text('餐饮'));
+    expect(find.text('33.50'), findsOneWidget);
+    expect(find.text('支出'), findsOneWidget); // 仍是「分类」档，没被重置回明细
+    expect(find.text('这个月还没有记账'), findsNothing);
+  });
+
+  testWidgets('翻到上月后写账（bump）→ 刷新但**停在上月**，不弹回当月', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+
+    await _openFromHeader(tester, db);
+    await tester.tap(find.byTooltip('上一月'));
+    await tester.pumpAndSettle();
+
+    final DateTime now = DateTime.now();
+    final DateTime prev = DateTime(now.year, now.month - 1, 1);
+    expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
+    expect(find.text('这个月还没有记账'), findsOneWidget);
+
+    await _addOneTx(
+      db,
+      year: prev.year,
+      month: prev.month,
+      day: 15,
+      cents: 6600,
+      categoryName: '交通',
+      note: '上月打车',
+    );
+    _containerOf(tester).read(dataEpochProvider.notifier).bump();
+
+    await _pumpUntil(tester, find.text('66.00'));
+    expect(find.text('交通'), findsOneWidget);
+    expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
   });
 }

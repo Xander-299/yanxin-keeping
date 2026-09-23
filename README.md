@@ -109,4 +109,6 @@ tag 表与规则见 [`CHANGELOG.md`](CHANGELOG.md) 顶部。
 ## 开发规范
 
 - **首次使用验收**：新增功能、改动入口文案/默认值/授权流程后，重跑 `first-run-acceptance`。
-  规则与验收标准见 [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)（M1/M2 基线报告）。
+  规则、准备条件三分类与复查触发条件见
+  [`docs/acceptance-first-run.md`](docs/acceptance-first-run.md)（F7.7-a 报表页 / 冷启动全链路，含数据层实跑）；
+  M1/M2 基线报告见 [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)。

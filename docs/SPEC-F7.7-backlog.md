@@ -280,7 +280,7 @@
 | 门禁 | 结果 |
 |---|---|
 | `flutter analyze` 0 issue | ✅ **已达成（等效手段）** —— `python tool/dart_analyze_fallback.py` → **`No issues found!`**（全项目，分析 19s，退出码 0）。见下「等效门禁」。 |
-| `flutter test` 全绿 0 skip（基线 269，只增不删） | ❌ **本机跑不了，且已确认不可替代** —— 新增用例 **+20**（11 纯函数 + 7 widget + 2 A.0）**未执行**。<br>`inheritStdio` 包装器能把 `flutter` 拉起来，但 `flutter_tools` 内部满地 `Process.runSync`（`LocalProcessManager.runSync`）→ 第二层就断。**只能在正常环境跑**。 |
+| `flutter test` 全绿 0 skip（基线 269，只增不删） | ❌ **本机跑不了，且已确认不可替代** —— A 批新增用例 **+18**（9 纯函数 + 7 widget + 2 A.0）**未执行**（⚠️ 原文写「+20（11+7+2）」为误记，2026-09-23 静态计数修正：全仓 **289** = 基线 269 + A 批 18 + 首次使用验收 2）。<br>`inheritStdio` 包装器能把 `flutter` 拉起来，但 `flutter_tools` 内部满地 `Process.runSync`（`LocalProcessManager.runSync`）→ 第二层就断。**只能在正常环境跑**。 |
 | 真机走查（MuMu 12 / 900×1600 / 320dpi）阻断 0 | ❌ **未走查** —— 构建链路（`flutter build` → Gradle 插件 → `dart`）同样断在 `flutter_tools`，无法产出含 A 批代码的 APK。**只能在正常环境做**。 |
 
 **环境阻塞（本机 · 2026-09-23）**

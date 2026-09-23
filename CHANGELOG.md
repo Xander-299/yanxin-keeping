@@ -46,6 +46,26 @@
   首页 / 日历 / 搜索三处既有调用点行为不变。
 - **文档**：`docs/SPEC-F7.7-backlog.md` §F 签字表 + §G 实施记录已回写。
 
+### 修复 + 验收 — 首次使用验收（F7.7-a，2026-09-23）
+
+- **修复（阻断级）报表页不随写操作刷新**：`reportsProvider` 是**常驻** provider，且 `/record` 是 push 在
+  报表页**上面**的 → 报表页 State 与 provider 都存活、不重建；而 `ReportsController.refresh()`
+  （注释写着「记一笔 / 删除后刷新用」）**全库零调用** —— 5 个写点都只刷 ledger / calendar / stats。
+  后果：新用户顺着报表空态「去记一笔」记完第一笔，**返回报表仍是「这个月还没有记账」**（三档全空）。
+  现改为 `ReportsController.build()` 里 `ref.listen(dataEpochProvider) → refresh()`：一处覆盖全部写点，
+  且**保留**用户当前档位与月份（不用 `watch` —— `watch` 会让 build 重跑、把月份与档位重置回
+  「当月 + 明细」，等于吞掉 SPEC §A.2「报表页独立记月份」）。
+- **新增测试 2 例**（`reports_page_test.dart` 7 → 9）：空月写账后报表自动刷新且保留档位；翻月后写账仍停在原月。
+- **新增工具 `tool/data_layer_probe.py` + `tool/data_layer_probe.dart`**：`flutter test` 不可用时的数据层实跑 ——
+  把 `lib/` 复制到 `.dart_tool/` 下的临时包、把 `database.dart` 的 drift_flutter 换成内存库，
+  在**纯 Dart VM** 里用真实仓储 + 真实聚合代码跑「冷启动 → 记第一笔 → 首页汇总 → 报表三档 → 边界」，
+  **13/13 断言通过**（内存库，不碰任何真实数据）。
+- **验收报告**：`docs/acceptance-first-run.md`（新建）。结论：D2 运行前缺项通过（A 类前置 0）、
+  D5 不通过（8 处 `加载失败：$e` 无重试）、D6 部分（即上面的阻断项）；另登记 F2（首页报表入口不带月份，
+  **待裁定**）/ F4（「设置」副标题承诺未实现项）/ F5（「全部账单」入口 vs「报表」标题）/ F6（记一笔页返回丢输入）。
+- **文档修正**：A 批新增用例实为 **18** 例（9 纯函数 + 7 widget + 2 A.0），此前文档写「+20（11+7+2）」有误。
+  全仓静态计数 **289** = 基线 269 + A 批 18 + 本次 2 → 门禁预期仍是 **289 passed / 0 skipped**（数字巧合一致）。
+
 ### 已知环境阻塞 — 本机（A 机）Dart 无法创建子进程（2026-09-23）
 
 - 现象：一切 `flutter` / `dart` 子进程启动失败 → `ProcessException: 所有的管道范例都在使用中

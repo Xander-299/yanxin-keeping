@@ -246,17 +246,38 @@
       日历页 header→明细档+月份对齐 / 月份选择页 header→明细档+月份对齐
 - [x] 口径：`listByMonth` 取数；分类档收支两段 + 转账单列；账户档按 `account_id` 聚合；软删/空 id 归「其他账户」
 - [x] `TxTile` 回调改可空（支持只读行）+ `neutral`（转账行配色）；三处既有调用点行为不变
-- [x] 新增测试 20 例：`report_aggregate_test`（11）/ `reports_page_test`（7）/ `record_account_test`（2）
+- [x] 新增测试 **18** 例：`report_aggregate_test`（9）/ `reports_page_test`（7）/ `record_account_test`（2）
+      （⚠️ 2026-09-23 修正：此前写「20 例：11+7+2」是误记，静态计数实为 18）
 - [x] **`flutter analyze` 0 issue** —— ✅ **等效达成**（2026-09-23）：`python tool/dart_analyze_fallback.py` →
       `No issues found!`（Python 托管**同一个** `analysis_server_aot.dart.snapshot` + 同一套 `analysis_options.yaml`；
       已用探针校准确认 lint 规则在线）。原理与协议三坑见 `docs/SPEC-F7.7-backlog.md` §G
-- [ ] **`flutter test` 全绿 0 skip** —— ⏳ **未跑**（预期 **289** = 基线 269 + 本批 20）；本机无替代方案，需正常环境
+- [ ] **`flutter test` 全绿 0 skip** —— ⏳ **未跑**（预期 **289** = 基线 269 + A 批 18 + 首次使用验收 2）；
+      本机无替代方案，需正常环境
 - [ ] **真机走查**（MuMu 12 / 900×1600 / 320dpi）**阻断 0** —— ⏳ **未走查**；现有 APK 不含 A 批，需先重建
 - [ ] **tag `v0.7.7` 暂缓**：待上面两条补齐后把 CHANGELOG `[Unreleased]` 移成 `## [v0.7.7]` + `git tag -a`
 - [ ] B 数据导出（待签字）
 - [ ] C 账户图标 / 颜色（待签字）
 - [ ] D 搜索增强（待签字；**动 schema v2→v3**）
 - [ ] E 日历增强（待签字）
+
+### F7.7-a 首次使用验收（2026-09-23，报告 `docs/acceptance-first-run.md`）
+
+验收对象：零配置新用户「第一次打开 → 记下第一笔账 → 在首页 / 报表看到这笔账被正确归集」。
+手法：数据层**实跑**（`python tool/data_layer_probe.py`，真实仓储 + 真实聚合，内存库，**13/13 断言通过**）
++ UI 层静态走查（本机跑不了 UI）。六维度：D1 通过 / D2 通过（A 类前置 0）/ D3 部分 / D4 通过 /
+**D5 不通过** / D6 部分。
+
+- [x] **F1（阻断）报表页不随写操作刷新** —— 新用户顺着报表空态「去记一笔」记完第一笔，回报表仍显示「这个月还没有记账」
+      （`reportsProvider` 常驻 + `/record` push 在其上；`ReportsController.refresh()` 全库零调用）
+      → 修：`build()` 里 `ref.listen(dataEpochProvider) → refresh()`（保留档位 / 月份，**不用 `watch`**）
+- [x] 新增测试 2 例（`reports_page_test` 7 → 9）：空月写账后自动刷新且保留档位 / 翻月后写账仍停原月
+- [x] 新增工具 `tool/data_layer_probe.py` + `tool/data_layer_probe.dart`（`flutter test` 不可用时的数据层替代）
+- [ ] **F2（卡住 · 待裁定）** 首页 header「报表」与「全部账单 ›」**不带年月** → 报表落到「它自己记得的月份」
+      （日历页 / 月份选择页入口都带）。SPEC §A.2.3 未写这两条
+- [ ] **F3（反馈不可懂）** 8 处 `加载失败：$e` 直出异常字符串、无重试 → 抽 `LoadFailure`，先接首页 / 报表页
+- [ ] **F4（摩擦）**「我的 → 设置」副标题承诺「主题、默认账户、货币单位」但整行不可点（文案 1 行）
+- [ ] **F5（摩擦 · 待裁定）** 入口「全部账单 ›」vs 落地页标题「报表」（SPEC 要求入口文案保持）
+- [ ] **F6（摩擦）** 记一笔页返回即丢已输金额 / 备注（可加 `PopScope` 二次确认）
 
 ### F7.5 剩余项（待排期 · **属新产品功能，须先出小 SPEC 并签字**）
 

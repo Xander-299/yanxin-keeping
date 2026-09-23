@@ -1,4 +1,4 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；**F7.7 A 批已实现，门禁待跑**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅；**F7.7 A 批已实现 + 首次使用验收已做，门禁待跑**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
 > 最后更新：2026-09-23 11:05 · 更新人：AI 助手（**本机 = A 机**）
@@ -11,7 +11,23 @@
 > - ❌ **仍跑不了**：`flutter test`、真机走查（`flutter_tools` 内部满地 `Process.runSync`，包装器救不了）
 >   → 需在正常环境（用户自己终端）跑。
 >
-> **本轮（F7.7 A 批「报表明细清单」，代码 + 测试已落地）**：
+> **本轮（首次使用验收 F7.7-a「零配置新用户能不能独立拿到第一个有效结果」，报告 `docs/acceptance-first-run.md`）**：
+> - 手法：**数据层真跑**（`python tool/data_layer_probe.py` —— 复制 `lib/` 到 `.dart_tool/` 临时包、把
+>   `database.dart` 的 drift_flutter 换成内存库，用**真实仓储 + 真实聚合代码**跑冷启动 → 记第一笔 → 报表三档 → 边界，
+>   **13/13 断言通过**）+ **UI 层静态走查**（逐行读实现，因本机跑不了 UI）。
+> - **结论**：D2 运行前缺项 **通过**（A 类前置 = 0：冷启动 100ms 自动建「默认账本」+ 现金账户 + 15 预置分类）；
+>   D1/D4 通过；**D5 不通过**（8 处 `加载失败：$e` 直出异常、无重试）；D6 部分。
+> - **修掉 1 个阻断级缺陷（F1）**：报表页不随写操作刷新 —— `reportsProvider` 是**常驻** provider 且 `/record`
+>   push 在报表页**上面**，而 `ReportsController.refresh()`（注释写着「记一笔 / 删除后刷新用」）**全库零调用**；
+>   5 个写点都只刷 ledger/calendar/stats。→ 新用户顺着报表空态「去记一笔」记完第一笔，**回报表仍是空态**。
+>   修法：`build()` 里 `ref.listen(dataEpochProvider) → refresh()`（一处覆盖全部写点，且保留档位 / 月份；
+>   **不能用 `watch`** —— 会让 build 重跑并把月份 / 档位重置回「当月 + 明细」）。新增 2 例测试，analyze 等效门禁 0 issue。
+> - 另登记 4 项（未改）：F2 首页两个报表入口**不带年月**（**待裁定**，SPEC §A.2.3 没写）/ F3 失败无重试 /
+>   F4「设置」副标题承诺未实现项 / F5 入口「全部账单」vs 标题「报表」（待裁定）/ F6 记一笔页返回丢输入。
+> - 新增工具 `tool/data_layer_probe.py` + `tool/data_layer_probe.dart`（`flutter test` 不可用时的数据层替代）。
+> - 顺手修正文档误记：**A 批新增用例实为 18**（9+7+2），不是「20」→ 全仓 **289** = 269 + 18 + 2（预期总数不变）。
+>
+> **上一轮（F7.7 A 批「报表明细清单」，代码 + 测试已落地）**：
 > - 用户逐条签了 SPEC 三点：**A.0 做（按 SPEC）** / **D.5 拼音不做** / **E.5 农历不做**；
 >   另裁定 SPEC 内部冲突：**报表页流水行只读、不可点**（按 A.4，不做长按删除）。
 > - 已实现：**A.0 记一笔支持选账户**（第 4 个 `ToonField`「账户」+ 底部弹层，默认仍首个账户）；
@@ -233,7 +249,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端**（`2f6db4c`），工作区只剩两个临时目录（`.qa-probe/`、`tool/`，未入库）；tag `v0.7.1`…`v0.7.6` 已推远端，**`v0.7.7` 待补**。
+- **本机 = 远端**（`2f6db4c`，随后 `bd65f21`）；`.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`；
+  工作区现在只有两个**已入库**的门禁替代工具：`tool/dart_analyze_fallback.py`（analyze）+ `tool/data_layer_probe.py`（数据层实跑）。
+  tag `v0.7.1`…`v0.7.6` 已推远端，**`v0.7.7` 待补**。
 
 # 未解决问题
 
@@ -281,17 +299,36 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      ③ 完成信号 = `server.status` 的 `analysis.isAnalyzing` 由 true → false。详见 `docs/SPEC-F7.7-backlog.md` §G。
    - ❌ **`flutter test` / 构建 / 真机走查无替代方案** —— `flutter_tools` 内部满地 `Process.runSync`，
      `inheritStdio` 包装器救不了第二层（堆栈见 `flutter_08.log`）。**只能在正常环境跑**。
-2. 【**待补门禁 + 待打 tag**】F7.7 **A 批**代码与测试已落地 → **`v0.7.7` 暂缓**：
-   - ✅ `flutter analyze` 0 issue：**已等效达成**（`python tool/dart_analyze_fallback.py` → `No issues found!`）。
-   - ⏳ `flutter test` 全绿 0 skip：**未跑**。**基线 269，本批 +20**（11 纯函数 + 7 页面 widget + 2 A.0）→ 预期 **289**。
+2. 【**待补门禁 + 待打 tag**】F7.7 **A 批** + 本轮首次使用验收的修复已落地 → **`v0.7.7` 暂缓**：
+   - ✅ `flutter analyze` 0 issue：**已等效达成**（`python tool/dart_analyze_fallback.py` → `No issues found!`；
+     本轮改动后复跑仍是 0 issue）。
+   - ⏳ `flutter test` 全绿 0 skip：**未跑**。**基线 269 + A 批 18**（9 纯函数 + 7 页面 widget + 2 A.0）
+     **+ 本轮 2**（报表刷新）→ 全仓静态计数 **289**，预期 **289 passed / 0 skipped**。
+     ⚠️ 之前文档写「A 批 +20（11 纯函数 + 7 widget + 2 A.0）」是**误记**，实为 18（总数预期不变，仍 289）。
      本机跑不了（见第 1 条），**需在正常环境跑**。
    - ⏳ 真机走查（MuMu 12 / 900×1600 / 320dpi）**阻断 0**：**未走查**，且现有 APK 不含 A 批 → 需先重新构建。
      5 条路径 —— 首页 header「报表」→**分类档**；首页「全部账单 ›」→**明细档**；日历页 header→明细档 + 核对月份；
      月份选择页 header→明细档 + 核对月份；再核对空态 / 翻月 / 展开 / **A.0 记一笔选账户**。
+     **外加本轮 F1 的动作**：报表空态 →「去记一笔」→ 保存 → 回报表应**立刻看到**那笔（修复前是仍显示空态）。
    - 后两条补齐后：把 `CHANGELOG.md` 的 `[Unreleased]` 内容移成 `## [v0.7.7]` 段 + tag 表补一行 → `git tag -a v0.7.7` → `git push && git push --tags`。
 3. 【已并入 A 批并**已实现**】**报表** 4 处「建设中」占位 → 现已全部接真实入口（首页 header / 首页 `全部账单 ›` /
    日历页 header / 月份选择页 header）。实现细节见 `docs/SPEC-F7.7-backlog.md` §G。
 4. 【低】日历页在**横屏/矮窗口**下需滚动才能看到当日账单（竖屏真机不用）—— 属预期行为，除非要专门为横屏排一版布局。
+5. 【**本轮首次使用验收**（F7.7-a）】报告 `docs/acceptance-first-run.md`：数据层 **实跑 13/13 断言**（真实仓储 + 真实聚合，
+   内存库）+ UI 层静态走查。六维度：D2 通过（**A 类前置 = 0**，冷启动 100ms 自带账本 / 现金账户 / 15 预置分类）、
+   D5 不通过、D6 部分。遗留：
+   - **已修（阻断级 F1）**：报表页不随写操作刷新 —— 新用户顺着报表空态「去记一笔」记完第一笔，回报表仍是空态。
+     修法：`ReportsController.build()` 里 `ref.listen(dataEpochProvider) → refresh()`（`watch` 会把月份 / 档位重置回当月 + 明细）。
+     加了 2 例测试；analyze 等效门禁 0 issue；**UI 未验证**（本机跑不了）。
+   - 【**待裁定**】F2：首页 header「报表」与「全部账单 ›」**不带年月** → 报表落到「它自己记得的月份」
+     （日历页 / 月份选择页的入口都带）。SPEC §A.2.3 没写这两条，故不擅自改。
+     要改就动 `home_page.dart`：`_Header` 改 `ConsumerWidget`、`_SectionHeader` 加 `year/month` 两个参数。
+   - 【待办】F3：8 处 `加载失败：$e` 直出异常字符串、无重试（核心路径 2 处：`home_page.dart:51`、`reports_page.dart:63`）
+     → 抽 `LoadFailure`（人话 + 重试按钮）。
+   - 【待办】F4：「我的 → 设置」副标题承诺「主题、默认账户、货币单位」但整行不可点（纯文案 1 行）。
+   - 【待裁定】F5：入口「全部账单 ›」vs 落地页 AppBar 标题「报表」（SPEC 要求入口文案保持）。
+   - 【待办】F6：记一笔页返回即丢已输金额 / 备注（可加 `PopScope` 二次确认）。
+   - 数据层实跑入口（`flutter test` 不可用时的替代）：`python tool/data_layer_probe.py`。
 
 **F7.6 P3 轮已清掉的旧待办**：
 
