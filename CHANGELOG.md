@@ -22,6 +22,38 @@
 | `v0.7.9` | F7.7 C 批 账户图标 / 颜色选择（schema v3）+ widget 测试视口修复 | 本段所在提交 |
 | `v0.7.10` | F7.7 D 批 搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批 日历增强（长按记账 / 左右滑翻月） | 本段所在提交 |
 
+## [Unreleased] · F7.8 流水左滑删除
+
+> **诉求**：删除入口原是**长按**（无视觉提示，且与日历页「长按空格子记一笔」语义撞车）→ 用户要求改为**左滑**。
+> **三项裁定（2026-09-25，详见 `docs/SPEC-F7.8-swipe-delete.md` §7）**：
+> ① **长按取消**、只留左滑；② **滑出红色「删除」按钮 → 点按钮才删**（不采用「滑走即删」）；
+> ③ 作用范围 = **首页 + 日历日账单 + 搜索结果** 3 处（报表页流水行仍只读）。
+> **不动 schema、零新依赖**（手写滑动件，不引 `flutter_slidable`）。
+> 门禁：analyze 等效 **0 issue** ✅；⏳ `flutter test` 待用户终端全量（预期 **371** = 361 + 10，其中 `testWidgets` +5 本机跑不了）。
+
+### 新增
+
+- **左滑露出删除按钮**：新通用件 `lib/features/ledger/presentation/widgets/swipe_action_row.dart`
+  （`SwipeActionRow` + 纯函数 `resolveSwipeOpen`）。行内容**只向左移**，右侧钉一个 84px 红色动作区
+  （白垃圾桶图标 + 「删除」）；松手按「行程 ≥ 45% **或** 向左甩 ≥ 350 px/s」吸附开合，动画 160 ms。
+- **单开协调**：同一列表同时只允许一行展开 —— 滑开另一行、或点已展开的行任意处 → 当前行收起。
+- **3 处接入**：首页「本月账单」（`TxGroupList`）、日历页选中日账单（`_SelectedDaySection`）、
+  搜索浮层结果（走 `TxGroupList`）。
+
+### 变更
+
+- **长按删除移除**：`TxTile` 不再有 `onLongPress`（长按**保留**给日历格子「记这一天的账」，不受影响）。
+- 删除确认框**不变**：仍走既有 `confirmDeleteTx`（「删除这笔」）—— 取消 = 行回弹、数据不动。
+
+### 测试
+
+- **改 2 例**（原长按口径 → 左滑口径）：`test/widget_test.dart`「左滑删除 → 列表消失回到空态」、
+  `test/features/search/search_overlay_test.dart`「左滑结果可删」。确认框里的「删除」改用
+  `find.widgetWithText(ToonButton, '删除')` 区分（动作区的那个是裸 `Text`）。
+- **新增 10 例**（`test/features/ledger/swipe_action_test.dart`）：`resolveSwipeOpen` 纯函数 5
+  （行程不足 / 过半 / 甩速 / 反向 / 宽度为 0）+ 行行为 5（左滑触发 action 并自动收起 /
+  未滑开点行走 child onTap / 滑开后点行收起且不跳编辑 / 多行只开一行 / `enabled=false` 纯展示）。
+
 ## [v0.7.10] — 2026-09-25 · F7.7 D 批（搜索增强）+ E 批（日历增强）
 
 > **门禁全闭合**：`flutter analyze` 等效 **0 issue** ✅；`flutter test` **361 passed / 0 skipped**
