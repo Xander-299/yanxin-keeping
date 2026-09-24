@@ -1,7 +1,7 @@
 // F4 冒烟 + M1 等价关键路径（UI 层）。
 //
 // 冷启动/持久化/账本隔离等 DB 层语义已在 test/core/db、test/data/repositories 覆盖；
-// 这里验证「点得动」：记一笔 → 列表出现 → 编辑 → 长按删除。
+// 这里验证「点得动」：记一笔 → 列表出现 → 编辑 → 左滑删除。
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -64,7 +64,7 @@ void main() {
     expect(find.text('12.00'), findsOneWidget); // hero 支出
   });
 
-  testWidgets('长按删除 → 列表消失回到空态', (WidgetTester tester) async {
+  testWidgets('左滑删除 → 列表消失回到空态', (WidgetTester tester) async {
     final db = openTestDatabase();
     final book = await BookRepository(db).ensureDefaultBook();
     final cat = (await CategoryRepository(db).listByBook(book.id, kind: 'expense')).first;
@@ -86,15 +86,19 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('-1.00'), findsNWidgets(2)); // hero 结余 + 列表金额
 
-    // 长按删除（长按列表里的分类名，避开 hero 上的同文本金额）
+    // F7.8：删除入口 = **左滑**（长按已移除）。滑列表里的分类名，避开 hero 上的金额。
     // 视口 800×600 下列表项会被预算卡挤出屏幕 → 必须先滚进可视区，否则
-    // longPress 落空（"would not hit test"）。
+    // drag 落空（"would not hit test"）。
     await tester.ensureVisible(find.text(cat.name));
     await tester.pumpAndSettle();
-    await tester.longPress(find.text(cat.name));
+    await tester.drag(find.text(cat.name), const Offset(-200, 0));
     await tester.pumpAndSettle();
-    // F7.6 起删除确认框用 ToonButton（胶囊按钮），不再是 TextButton
+
+    // 动作区的「删除」此刻唯一（确认框还没弹）→ 直接点它
     await tester.tap(find.text('删除'));
+    await tester.pumpAndSettle();
+    // 确认框里的「删除」是 ToonButton（动作区那个是裸 Text，用 widgetWithText 区分）
+    await tester.tap(find.widgetWithText(ToonButton, '删除'));
     await tester.pumpAndSettle();
     await pumpUntil(tester, find.textContaining('还没有记账'));
 

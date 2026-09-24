@@ -18,6 +18,7 @@ import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
+import 'package:yanxin/features/ledger/presentation/widgets/swipe_action_row.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/tx_delete_dialog.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/tx_group_list.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
@@ -285,7 +286,10 @@ class _SummaryItem extends StatelessWidget {
 }
 
 /// 选中日期的账单区：日期头 + 账单列表 / 空态。
-class _SelectedDaySection extends StatelessWidget {
+///
+/// F7.8：删除入口改为**左滑露出按钮**，单开协调器由本 State 持有
+/// （与首页 `TxGroupList` 同一套 [SwipeActionRow] 口径）。
+class _SelectedDaySection extends StatefulWidget {
   const _SelectedDaySection({
     required this.state,
     required this.categoryNameOf,
@@ -296,10 +300,27 @@ class _SelectedDaySection extends StatelessWidget {
   final CalendarState state;
   final String Function(String?) categoryNameOf;
   final ValueChanged<TxRow> onEdit;
-  final ValueChanged<TxRow> onDelete;
+
+  /// 点左滑动作区后执行（内部弹确认框）；Future 完成即收起该行。
+  final Future<void> Function(TxRow) onDelete;
+
+  @override
+  State<_SelectedDaySection> createState() => _SelectedDaySectionState();
+}
+
+class _SelectedDaySectionState extends State<_SelectedDaySection> {
+  /// 当前展开（左滑露出删除按钮）的行 id —— 单开协调器。
+  final ValueNotifier<String?> _openRow = ValueNotifier<String?>(null);
+
+  @override
+  void dispose() {
+    _openRow.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final CalendarState state = widget.state;
     final DateTime day = DateTime(state.year, state.month, state.selectedDay);
     final List<TxRow> items = state.selectedItems;
     final int dayExpenseCents = items
@@ -358,11 +379,18 @@ class _SelectedDaySection extends StatelessWidget {
                   Column(
                     children: <Widget>[
                       if (i > 0) const ToonDashedLine(),
-                      TxTile(
-                        tx: items[i],
-                        categoryName: categoryNameOf(items[i].categoryId),
-                        onTap: () => onEdit(items[i]),
-                        onLongPress: () => onDelete(items[i]),
+                      SwipeActionRow(
+                        key: ValueKey<String>('swipe-${items[i].id}'),
+                        rowId: items[i].id,
+                        openRow: _openRow,
+                        onAction: () => widget.onDelete(items[i]),
+                        child: TxTile(
+                          tx: items[i],
+                          categoryName: widget.categoryNameOf(
+                            items[i].categoryId,
+                          ),
+                          onTap: () => widget.onEdit(items[i]),
+                        ),
                       ),
                     ],
                   ),

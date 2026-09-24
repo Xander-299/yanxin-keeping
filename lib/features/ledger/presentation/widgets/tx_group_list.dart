@@ -6,6 +6,8 @@
 /// F7.7 D 批追加 [highlightQuery]（可选）：搜索浮层传入关键词后，
 /// 命中子串（分类名 / 备注 / 金额）标 `Tok.brandTint2` 底色；
 /// 其余页面不传 → 渲染与原来完全一致。
+///
+/// F7.8 起删除入口 = **左滑露出按钮**（[SwipeActionRow]），长按删除已移除。
 library;
 
 import 'package:flutter/material.dart';
@@ -16,6 +18,7 @@ import '../../../../core/theme/toon.dart';
 import '../../../../core/utils/date.dart';
 import '../../../../core/utils/highlight.dart';
 import '../../../../core/utils/money.dart';
+import 'swipe_action_row.dart';
 
 /// 命中子串的底色（浅琥珀）。只覆盖背景，字色 / 字重全部继承外层样式。
 const TextStyle _hitStyle = TextStyle(backgroundColor: Tok.brandTint2);
@@ -57,7 +60,10 @@ Text _highlightText(
 ///
 /// [categoryNameOf] 由外层按 categoryId 查名字；查不到时退回「未分类」。
 /// [shrinkWrap] 为 true 时（首页嵌入滚动视图）不自己滚动、去掉底部留白。
-class TxGroupList extends StatelessWidget {
+///
+/// F7.8：删除入口由「长按」改为**左滑露出删除按钮**（[SwipeActionRow]）；
+/// 同一时刻只允许一行展开（本 State 持协调器）。
+class TxGroupList extends StatefulWidget {
   const TxGroupList({
     super.key,
     required this.items,
@@ -71,19 +77,38 @@ class TxGroupList extends StatelessWidget {
   final List<TxRow> items;
   final String Function(String? categoryId) categoryNameOf;
   final ValueChanged<TxRow> onEdit;
-  final ValueChanged<TxRow> onDelete;
+
+  /// 点左滑动作区后执行（内部弹「删除这笔」确认框）；Future 完成即收起该行。
+  final Future<void> Function(TxRow) onDelete;
+
   final bool shrinkWrap;
 
   /// 非空 → 命中子串高亮（搜索浮层用）。
   final String? highlightQuery;
 
   @override
+  State<TxGroupList> createState() => _TxGroupListState();
+}
+
+class _TxGroupListState extends State<TxGroupList> {
+  /// 当前展开（左滑露出删除按钮）的行 id —— 单开协调器。
+  final ValueNotifier<String?> _openRow = ValueNotifier<String?>(null);
+
+  @override
+  void dispose() {
+    _openRow.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final groups = groupByDay<TxRow>(items, (TxRow t) => t.occurredAt);
+    final groups = groupByDay<TxRow>(widget.items, (TxRow t) => t.occurredAt);
     return ListView.builder(
-      padding: EdgeInsets.only(bottom: shrinkWrap ? 0 : 96),
-      shrinkWrap: shrinkWrap,
-      physics: shrinkWrap ? const NeverScrollableScrollPhysics() : null,
+      padding: EdgeInsets.only(bottom: widget.shrinkWrap ? 0 : 96),
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.shrinkWrap
+          ? const NeverScrollableScrollPhysics()
+          : null,
       itemCount: groups.length,
       itemBuilder: (BuildContext context, int index) {
         final group = groups[index];
@@ -104,12 +129,19 @@ class TxGroupList extends StatelessWidget {
                     Column(
                       children: <Widget>[
                         if (i > 0) const ToonDashedLine(),
-                        TxTile(
-                          tx: group.items[i],
-                          categoryName: categoryNameOf(group.items[i].categoryId),
-                          highlightQuery: highlightQuery,
-                          onTap: () => onEdit(group.items[i]),
-                          onLongPress: () => onDelete(group.items[i]),
+                        SwipeActionRow(
+                          key: ValueKey<String>('swipe-${group.items[i].id}'),
+                          rowId: group.items[i].id,
+                          openRow: _openRow,
+                          onAction: () => widget.onDelete(group.items[i]),
+                          child: TxTile(
+                            tx: group.items[i],
+                            categoryName: widget.categoryNameOf(
+                              group.items[i].categoryId,
+                            ),
+                            highlightQuery: widget.highlightQuery,
+                            onTap: () => widget.onEdit(group.items[i]),
+                          ),
                         ),
                       ],
                     ),
@@ -166,14 +198,14 @@ class _GroupChip extends StatelessWidget {
 
 /// 单条流水。
 ///
-/// [onTap] / [onLongPress] 传空 = **只读行**（报表页用：只展示，不进编辑、不删）。
+/// [onTap] 传空 = **只读行**（报表页用：只展示，不进编辑、不删）。
+/// 删除入口不在这里 —— F7.8 起由外层的 [SwipeActionRow] 左滑露出按钮。
 class TxTile extends StatelessWidget {
   const TxTile({
     super.key,
     required this.tx,
     required this.categoryName,
     this.onTap,
-    this.onLongPress,
     this.neutral = false,
     this.highlightQuery,
   });
@@ -181,7 +213,6 @@ class TxTile extends StatelessWidget {
   final TxRow tx;
   final String categoryName;
   final VoidCallback? onTap;
-  final VoidCallback? onLongPress;
 
   /// 转账行：不算收支方向 → 金额用次级灰、不带 ± 号（SPEC-F7.7 §A.3 口径）。
   final bool neutral;
@@ -203,7 +234,6 @@ class TxTile extends StatelessWidget {
       dx: 0,
       dy: 0,
       onTap: onTap,
-      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(

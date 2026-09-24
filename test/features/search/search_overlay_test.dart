@@ -393,7 +393,7 @@ void main() {
     expect(find.byKey(_inputKey), findsNothing);
   });
 
-  testWidgets('长按结果可删：删完只剩空结果提示，且库里已软删', (
+  testWidgets('左滑结果可删：删完只剩空结果提示，且库里已软删', (
     WidgetTester tester,
   ) async {
     final db = openTestDatabase();
@@ -403,12 +403,17 @@ void main() {
     await _openSearch(tester, db);
     await _type(tester, '打车');
 
-    await tester.longPress(_inOverlay(find.text('-12.00')));
+    // F7.8：删除入口 = 左滑（长按已移除）→ 滑出右侧动作区
+    await tester.drag(_inOverlay(find.text('-12.00')), const Offset(-200, 0));
+    await tester.pumpAndSettle();
+
+    // 此刻动作区的「删除」是浮层内唯一一个（确认框还没弹）
+    await tester.tap(_inOverlay(find.text('删除')));
     await tester.pumpAndSettle();
     expect(find.text('删除这笔'), findsOneWidget);
 
-    // F7.6 起删除确认框用 ToonButton（胶囊按钮），不再是 TextButton
-    await tester.tap(find.text('删除'));
+    // 确认框里的「删除」是 ToonButton（动作区那个是裸 Text，用 widgetWithText 区分）
+    await tester.tap(find.widgetWithText(ToonButton, '删除'));
     await tester.pumpAndSettle();
 
     expect(_inOverlay(find.text('没有匹配「打车」的账单')), findsOneWidget);
