@@ -21,7 +21,18 @@ agent_created: true
 | 项目目录 | `D:\Tencent\yanxin-flutter` | `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master` |
 
 公共：包名 `com.teacodeman.yanxin`；adb 端口 `16384`（另有 `7555`，等价），设备名 `127.0.0.1:16384`；
-抓取脚本 `.workbuddy/ui_dump.py`；装包前先有 APK：`flutter build apk --debug`。
+抓取脚本 `.workbuddy/ui_dump.py`；**装包前必须有 APK —— 本机构建不能用 `flutter build`，命令见下**：
+
+```bash
+# ⚠️ `flutter build apk` 与 `cd android && ./gradlew assembleDebug` 在本机都会撞
+#    `CreateFile failed 231`（`:app:compileFlutterBuildDebug` 内部是 flutter.bat → dart → frontend_server）。
+#    可行路径 = Python 起 frontend_server 产 kernel + 让 Gradle 跳过那条必挂的 Dart 链：
+source env.sh
+"$PY" tool/build_kernel_fallback.py                       # 产出并核验 kernel_blob.bin（sha256）
+( cd android && ./gradlew assembleDebug -x compileFlutterBuildDebug )
+# 装机前**必做**：从 APK 里读 assets/flutter_assets/kernel_blob.bin，比对 sha256 与盘上一致
+# + grep 本次新增文案 → 否则可能把上一版 APK 装上去，看到「改了没用」而误判代码。
+```
 
 ```bash
 export PATH="/usr/bin:/bin:$PATH"          # 本环境 bash 偶尔丢 PATH，先补
@@ -138,6 +149,14 @@ sleep 7
     再用 `xml.etree` 打印 `class / text / bounds / 中心`（`EditText` 就取它自己的 bounds）。
     注意 `uiautomator` **不裁视口**：报出的 bounds 可能落在屏幕外，`input tap` 过去等于点空。
 
+15. **模拟长按 = `input swipe x y x y 800`**（起终点同坐标 + 时长 800ms）。想「收键盘但别提交」时
+    **不要用 `keyevent 111`（ESC）** —— 实测会把整个 `showModalBottomSheet` 关掉（白干一轮）。
+    `input text` 通常不会拉起软键盘，输完直接点保存即可；弹层位置也不会因键盘上移。
+16. **后台任务有 ~15 分钟上限**：全量纯测试（`tool/dart_test_fallback.py`，40 个文件）实测跑到
+    **15m03s 就被掐断**，输出停在 `[29/40]`、**没有 `---- 汇总 ----` 行**（且状态仍报 completed，极易误以为「跑完了」）。
+    判据：最后一行不是汇总行 = 没跑完。对策：**分批跑**（如只跑本次改动的文件），或把输出
+    `> 日志文件` 落盘再看，别指望一次拿到全量结论。
+
 ## 视觉对拍：原型定点截图（F7.6 起必做）
 
 改 UI 后要和页面原型并排比对。原型 `D:\new file\modao\yanxin\` 是**单页应用、没有 URL 路由**
@@ -225,11 +244,17 @@ EOF
 你会看到「改了没用 / 修了还是老的」并开始怀疑代码。判定与做法：
 
 ```bash
-source env.sh && flutter build apk --debug          # 只有一个输出才继续
+source env.sh
+"$PY" tool/build_kernel_fallback.py                                    # 先产 kernel（见「环境常量」节说明）
+( cd android && ./gradlew assembleDebug -x compileFlutterBuildDebug )  # 只有一个输出才继续
 "$ADB" -s emulator-5554 install -r -t build/app/outputs/flutter-apk/app-debug.apk   # 必须看到 Success
 "$ADB" -s emulator-5554 shell am force-stop com.teacodeman.yanxin
 "$ADB" -s emulator-5554 shell am start -n com.teacodeman.yanxin/.MainActivity
 ```
+
+另外**务必先核验 APK 里装的是新码**（装完再怀疑代码就晚了）：从 APK 里读出
+`assets/flutter_assets/kernel_blob.bin`，比对它的 sha256 与 `build/app/intermediates/flutter/debug/flutter_assets/kernel_blob.bin`
+一致，并 `grep` 一个本次新增的文案串。踩过两次：一次是 Gradle 增量没重打包、一次是 kernel 没重生成。
 
 判据：安装输出必须是 `Success`；截图里应能看到本次改动的最显著视觉特征。
 （2026-09-19 实际踩过：设备上还是 P1 的 APK，日历空态看着没改，其实代码早改了。）
