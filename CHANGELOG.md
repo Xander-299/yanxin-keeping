@@ -20,18 +20,23 @@
 | `v0.7.7` | F7.7 A 批 报表明细清单 `/reports`（含 A.0 记一笔选账户 + 4 处占位点亮）+ 首次使用验收 F1 阻断修复 | `2f6db4c` / `47e1bf6` |
 | `v0.7.8` | F7.7 B 批 数据导出（流水 CSV + 备份 JSON，SAF 免权限；真机走查 AI 经 adb 全包完成） | 本段所在提交 |
 | `v0.7.9` | F7.7 C 批 账户图标 / 颜色选择（schema v3）+ widget 测试视口修复 | 本段所在提交 |
+| `v0.7.10` | F7.7 D 批 搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批 日历增强（长按记账 / 左右滑翻月） | 本段所在提交 |
 
-## [Unreleased] · F7.7 D 批（搜索增强）+ E 批（日历增强）
+## [v0.7.10] — 2026-09-25 · F7.7 D 批（搜索增强）+ E 批（日历增强）
 
+> **门禁全闭合**：`flutter analyze` 等效 **0 issue** ✅；`flutter test` **361 passed / 0 skipped**
+> （用户终端全量，2026-09-25；= `test()` 287 + `testWidgets` 74，本批新增 **+32**）。
+> **真机走查（MuMu 12）由 AI 经 adb 全包完成** ✅：高亮暖黄底 / 账户名命中 / 历史 chip 一点即搜 /
+> 只点「本月」= `共 5 笔 支出 286.88 · 本月` / 长按 9月10日 → 记一笔页日期 `2026年9月10日` /
+> 左滑 9月→10月、右滑回退且日列表同步、竖向未误翻月 → `logcat -b crash` **0 崩溃**，
+> 记录见 `docs/acceptance-F7.7-DE.md`。
+> 标签日 = 2026-09-25；**回滚**：`git checkout v0.7.9`。
+>
 > **本批不动 schema**（⚠️ 又一处 SPEC 前提修正）：§D.3 原计划新建 `app_meta` KV 表并把 schema
 > 推到 v4，但 `schema_meta`（`key` + `value`）本来就是 PRD 登记的 KV 元数据表，
 > `docs/SPEC-F7.3-budget.md` §3 也把它列为「零迁移」备选 → **复用现有表，schema 仍是 v3**。
 > 另一处：§E.1 写「`/record?date=YYYY-MM-DD`」，实际约定是**毫秒**（`app.dart` 里
 > `int.tryParse(queryParameters['date'])` → `occurredAtMs`）→ 按毫秒传。
-> 门禁：analyze 等效 **0 issue** ✅；测试计数 **361**（287 `test()` + 74 `testWidgets`，本次 **+32**）——
-> 改动的纯测试本机实测全绿 ✅（search 三文件 54 例），**全量以用户终端 `flutter test` 为准**
-> （本机跑不了 `testWidgets`）；
-> 真机走查（MuMu 12，AI 经 adb 全包）**通过**，走查记录见 `docs/acceptance-F7.7-DE.md`。
 > ⚠️ 走查抓到 1 个**真 bug**（搜索快照过期，见「修复」段）——D 批新增的「账户名命中」正好踩在它上面。
 
 ### 新增
