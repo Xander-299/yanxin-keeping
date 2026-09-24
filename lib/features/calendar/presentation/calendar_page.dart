@@ -59,6 +59,16 @@ class CalendarPage extends ConsumerWidget {
                         selectedDay: state.selectedDay,
                         onSelectDay: (int day) =>
                             ref.read(calendarProvider.notifier).selectDay(day),
+                        // F7.7 E 批：长按某天 → 直接记这一天的账（顺带把那天选中，
+                        // 回来就能看到刚记的那笔）；左右滑动 → 翻月
+                        onLongPressDay: (DateTime day) {
+                          ref.read(calendarProvider.notifier).selectDay(day.day);
+                          context.push(
+                            '/record?date=${day.millisecondsSinceEpoch}',
+                          );
+                        },
+                        onShiftMonth: (int delta) =>
+                            ref.read(calendarProvider.notifier).shiftMonth(delta),
                       ),
                     ),
                     // 网格与月结余卡之间不再另加间距：原型是 `.day` 的 2px 外边距
@@ -415,7 +425,7 @@ class _EmptyDay extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           const Text(
-            '点右侧按钮会带上这一天作为默认日期',
+            '长按日历里任意一天，也能直接记这一天的账',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12.5,

@@ -11,6 +11,7 @@ import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
+import 'package:yanxin/features/calendar/presentation/widgets/month_grid.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 
 import '../../helpers/pump_app.dart';
@@ -239,5 +240,87 @@ void main() {
     expect(rows.first.amountCents, 500);
     // 3 月的账不该出现在 9 月
     expect(await TransactionRepository(db).listByMonth(book.id, 2026, 9), isEmpty);
+  });
+
+  // ===== F7.7 E 批：长按快速记一笔 / 左右滑动翻月 =====
+
+  testWidgets('长按日历某天 → 直接进「记一笔」并带上该日期（E 批）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await BookRepository(db).ensureDefaultBook();
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    final int day = otherDay();
+    await tester.longPress(find.text('$day'));
+    await tester.pumpAndSettle();
+
+    // 直接落在记一笔页，日期 = 长按那天（毫秒口径，与空态「记一笔」按钮一致）
+    expect(find.text('日期'), findsOneWidget);
+    final DateTime now = DateTime.now();
+    expect(find.textContaining('${now.year}年${now.month}月$day日'), findsOneWidget);
+  });
+
+  testWidgets('月历左滑 → 下一个月；右滑 → 上一个月（E 批）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await BookRepository(db).ensureDefaultBook();
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    final DateTime now = DateTime.now();
+    final DateTime next = DateTime(now.year, now.month + 1);
+    final DateTime prev = DateTime(now.year, now.month - 1);
+
+    // 左滑（阈值 = 1/3 格宽 ≈ 40dp，这里给 260）
+    await tester.drag(find.byType(MonthGrid), const Offset(-260, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('${next.year}年${next.month}月'), findsOneWidget);
+
+    // 右滑回本月
+    await tester.drag(find.byType(MonthGrid), const Offset(260, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('${now.year}年${now.month}月'), findsOneWidget);
+
+    // 再右滑 = 上一个月
+    await tester.drag(find.byType(MonthGrid), const Offset(260, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
+  });
+
+  testWidgets('滑不够阈值不翻月；竖向滑动仍然滚动页面（不吃竖向手势）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await BookRepository(db).ensureDefaultBook();
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    final DateTime now = DateTime.now();
+    final String header = '${now.year}年${now.month}月';
+
+    // 只滑 10dp（< 1/3 格宽）→ 不动
+    await tester.drag(find.byType(MonthGrid), const Offset(-10, 0));
+    await tester.pumpAndSettle();
+    expect(find.text(header), findsOneWidget);
+
+    // 竖向拖动 = 外层 SingleChildScrollView 滚动（网格上移），且月份不变
+    final double before = tester.getTopLeft(find.byType(MonthGrid)).dy;
+    await tester.drag(find.byType(MonthGrid), const Offset(0, -120));
+    await tester.pumpAndSettle();
+    final double after = tester.getTopLeft(find.byType(MonthGrid)).dy;
+    expect(after, lessThan(before), reason: '竖向滑动必须仍能滚动页面');
+    expect(find.text(header), findsOneWidget);
   });
 }
