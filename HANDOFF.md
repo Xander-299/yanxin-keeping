@@ -723,8 +723,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   命中 = 分类名 / **账户名** / 备注 / 金额子串 + 类型指令「仅支出 / 仅收入 / 转账」+ **时间区间（全部 / 本月 / 近3月）**；
   命中处高亮（`core/utils/highlight.dart`）；历史 10 条落 `schema_meta` KV。
   ⚠️ `searchProvider` **必须 watch `dataEpochProvider`**，否则「刚记一笔 / 刚加账户后再搜搜不到」（老 bug，已修）。
-- 视觉：**全站卡通浅色一套主题**（原型 `D:
-ew file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，
+- 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，
   通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
 - 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.9`。
 - **下一步（只剩一件）**：**等用户在自己的 Git Bash 终端跑 `source env.sh && fx-test`（预期 361）→ 通过后打 `v0.7.10` 并收尾**
