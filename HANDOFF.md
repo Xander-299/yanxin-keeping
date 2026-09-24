@@ -1,10 +1,11 @@
 # HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.9` 已打 tag；D/E 待用户终端回归后打 `v0.7.10`）**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-25 03:30 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-25 03:40 · 更新人：AI 助手（**本机 = A 机**）
 >
 > **本轮（交接固化 —— D/E 批已实现 + 走查通过 ✅ · backlog 五批清零 · 只剩「用户终端全量回归 → 打 `v0.7.10`」）**：
-> - 代码 / 文档 / tag 全部就位：`origin/master` = **`de04841`**（D → E → 快照修复 → 构建工具 → 文档回写），工作区干净。
+> - 代码 / 文档 / tag 全部就位：功能代码基线 = **`de04841`**（D → E → 快照修复 → 构建工具），
+>   交接文档提交在 `de04841` 之后（**别记哈希**，用 `git log --oneline -3` 查），工作区干净。
 > - ✅ analyze 等效 **0 issue**；✅ 真机走查（MuMu 12，AI 经 adb 全包）**通过、0 崩溃**（记录 `docs/acceptance-F7.7-DE.md`）。
 > - ⏳ **唯一剩项 = 用户在 Git Bash 终端跑 `flutter test`（预期 361 passed / 0 skipped）→ 回报后打 `v0.7.10` 并做发布收尾**。
 >
@@ -170,7 +171,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-25 · F7.7 D/E 批）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **用户终端最近一次全绿 = 329**（2026-09-24，C 批收尾时），本批 **+32** → ⏳ **预期 361 passed / 0 skipped（待用户终端复跑确认）**；真机走查 ✅ **已完成**（D/E 批，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 287/287 实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤，配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）。 |
-| git | 本机**代码基线** = **`de04841`** = `origin/master`（F7.7 A/B/C/D/E 五批 + F1 修复 + 四个等效工具均已入库）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.9`**（`v0.7.10` **待用户终端全量回归后打**；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| git | **功能代码基线** = **`de04841`**；交接文档提交在 `de04841` 之后（**本文件自身也在提交，别记哈希**）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.9`**（`v0.7.10` **待用户终端全量回归后打**；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
 | 源码规模 | `lib/` **83** 个 `.dart`，`test/` **43** 个 `.dart`（其中 **12** 个文件含 `testWidgets`），`tool/` **7** 个脚本（4 个等效 / 验证工具 + 3 个 `.dart` 辅助）；用例静态计数 **361** = `test()` 287 + `testWidgets` 74；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -310,7 +311,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 # 当前状态
 
 - **F7.7 D 批（搜索增强）+ E 批（日历增强）已实现 + 走查通过**（测试计数 **361** = `test()` 287 + `testWidgets` 74，本批 +32；
-  提交线 `bce6305`（D）→ `cfe17ff`（E）→ `04c2bfd`（快照修复）→ `27689a2`（构建工具 + skill）→ `de04841`（文档回写）= **`origin/master`**）。
+  提交线 `bce6305`（D）→ `cfe17ff`（E）→ `04c2bfd`（快照修复）→ `27689a2`（构建工具 + skill）→ `de04841`（文档回写）+ 其后的交接文档提交 = **`origin/master`**）。
   ⏳ **`v0.7.10` 待用户终端 `flutter test` 回归（预期 361）后打**。
   ⚠️ **本批不动 schema**（SPEC §D.3 的「新建 `app_meta` 表 + schema 2→3」两处前提都不成立 → 复用既有
   `schema_meta` KV）；§E.1 的 `date` 参数实际约定是**毫秒**。
@@ -426,7 +427,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      `assets/flutter_assets/kernel_blob.bin` 的 sha256 与盘上一致 + grep 本次新增文案（防「装到旧包」）。
      细节见 `docs/acceptance-F7.7-DE.md` 文末。**2026-09-24 D/E 批走查即用这条路完成装机。**
 2. 【**唯一剩项 · 等用户终端全量 `flutter test` → 打 `v0.7.10`**】F7.7 D/E 批实现 + 走查通过已全部落地
-   （`origin/master` = `de04841`，工作区干净）：
+   （功能代码基线 `de04841`，交接文档提交在其后，工作区干净）：
    - ✅ `flutter analyze`：**已闭合** 0 issue（`python tool/dart_analyze_fallback.py` → `No issues found!`）。
    - ✅ **真机走查：已闭合**（2026-09-24，MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）——
      D 批：高亮暖黄底 / 账户名命中 / 历史 chip 一点即搜 / 只点「本月」= `共 5 笔 支出 286.88 · 本月`；
@@ -703,7 +704,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.7 五批（A 报表明细 → B 数据导出 → C 账户图标·颜色 → D 搜索增强 → E 日历增强）全部已签字 + 已实现 + 已走查**：
   `v0.7.7` / `v0.7.8` / `v0.7.9` 已打 tag；**D + E 合并的 `v0.7.10` ⏳ 待用户终端全量回归后打**。
   **DB schema = v3**（v2 加 budgets、v3 加 `accounts.icon` / `accounts.color`）；**D 批零迁移**（复用既有 `schema_meta` KV）。
-- **代码基线 = `de04841` = `origin/master`**（工作区干净）；**最新 tag `v0.7.9`**。
+- **功能代码基线 = `de04841`**（交接文档提交在其后）；**最新 tag `v0.7.9`**。
 - ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（`CreateFile failed 231` / `process_win.cc:744`）
   → `flutter analyze / test / pub / build_runner` / **构建** 在本机直连全废。**别怀疑代码、别换 Dart 版本、别开 `dangerouslyDisableSandbox`**。
   四个等效工具（已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
