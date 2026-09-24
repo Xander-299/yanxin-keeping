@@ -77,6 +77,35 @@
 2. **滑出红色「删除」按钮 → 点按钮才删** —— 不采用「滑走即删」，也不采用「滑到底弹确认框」。
 3. **作用范围 = 首页 + 日历日账单 + 搜索结果 3 处** —— 口径一致；报表页保持只读。
 
-## 8. 实施记录（实现后回填）
+## 8. 实施记录（2026-09-25）
 
-（待填）
+**实现**（提交 `8d8dc8e`）
+
+- 新增 `lib/features/ledger/presentation/widgets/swipe_action_row.dart`：
+  `SwipeActionRow`（`Stack` + 右侧钉住的 84 px 动作区 + `Transform.translate` 左移内容 +
+  `AnimationController` 160 ms 吸附）+ 顶层纯函数 `resolveSwipeOpen`；
+  单开靠外层传进来的 `ValueNotifier<String?>`；展开时行本体 `IgnorePointer`，
+  整行点击落到外层的「收起」上。
+- `TxGroupList` → `StatefulWidget`（持单开协调器）；每行包 `SwipeActionRow`；
+  `onDelete` 类型由 `ValueChanged<TxRow>` 改为 `Future<void> Function(TxRow)`（动作完成即收起）。
+- `calendar_page.dart` 的 `_SelectedDaySection` → `StatefulWidget`，同款接入。
+- `TxTile` 摘掉 `onLongPress`（长按仍保留给 `MonthGrid` 的「记这一天的账」）。
+- 报表页 `report_group_list.dart` **未改**（不传回调 → 不包 `SwipeActionRow`）。
+
+**门禁**
+
+- `flutter analyze` 等效（`python tool/dart_analyze_fallback.py`）：**No issues found** ✅。
+- 测试：**改 2 例**（`widget_test.dart`、`search_overlay_test.dart` 的长按用例 → 左滑口径）
+  + **新增 10 例**（`test/features/ledger/swipe_action_test.dart`：`resolveSwipeOpen` 5 + 行行为 5）
+  → 本机纯 `test()` 5 例实测全绿；含 `testWidgets` 的全量 **371** 待用户终端确认。
+
+**真机走查** —— `docs/acceptance-F7.8-swipe-delete.md`（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
+
+- **SPEC §2 的 D1–D7 全部通过**；0 崩溃。
+- 🔴 **抓到 1 个只有真机能发现的视觉 bug**：`TxTile` 自身没有背景色（白来自外层白卡），
+  而动作区钉在 `Stack` 底层 → **未滑开时红色直接透出行**。修法：行包 `ColoredBox(color: Tok.paper)`。
+- ⚠️ 环境坑：装包后立即注入 adb 输入可能不生效（tap/swipe 无反应但 UI 正常）→
+  `am force-stop` 重启 App 即恢复，**非代码问题**。
+- 走查造的 2 笔软删已还原（改库前备份 `yanxin.sqlite.bak-20260925`），重启复核数据一致。
+
+**版本**：收尾后打 tag **`v0.7.11`**（沿用递增；F7.7 五批已占 `v0.7.7`–`v0.7.10`）。

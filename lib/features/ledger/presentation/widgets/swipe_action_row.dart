@@ -181,7 +181,13 @@ class _SwipeActionRowState extends State<SwipeActionRow>
               Transform.translate(
                 offset: Offset(-_dx, 0),
                 // 展开时行本体不接手势 → 整行点击落到外层的「收起」上
-                child: IgnorePointer(ignoring: open, child: child),
+                child: IgnorePointer(
+                  ignoring: open,
+                  // 行必须自带**不透明**底：`TxTile` 本身没有背景色（白是外层卡片给的），
+                  // 否则 Stack 底层的红色动作区会「透」过行露出来 —— 未滑开就能看到一条红。
+                  // 真机走查抓到（第一版漏了这层，见 `docs/acceptance-F7.8-swipe-delete.md`）。
+                  child: ColoredBox(color: Tok.paper, child: child),
+                ),
               ),
             ],
           );

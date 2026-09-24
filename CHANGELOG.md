@@ -29,7 +29,10 @@
 > ① **长按取消**、只留左滑；② **滑出红色「删除」按钮 → 点按钮才删**（不采用「滑走即删」）；
 > ③ 作用范围 = **首页 + 日历日账单 + 搜索结果** 3 处（报表页流水行仍只读）。
 > **不动 schema、零新依赖**（手写滑动件，不引 `flutter_slidable`）。
-> 门禁：analyze 等效 **0 issue** ✅；⏳ `flutter test` 待用户终端全量（预期 **371** = 361 + 10，其中 `testWidgets` +5 本机跑不了）。
+> 门禁：analyze 等效 **0 issue** ✅；**真机走查（MuMu 12，AI 经 adb 全包）通过** ✅，
+> 记录见 `docs/acceptance-F7.8-swipe-delete.md`；⏳ `flutter test` 待用户终端全量
+> （预期 **371** = 361 + 10，其中 `testWidgets` +5 本机跑不了）。
+> ⚠️ 走查抓到 1 个**只有真机能发现的视觉 bug**（见「修复」段）：未滑开时红色动作区透过行露出来。
 
 ### 新增
 
@@ -39,6 +42,14 @@
 - **单开协调**：同一列表同时只允许一行展开 —— 滑开另一行、或点已展开的行任意处 → 当前行收起。
 - **3 处接入**：首页「本月账单」（`TxGroupList`）、日历页选中日账单（`_SelectedDaySection`）、
   搜索浮层结果（走 `TxGroupList`）。
+
+### 修复
+
+- **未滑开时红色动作区透过行露出来**（真机走查抓到，**只有真机能发现**）：`TxTile` 自身没有背景色
+  （行的白由外层白卡 `Container(decoration: cardDeco())` 提供），而 `SwipeActionRow` 的 `Stack` 底层
+  钉着红色动作区 → 透明的行把红底直接透出来，视觉上像「已经滑开了」。
+  修法：`Transform.translate` 内给行包一层 `ColoredBox(color: Tok.paper)`（`swipe_action_row.dart`）。
+  widget 测试断言的是结构 / 行为，看不出「颜色透过」，故这条只能靠真机走查。
 
 ### 变更
 
