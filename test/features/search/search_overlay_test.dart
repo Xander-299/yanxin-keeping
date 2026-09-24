@@ -12,10 +12,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
+import 'package:yanxin/data/repositories/app_meta_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
 import 'package:yanxin/features/ledger/presentation/home_page.dart';
+import 'package:yanxin/features/search/application/search_history.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 
 import '../../helpers/pump_app.dart';
@@ -101,6 +103,14 @@ Future<void> _type(WidgetTester tester, String keyword) async {
   await tester.pumpAndSettle();
 }
 
+/// 等异步写库 + provider 重建到位（写库是真实异步，`pumpAndSettle` 可能抢先返回）。
+Future<void> _pumpDb(WidgetTester tester) async {
+  for (var i = 0; i < 20; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('首页搜索图标 → 覆盖式浮层：输入框 + 引导态（不列全部流水）', (
     WidgetTester tester,
@@ -112,7 +122,7 @@ void main() {
     await _openSearch(tester, db);
 
     expect(find.byKey(_inputKey), findsOneWidget);
-    expect(_inOverlay(find.text('输入分类、备注或金额开始搜索')), findsOneWidget);
+    expect(_inOverlay(find.text('输入分类、账户、备注或金额开始搜索')), findsOneWidget);
     // 未输入时浮层里不出现任何流水、也不显示清空按钮
     expect(_inOverlay(find.text('-88.88')), findsNothing);
     expect(find.byKey(_clearKey), findsNothing);
@@ -258,7 +268,7 @@ void main() {
 
     final TextField field = tester.widget<TextField>(find.byKey(_inputKey));
     expect(field.controller?.text, isEmpty);
-    expect(_inOverlay(find.text('输入分类、备注或金额开始搜索')), findsOneWidget);
+    expect(_inOverlay(find.text('输入分类、账户、备注或金额开始搜索')), findsOneWidget);
   });
 
   testWidgets('类型筛选 + 关键词 = 交集', (WidgetTester tester) async {
@@ -312,7 +322,7 @@ void main() {
 
     final TextField field = tester.widget<TextField>(find.byKey(_inputKey));
     expect(field.controller?.text, isEmpty);
-    expect(_inOverlay(find.text('输入分类、备注或金额开始搜索')), findsOneWidget);
+    expect(_inOverlay(find.text('输入分类、账户、备注或金额开始搜索')), findsOneWidget);
     expect(find.byKey(_clearKey), findsNothing);
     expect(_inOverlay(find.text('-12.00')), findsNothing);
   });
@@ -330,7 +340,7 @@ void main() {
     // F7.6 P3 起清空入口是卡通胶囊按钮（不再是 TextButton）
     await tester.tap(find.widgetWithText(ToonButton, '清空输入'));
     await tester.pumpAndSettle();
-    expect(_inOverlay(find.text('输入分类、备注或金额开始搜索')), findsOneWidget);
+    expect(_inOverlay(find.text('输入分类、账户、备注或金额开始搜索')), findsOneWidget);
   });
 
   testWidgets('点关闭按钮 → 浮层收起，回首页（数据无变化）', (WidgetTester tester) async {
@@ -372,7 +382,7 @@ void main() {
     await _seed(db);
 
     await _openSearch(tester, db);
-    expect(_inOverlay(find.text('输入分类、备注或金额开始搜索')), findsOneWidget);
+    expect(_inOverlay(find.text('输入分类、账户、备注或金额开始搜索')), findsOneWidget);
 
     // 真机曾在此挂掉：引导态原本用 SingleChildScrollView，Scrollable 以 opaque
     // 命中整块下方区域 → 点空白无反应。改成 Align 后空白可穿透。
@@ -408,4 +418,139 @@ void main() {
     expect(rows.map((t) => t.note), isNot(contains('打车')));
     expect(rows, hasLength(2));
   });
+
+  // ===== F7.7 D 批：账户名命中 / 时间区间 / 搜索历史 / 高亮 =====
+
+  testWidgets('按账户名搜：账户名也能命中流水（D 批）', (WidgetTester tester) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await _seed(db);
+
+    await _openSearch(tester, db);
+    // _seed 用的都是默认账本自带的「现金」账户 → 三笔全命中
+    await _type(tester, '现金');
+
+    expect(_inOverlay(find.text('共 3 笔')), findsOneWidget);
+  });
+
+  testWidgets('区间 chips：默认「全部」，点「本月」后结果条标区间且上月流水搜不到', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await _seed(db);
+
+    await _openSearch(tester, db);
+    // 默认选中「全部」
+    expect(
+      tester
+          .widget<ToonChip>(find.byKey(const ValueKey<String>('search-range-全部')))
+          .selected,
+      isTrue,
+    );
+
+    // 只选区间、不输关键词 → 直接出本月结果（不是引导态）
+    await tester.tap(find.byKey(const ValueKey<String>('search-range-本月')));
+    await tester.pumpAndSettle();
+    expect(_inOverlay(find.text('共 2 笔')), findsOneWidget);
+    expect(_inOverlay(find.text('· 本月')), findsOneWidget);
+    expect(_inOverlay(find.text('输入分类、账户、备注或金额开始搜索')), findsNothing);
+
+    // 「打车」发生在上月 → 本月区间内搜不到，空态点明「只搜本月」
+    await _type(tester, '打车');
+    expect(_inOverlay(find.text('没有匹配「打车」的账单')), findsOneWidget);
+    expect(_inOverlay(find.textContaining('只搜「本月」')), findsOneWidget);
+
+    // 换回「全部」→ 又能搜到
+    await tester.tap(find.byKey(const ValueKey<String>('search-range-全部')));
+    await tester.pumpAndSettle();
+    expect(_inOverlay(find.text('共 1 笔')), findsOneWidget);
+    expect(_inOverlay(find.text('-12.00')), findsOneWidget);
+  });
+
+  testWidgets('近 3 月：三条数据都在窗口内（含上月）', (WidgetTester tester) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await _seed(db);
+
+    await _openSearch(tester, db);
+    await tester.tap(find.byKey(const ValueKey<String>('search-range-近3月')));
+    await tester.pumpAndSettle();
+
+    expect(_inOverlay(find.text('共 3 笔')), findsOneWidget);
+    expect(_inOverlay(find.text('-12.00')), findsOneWidget);
+  });
+
+  testWidgets('命中高亮：金额里的 88 被标底色，分类名命中同样高亮（D 批）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await _seed(db);
+
+    await _openSearch(tester, db);
+    await _type(tester, '88');
+
+    // 结果行金额改成 Text.rich 后，find.text 仍按 toPlainText 匹配 → 断言串不变
+    expect(_inOverlay(find.text('-88.88')), findsOneWidget);
+    // 至少有一段带底色的 span（= 命中子串确实被高亮了）
+    final Iterable<RichText> rich = tester.widgetList<RichText>(
+      _inOverlay(find.byType(RichText)),
+    );
+    expect(
+      rich.any((RichText t) => _highlightCount(t.text) > 0),
+      isTrue,
+      reason: '关键词 88 的命中子串应当有高亮底色的 span',
+    );
+  });
+
+  testWidgets('搜索历史：回车记入 → chip 出现 → 点它能搜 → 可一键清空（D 批）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await _seed(db);
+
+    await _openSearch(tester, db);
+    await _type(tester, '餐饮');
+    // 回车 / 键盘「搜索」键 = 提交，记进历史（写库异步 → 等一拍）
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await _pumpDb(tester);
+
+    // 清空输入回到引导态 → 历史 chip 出现
+    await tester.tap(find.byKey(_clearKey));
+    await _pumpDb(tester);
+    expect(_inOverlay(find.text('最近搜过')), findsOneWidget);
+    final Finder historyChip = find.byKey(
+      const ValueKey<String>('search-history-餐饮'),
+    );
+    expect(historyChip, findsOneWidget);
+
+    // 点历史 chip → 关键词回到输入框并出结果
+    await tester.tap(historyChip);
+    await tester.pumpAndSettle();
+    expect(_inOverlay(find.text('共 2 笔')), findsOneWidget);
+
+    // 清空输入 + 清空历史 → 历史块消失，KV 行也删掉
+    await tester.tap(find.byKey(_clearKey));
+    await _pumpDb(tester);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('search-history-clear')),
+    );
+    await _pumpDb(tester);
+    expect(_inOverlay(find.text('最近搜过')), findsNothing);
+    expect(historyChip, findsNothing);
+    expect(await AppMetaRepository(db).get(kSearchHistoryKey), isNull);
+  });
+}
+
+/// 数一数 `TextSpan` 树里带高亮底色的段数（>0 即「确实高亮了」）。
+int _highlightCount(InlineSpan span) {
+  var count = 0;
+  span.visitChildren((InlineSpan child) {
+    final TextStyle? style = child.style;
+    if (style?.backgroundColor != null) count++;
+    return true;
+  });
+  return count;
 }

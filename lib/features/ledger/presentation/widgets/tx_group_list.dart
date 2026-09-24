@@ -2,6 +2,10 @@
 ///
 /// 视觉对齐页面原型 `.list` + `.group-label`：分组是贴着的小气泡贴纸，
 /// 列表是白卡描边 + 硬阴影，组内条目之间用虚线分隔。
+///
+/// F7.7 D 批追加 [highlightQuery]（可选）：搜索浮层传入关键词后，
+/// 命中子串（分类名 / 备注 / 金额）标 `Tok.brandTint2` 底色；
+/// 其余页面不传 → 渲染与原来完全一致。
 library;
 
 import 'package:flutter/material.dart';
@@ -10,7 +14,44 @@ import '../../../../core/db/database.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/toon.dart';
 import '../../../../core/utils/date.dart';
+import '../../../../core/utils/highlight.dart';
 import '../../../../core/utils/money.dart';
+
+/// 命中子串的底色（浅琥珀）。只覆盖背景，字色 / 字重全部继承外层样式。
+const TextStyle _hitStyle = TextStyle(backgroundColor: Tok.brandTint2);
+
+/// 把 [text] 按 [query] 的命中区间切成 spans；无命中时返回单段（等价普通文本）。
+///
+/// 始终返回 `Text.rich`：`find.text` 走 `textSpan.toPlainText()`，断言串不受影响。
+Text _highlightText(
+  String text, {
+  required TextStyle style,
+  String? query,
+  int? maxLines,
+  TextOverflow? overflow,
+}) {
+  final List<MatchRange> hits = query == null
+      ? const <MatchRange>[]
+      : highlightRanges(text, query);
+  if (hits.isEmpty) {
+    return Text(text, style: style, maxLines: maxLines, overflow: overflow);
+  }
+  final List<InlineSpan> spans = <InlineSpan>[];
+  var cursor = 0;
+  for (final MatchRange r in hits) {
+    if (r.start > cursor) {
+      spans.add(TextSpan(text: text.substring(cursor, r.start)));
+    }
+    spans.add(TextSpan(text: text.substring(r.start, r.end), style: _hitStyle));
+    cursor = r.end;
+  }
+  if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
+  return Text.rich(
+    TextSpan(style: style, children: spans),
+    maxLines: maxLines,
+    overflow: overflow,
+  );
+}
 
 /// 按天分组的流水列表。
 ///
@@ -24,6 +65,7 @@ class TxGroupList extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.shrinkWrap = false,
+    this.highlightQuery,
   });
 
   final List<TxRow> items;
@@ -31,6 +73,9 @@ class TxGroupList extends StatelessWidget {
   final ValueChanged<TxRow> onEdit;
   final ValueChanged<TxRow> onDelete;
   final bool shrinkWrap;
+
+  /// 非空 → 命中子串高亮（搜索浮层用）。
+  final String? highlightQuery;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +107,7 @@ class TxGroupList extends StatelessWidget {
                         TxTile(
                           tx: group.items[i],
                           categoryName: categoryNameOf(group.items[i].categoryId),
+                          highlightQuery: highlightQuery,
                           onTap: () => onEdit(group.items[i]),
                           onLongPress: () => onDelete(group.items[i]),
                         ),
@@ -129,6 +175,7 @@ class TxTile extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.neutral = false,
+    this.highlightQuery,
   });
 
   final TxRow tx;
@@ -139,6 +186,9 @@ class TxTile extends StatelessWidget {
   /// 转账行：不算收支方向 → 金额用次级灰、不带 ± 号（SPEC-F7.7 §A.3 口径）。
   final bool neutral;
 
+  /// 非空 → 分类名 / 备注 / 金额里的命中子串标底色（搜索浮层用，见 [TxGroupList]）。
+  final String? highlightQuery;
+
   @override
   Widget build(BuildContext context) {
     final bool isIncome = tx.type == 'income';
@@ -148,6 +198,7 @@ class TxTile extends StatelessWidget {
         ? Tok.ink2
         : (isIncome ? Tok.green : Tok.red);
     final String sign = neutral ? '' : (isIncome ? '+' : '-');
+    final String amountText = '$sign${centsToYuan(tx.amountCents)}';
     return ToonPress(
       dx: 0,
       dy: 0,
@@ -172,8 +223,9 @@ class TxTile extends StatelessWidget {
                 textBaseline: TextBaseline.alphabetic,
                 children: <Widget>[
                   Flexible(
-                    child: Text(
+                    child: _highlightText(
                       categoryName,
+                      query: highlightQuery,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
@@ -183,8 +235,9 @@ class TxTile extends StatelessWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       flex: 2,
-                      child: Text(
+                      child: _highlightText(
                         tx.note,
+                        query: highlightQuery,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -199,8 +252,9 @@ class TxTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              '$sign${centsToYuan(tx.amountCents)}',
+            _highlightText(
+              amountText,
+              query: highlightQuery,
               style: TextStyle(
                 color: amountColor,
                 fontSize: 15.5,

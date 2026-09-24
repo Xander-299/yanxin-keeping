@@ -27,6 +27,7 @@ import 'package:yanxin/features/ledger/presentation/widgets/tx_group_list.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/search_controller.dart';
+import '../application/search_history.dart';
 import '../application/search_query.dart';
 
 /// 单次展示的结果上限：超出只显示最近 N 条（列表太长反而不好找）。
@@ -62,6 +63,12 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   final TextEditingController _input = TextEditingController();
   final FocusNode _focus = FocusNode();
 
+  /// 日期区间档（F7.7 D 批）：默认「全部」。
+  ///
+  /// 与类型词不同，区间**不进输入框**（没有对应的可解析指令词，写进去只会让
+  /// `parsePlan` 把它当普通关键词 → 恒搜不到），改为浮层单选状态 + chip 高亮可见。
+  SearchRange _range = SearchRange.all;
+
   @override
   void initState() {
     super.initState();
@@ -91,6 +98,24 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   /// 一键清空：清掉输入并重新聚焦，可以马上接着敲下一个关键词。
   void _clear() => _setKeyword('');
 
+  /// 记一条搜索历史（只记关键词；纯类型词 / 空串不记，见 `search_history.dart`）。
+  void _remember(String raw) {
+    final String keyword = stripTypeWords(raw).trim();
+    if (keyword.isEmpty) return;
+    unawaited(ref.read(searchHistoryProvider.notifier).remember(keyword));
+  }
+
+  /// 点历史词：填进输入框 + 提前到历史最前（最近用过的排前面）。
+  void _pickHistory(String keyword) {
+    _setKeyword(keyword);
+    _remember(keyword);
+  }
+
+  void _pickRange(SearchRange range) {
+    if (_range == range) return;
+    setState(() => _range = range);
+  }
+
   /// 点类型 chip：已选中的再点 = 取消；否则换成该类型，剩余关键词原样保留。
   ///
   /// 词是**真的填进输入框**（SPEC Q1）：条件始终可见、可编辑、可一键清空，
@@ -112,6 +137,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   void _close() => Navigator.of(context).maybePop();
 
   Future<void> _edit(TxRow tx) async {
+    // 点了结果 = 这次搜索有用 → 记进历史（与回车、点历史 chip 同一套触发点）
+    _remember(_input.text);
     await context.push('/record', extra: tx.id);
     if (!mounted) return;
     // 编辑可能改到金额 / 分类 / 备注，回来必须重查
@@ -170,9 +197,12 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                   controller: _input,
                   focusNode: _focus,
                   plan: plan,
+                  range: _range,
                   onClose: _close,
                   onClear: _clear,
                   onToggleType: _toggleType,
+                  onPickRange: _pickRange,
+                  onSubmit: _remember,
                 ),
                 Expanded(
                   child: async.when(
@@ -180,7 +210,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                         const Center(child: CircularProgressIndicator()),
                     error: (Object e, StackTrace _) =>
                         Center(child: Text('加载失败：$e')),
-                    data: (SearchState state) => _buildResults(state, plan),
+                    data: (SearchState state) =>
+                        _buildResults(state, plan, _range),
                   ),
                 ),
               ],
@@ -191,19 +222,35 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
     );
   }
 
-  Widget _buildResults(SearchState state, SearchPlan plan) {
-    // 未输入：给引导而不是「列出全部流水」
-    if (plan.isEmpty) {
-      return _Intro(onPick: _setKeyword);
+  Widget _buildResults(SearchState state, SearchPlan plan, SearchRange range) {
+    final List<String> history =
+        ref.watch(searchHistoryProvider).value ?? const <String>[];
+
+    // 没有任何条件（无类型词 / 无关键词 / 区间=全部）：给引导而不是「列出全部流水」
+    if (!hasAnyFilter(plan, range)) {
+      return _Intro(
+        history: history,
+        onPick: _setKeyword,
+        onPickHistory: _pickHistory,
+        onClearHistory: () =>
+            ref.read(searchHistoryProvider.notifier).clear(),
+      );
     }
 
+    final String keyword = plan.text;
     final List<TxRow> hits = filterTx(
       items: state.items,
       categoryNameOf: state.nameOf,
+      accountNameOf: state.nameOfAccount,
       query: _input.text,
+      range: range,
     );
     if (hits.isEmpty) {
-      return _NoResult(keyword: _input.text.trim(), onClear: _clear);
+      return _NoResult(
+        keyword: _input.text.trim(),
+        range: range,
+        onClear: _clear,
+      );
     }
 
     final List<TxRow> shown = hits.length > kSearchResultLimit
@@ -216,11 +263,14 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
           shown: shown.length,
           total: hits.length,
           summary: summarize(shown),
+          range: range,
         ),
         Expanded(
           child: TxGroupList(
             items: shown,
             categoryNameOf: state.nameOf,
+            // 高亮用的关键词：类型词已剥离（「仅支出」不该在行里被标黄）
+            highlightQuery: keyword.isEmpty ? null : keyword,
             onEdit: _edit,
             onDelete: _confirmDelete,
           ),
@@ -230,23 +280,29 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
   }
 }
 
-/// 顶部**不透明**提示块：关闭 + 输入框 + 一键清空 + 类型筛选 chips。
+/// 顶部**不透明**提示块：关闭 + 输入框 + 一键清空 + 类型筛选 chips + 时间区间 chips。
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
     required this.controller,
     required this.focusNode,
     required this.plan,
+    required this.range,
     required this.onClose,
     required this.onClear,
     required this.onToggleType,
+    required this.onPickRange,
+    required this.onSubmit,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
   final SearchPlan plan;
+  final SearchRange range;
   final VoidCallback onClose;
   final VoidCallback onClear;
   final ValueChanged<String> onToggleType;
+  final ValueChanged<SearchRange> onPickRange;
+  final ValueChanged<String> onSubmit;
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +345,7 @@ class _SearchBar extends StatelessWidget {
                           fontWeight: FontWeight.w700,
                         ),
                         decoration: const InputDecoration(
-                          hintText: '搜索分类、备注或金额',
+                          hintText: '搜索分类、账户、备注或金额',
                           border: InputBorder.none,
                           // 主题给输入框统一加了填充 + 描边（表单用），这里要裸输入框
                           filled: false,
@@ -300,6 +356,8 @@ class _SearchBar extends StatelessWidget {
                             vertical: 12,
                           ),
                         ),
+                        // 回车 / 键盘「搜索」键 = 一次确定的搜索 → 记进历史
+                        onSubmitted: onSubmit,
                       ),
                     ),
                     if (hasInput)
@@ -315,7 +373,7 @@ class _SearchBar extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 2),
                 child: Row(
                   children: <Widget>[
                     for (final String word in kTypeDirectives.keys)
@@ -326,6 +384,34 @@ class _SearchBar extends StatelessWidget {
                           label: word,
                           selected: active == word,
                           onTap: () => onToggleType(word),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              // 时间区间**独立一行**：与类型 chips 挤同一 Row，360dp 窄屏会溢出
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                child: Row(
+                  children: <Widget>[
+                    const Text(
+                      '时间',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                        color: Tok.ink2,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    for (final MapEntry<SearchRange, String> e
+                        in kRangeLabels.entries)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ToonChip(
+                          key: ValueKey<String>('search-range-${e.value}'),
+                          label: e.value,
+                          selected: range == e.key,
+                          onTap: () => onPickRange(e.key),
                         ),
                       ),
                   ],
@@ -345,11 +431,13 @@ class _ResultBar extends StatelessWidget {
     required this.shown,
     required this.total,
     required this.summary,
+    required this.range,
   });
 
   final int shown;
   final int total;
   final MonthSummary summary;
+  final SearchRange range;
 
   @override
   Widget build(BuildContext context) {
@@ -369,6 +457,19 @@ class _ResultBar extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
+                // 「共 N 笔」占一个独立 Text：既有测试按整串断言，后缀必须分开写
+                if (range != SearchRange.all)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: Text(
+                      '· ${kRangeLabels[range]}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Tok.ink2,
+                      ),
+                    ),
+                  ),
                 const Spacer(),
                 _AmountCell(
                   label: '支出',
@@ -439,17 +540,27 @@ class _AmountCell extends StatelessWidget {
   }
 }
 
-/// 未输入时的引导：说清能搜哪三类字段（示例点一下填进输入框）。
+/// 未输入时的引导：说清能搜哪几类字段（示例点一下填进输入框）+ 最近搜过的关键词。
 class _Intro extends StatelessWidget {
-  const _Intro({required this.onPick});
+  const _Intro({
+    required this.history,
+    required this.onPick,
+    required this.onPickHistory,
+    required this.onClearHistory,
+  });
+
+  /// 最近搜索过的关键词（已按最近优先排序，最多 10 条）。
+  final List<String> history;
 
   final ValueChanged<String> onPick;
+  final ValueChanged<String> onPickHistory;
+  final VoidCallback onClearHistory;
 
   @override
   Widget build(BuildContext context) {
     // ⚠️ 这里**不能**用 SingleChildScrollView：Scrollable 会以 opaque 命中整块下方区域，
     // 点提示块以外的玻璃空白就关不掉浮层了（真机走查抓到的）。Align 只占内容高度，空白可穿透。
-    // 内容约 180dp，正常手机（逻辑高 ≥ 480）放得下，不需要滚动兜底。
+    // 内容约 180dp（带历史约 250dp），正常手机（逻辑高 ≥ 480）放得下，不需要滚动兜底。
     return Align(
       alignment: Alignment.topCenter,
       child: Padding(
@@ -461,12 +572,13 @@ class _Intro extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               const Text(
-                '输入分类、备注或金额开始搜索',
+                '输入分类、账户、备注或金额开始搜索',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
               const Text(
-                '分类名（餐饮 / 交通）· 备注（房租 / 午餐）\n金额（88 命中 88.00、188.00）',
+                '分类名（餐饮 / 交通）· 账户名（招行 / 支付宝）· 备注（房租）\n'
+                '金额（88 命中 88.00、188.00）',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -487,13 +599,52 @@ class _Intro extends StatelessWidget {
                     ),
                 ],
               ),
+              if (history.isNotEmpty) ...<Widget>[
+                const SizedBox(height: 12),
+                Row(
+                  children: <Widget>[
+                    const Text(
+                      '最近搜过',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Tok.ink2,
+                      ),
+                    ),
+                    const Spacer(),
+                    ToonButton(
+                      key: const ValueKey<String>('search-history-clear'),
+                      label: '清空历史',
+                      kind: ToonButtonKind.ghost,
+                      small: true,
+                      onPressed: onClearHistory,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    for (final String keyword in history)
+                      ToonChip(
+                        key: ValueKey<String>('search-history-$keyword'),
+                        label: keyword,
+                        selected: false,
+                        onTap: () => onPickHistory(keyword),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               const Text(
-                '搜的是当前账本的全时间流水，最多显示 $kSearchResultLimit 条',
+                '搜的是当前账本的全时间流水，最多显示 $kSearchResultLimit 条\n'
+                '顶上「时间」可只看本月 / 近 3 月',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Tok.ink2,
+                  height: 1.6,
                 ),
               ),
             ],
@@ -509,9 +660,14 @@ const List<String> _examples = <String>['餐饮', '房租', '88', '工资'];
 
 /// 有输入但没有命中（原型：小猪吉祥物 + 一句清空引导）。
 class _NoResult extends StatelessWidget {
-  const _NoResult({required this.keyword, required this.onClear});
+  const _NoResult({
+    required this.keyword,
+    required this.range,
+    required this.onClear,
+  });
 
   final String keyword;
+  final SearchRange range;
   final VoidCallback onClear;
 
   @override
@@ -537,10 +693,13 @@ class _NoResult extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
-                '换个分类名、备注里的字，或金额里的数字试试',
+              Text(
+                // 区间收窄是常见「搜不到」原因，这里点一句（默认全部时不啰嗦）
+                range == SearchRange.all
+                    ? '换个分类名、账户名、备注里的字，或金额里的数字试试'
+                    : '当前只搜「${kRangeLabels[range]}」，换回「全部」或换个词试试',
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Tok.ink2,

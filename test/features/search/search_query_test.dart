@@ -4,21 +4,23 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/search/application/search_query.dart';
 
-/// 造一笔流水，只关心匹配用到的三个字段。
+/// 造一笔流水，只关心匹配用到的字段。
 TxRow _tx({
   String note = '',
   int amountCents = 100,
   String? categoryId = 'c1',
   String type = 'expense',
+  int occurredAt = 0,
 }) => TxRow(
   id: 't1',
   bookId: 'b1',
   accountId: 'a1',
   type: type,
   amountCents: amountCents,
-  occurredAt: 0,
+  occurredAt: occurredAt,
   createdAt: 0,
   updatedAt: 0,
   categoryId: categoryId,
@@ -32,9 +34,11 @@ bool _hit({
   String note = '',
   int amountCents = 100,
   String categoryName = '餐饮',
+  String accountName = '现金',
 }) => matchesQuery(
   tx: _tx(note: note, amountCents: amountCents),
   categoryName: categoryName,
+  accountName: accountName,
   query: query,
 );
 
@@ -148,7 +152,12 @@ void main() {
     test('空关键词返回空列表（不返回全量）', () {
       final items = <TxRow>[_tx(note: '午餐'), _tx(note: '晚餐')];
       expect(
-        filterTx(items: items, categoryNameOf: (_) => '餐饮', query: '  '),
+        filterTx(
+          items: items,
+          categoryNameOf: (_) => '餐饮',
+          accountNameOf: (_) => '现金',
+          query: '  ',
+        ),
         isEmpty,
       );
     });
@@ -164,11 +173,17 @@ void main() {
       final hit = filterTx(
         items: items,
         categoryNameOf: nameOf,
+        accountNameOf: (_) => '现金',
         query: '交通',
       );
       expect(hit.map((t) => t.note), <String>['打车']);
 
-      final both = filterTx(items: items, categoryNameOf: nameOf, query: '餐');
+      final both = filterTx(
+        items: items,
+        categoryNameOf: nameOf,
+        accountNameOf: (_) => '现金',
+        query: '餐',
+      );
       expect(both.map((t) => t.note), <String>['午餐', '咖啡']);
     });
   });
@@ -237,18 +252,30 @@ void main() {
     test('只输类型词 → 返回该类型全部流水（不再走文本匹配）', () {
       String nameOf(String? _) => '餐饮';
       expect(
-        filterTx(items: threeTypes(), categoryNameOf: nameOf, query: '仅支出')
-            .map((t) => t.note),
+        filterTx(
+          items: threeTypes(),
+          categoryNameOf: nameOf,
+          accountNameOf: (_) => '现金',
+          query: '仅支出',
+        ).map((t) => t.note),
         <String>['午餐'],
       );
       expect(
-        filterTx(items: threeTypes(), categoryNameOf: nameOf, query: '仅收入')
-            .map((t) => t.note),
+        filterTx(
+          items: threeTypes(),
+          categoryNameOf: nameOf,
+          accountNameOf: (_) => '现金',
+          query: '仅收入',
+        ).map((t) => t.note),
         <String>['工资'],
       );
       expect(
-        filterTx(items: threeTypes(), categoryNameOf: nameOf, query: '转账')
-            .map((t) => t.note),
+        filterTx(
+          items: threeTypes(),
+          categoryNameOf: nameOf,
+          accountNameOf: (_) => '现金',
+          query: '转账',
+        ).map((t) => t.note),
         <String>['转存'],
       );
     });
@@ -262,6 +289,7 @@ void main() {
       final hit = filterTx(
         items: items,
         categoryNameOf: (_) => '餐饮',
+        accountNameOf: (_) => '现金',
         query: '仅支出 午餐',
       );
       // 打车被关键词排除，午餐补贴被类型排除
@@ -273,10 +301,193 @@ void main() {
         filterTx(
           items: <TxRow>[_tx(note: '午餐')],
           categoryNameOf: (_) => '餐饮',
+          accountNameOf: (_) => '现金',
           query: '转账',
         ),
         isEmpty,
       );
+    });
+  });
+
+  // ===== F7.7 D 批新增口径 =====
+
+  group('账户名命中（D 批）', () {
+    test('账户名子串参与并集', () {
+      expect(_hit(query: '招行', accountName: '招行储蓄卡'), isTrue);
+      expect(_hit(query: '储蓄', accountName: '招行储蓄卡'), isTrue);
+      expect(_hit(query: '支付宝', accountName: '招行储蓄卡'), isFalse);
+    });
+
+    test('账户查不到时回退空串：不会因此把任何一笔「搜中」', () {
+      expect(_hit(query: '现金', accountName: ''), isFalse);
+      // 空串也不影响备注 / 分类 / 金额三路照常命中
+      expect(_hit(query: '午餐', note: '午餐', accountName: ''), isTrue);
+    });
+  });
+
+  group('filterTx 账户名 + 日期区间（D 批）', () {
+    /// 三笔：本月（当月 5 日）/ 上月（上月 20 日）/ 4 个月前。
+    List<TxRow> seeded(DateTime now) => <TxRow>[
+      _tx(
+        note: '本月午餐',
+        occurredAt: DateTime(now.year, now.month, 5).millisecondsSinceEpoch,
+      ),
+      _tx(
+        note: '上月打车',
+        occurredAt: DateTime(now.year, now.month - 1, 20).millisecondsSinceEpoch,
+      ),
+      _tx(
+        note: '老账',
+        occurredAt: DateTime(now.year, now.month - 4, 10).millisecondsSinceEpoch,
+      ),
+    ];
+
+    test('按账户名筛选（关键词命中账户名）', () {
+      final now = DateTime(2026, 9, 15);
+      final hit = filterTx(
+        items: seeded(now),
+        categoryNameOf: (_) => '餐饮',
+        accountNameOf: (_) => '招行储蓄卡',
+        query: '招行',
+        now: now,
+      );
+      expect(hit, hasLength(3));
+    });
+
+    test('区间 = 本月：只留本月那笔（半开区间，不含上月）', () {
+      final now = DateTime(2026, 9, 15);
+      final hit = filterTx(
+        items: seeded(now),
+        categoryNameOf: (_) => '餐饮',
+        accountNameOf: (_) => '现金',
+        query: '',
+        range: SearchRange.thisMonth,
+        now: now,
+      );
+      expect(hit.map((t) => t.note), <String>['本月午餐']);
+    });
+
+    test('区间 = 近 3 月：留本月 + 前两月，4 个月前那笔被排除', () {
+      final now = DateTime(2026, 9, 15);
+      final hit = filterTx(
+        items: seeded(now),
+        categoryNameOf: (_) => '餐饮',
+        accountNameOf: (_) => '现金',
+        query: '',
+        range: SearchRange.last3Months,
+        now: now,
+      );
+      expect(hit.map((t) => t.note), <String>['本月午餐', '上月打车']);
+    });
+
+    test('区间与关键词取交集', () {
+      final now = DateTime(2026, 9, 15);
+      final hit = filterTx(
+        items: seeded(now),
+        categoryNameOf: (_) => '餐饮',
+        accountNameOf: (_) => '现金',
+        query: '打车',
+        range: SearchRange.last3Months,
+        now: now,
+      );
+      expect(hit.map((t) => t.note), <String>['上月打车']);
+
+      // 换成「本月」→ 打车在上月，交集为空
+      expect(
+        filterTx(
+          items: seeded(now),
+          categoryNameOf: (_) => '餐饮',
+          accountNameOf: (_) => '现金',
+          query: '打车',
+          range: SearchRange.thisMonth,
+          now: now,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('只有区间（无关键词）也算生效条件 → 出结果而不是引导态', () {
+      final now = DateTime(2026, 9, 15);
+      expect(hasAnyFilter(parsePlan(''), SearchRange.all), isFalse);
+      expect(hasAnyFilter(parsePlan(''), SearchRange.thisMonth), isTrue);
+      expect(
+        filterTx(
+          items: seeded(now),
+          categoryNameOf: (_) => '餐饮',
+          accountNameOf: (_) => '现金',
+          query: '',
+          range: SearchRange.all,
+          now: now,
+        ),
+        isEmpty, // 三条件全无 → 空（上层显示引导态）
+      );
+    });
+  });
+
+  group('SearchRange 时间窗（D 批）', () {
+    test('本月 = 当月 1 日 00:00 ~ 下月 1 日 00:00（半开）', () {
+      final now = DateTime(2026, 9, 15, 13, 20);
+      final w = rangeWindow(SearchRange.thisMonth, now)!;
+      expect(w.start, DateTime(2026, 9, 1).millisecondsSinceEpoch);
+      expect(w.end, DateTime(2026, 10, 1).millisecondsSinceEpoch);
+
+      expect(inRange(DateTime(2026, 9, 1).millisecondsSinceEpoch, SearchRange.thisMonth, now: now), isTrue);
+      expect(inRange(DateTime(2026, 9, 30, 23, 59).millisecondsSinceEpoch, SearchRange.thisMonth, now: now), isTrue);
+      expect(inRange(DateTime(2026, 10, 1).millisecondsSinceEpoch, SearchRange.thisMonth, now: now), isFalse);
+      expect(inRange(DateTime(2026, 8, 31, 23, 59).millisecondsSinceEpoch, SearchRange.thisMonth, now: now), isFalse);
+    });
+
+    test('近 3 月 = 本月 + 前两个自然月，且跨年安全', () {
+      final now = DateTime(2026, 1, 15);
+      final w = rangeWindow(SearchRange.last3Months, now)!;
+      expect(w.start, DateTime(2025, 11, 1).millisecondsSinceEpoch);
+      expect(w.end, DateTime(2026, 2, 1).millisecondsSinceEpoch);
+
+      expect(inRange(DateTime(2025, 11, 1).millisecondsSinceEpoch, SearchRange.last3Months, now: now), isTrue);
+      expect(inRange(DateTime(2025, 10, 31, 23, 59).millisecondsSinceEpoch, SearchRange.last3Months, now: now), isFalse);
+      expect(inRange(DateTime(2026, 1, 31).millisecondsSinceEpoch, SearchRange.last3Months, now: now), isTrue);
+    });
+
+    test('全部 → 不限时间（窗口为 null，任何时间都在范围内）', () {
+      final now = DateTime(2026, 9, 15);
+      expect(rangeWindow(SearchRange.all, now), isNull);
+      expect(inRange(0, SearchRange.all, now: now), isTrue);
+    });
+  });
+
+  group('highlightRanges（D 批高亮区间）', () {
+    test('多段命中、从左到右、不重叠', () {
+      expect(highlightRanges('88.88', '8'), <MatchRange>[
+        (start: 0, end: 1),
+        (start: 1, end: 2),
+        (start: 3, end: 4),
+        (start: 4, end: 5),
+      ]);
+      expect(highlightRanges('午餐 + 午餐补贴', '午餐'), <MatchRange>[
+        (start: 0, end: 2),
+        (start: 5, end: 7),
+      ]);
+    });
+
+    test('大小写不敏感（英文），下标照原文', () {
+      expect(highlightRanges('Lunch with team', 'lunch'), <MatchRange>[
+        (start: 0, end: 5),
+      ]);
+    });
+
+    test('空关键词 / 空文本 / 没命中 → 空列表', () {
+      expect(highlightRanges('午餐', ''), isEmpty);
+      expect(highlightRanges('', '午餐'), isEmpty);
+      expect(highlightRanges('午餐', '晚餐'), isEmpty);
+    });
+
+    test('金额文本（无千分位）里的命中与显示串下标对齐', () {
+      // 流水行金额拼法是 '$sign${centsToYuan(cents)}' → '-88.88'
+      final display = '-${centsToYuan(8888)}';
+      expect(display, '-88.88');
+      expect(highlightRanges(display, '88.8'), <MatchRange>[
+        (start: 1, end: 5),
+      ]);
     });
   });
 }

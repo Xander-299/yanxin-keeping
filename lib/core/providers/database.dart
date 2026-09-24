@@ -6,6 +6,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/account_repository.dart';
+import '../../data/repositories/app_meta_repository.dart';
 import '../../data/repositories/book_repository.dart';
 import '../../data/repositories/budget_repository.dart';
 import '../../data/repositories/category_repository.dart';
@@ -42,4 +43,9 @@ final transactionRepositoryProvider = Provider<TransactionRepository>(
 /// 月度预算仓储（schema v2）。
 final budgetRepositoryProvider = Provider<BudgetRepository>(
   (ref) => BudgetRepository(ref.watch(appDatabaseProvider)),
+);
+
+/// 通用 KV 仓储（`schema_meta`）：搜索历史等本机偏好。
+final appMetaRepositoryProvider = Provider<AppMetaRepository>(
+  (ref) => AppMetaRepository(ref.watch(appDatabaseProvider)),
 );
