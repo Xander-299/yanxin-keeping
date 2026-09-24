@@ -1,9 +1,30 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **`v0.7.9` 已打 tag（F7.7 A/B/C 全交付）· 剩余 D / E 两批待签字**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.9` 已打 tag；D/E 待用户终端回归后打 `v0.7.10`）**）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-24 05:45 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-24 08:30 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **本轮（F7.7 C 批「账户图标 / 颜色选择」已收尾 ✅）**：
+> **本轮（F7.7 D 批「搜索增强」+ E 批「日历增强」已实现 + 走查通过 ✅ · backlog 五批清零）**：
+> - 用户一次签 D + E 两批（默认项沿用早前裁定：D.5 拼音匹配 **不做**、E.5 农历 **不做**，不引新依赖）。
+> - **实施前 SPEC 前提核查又抓到两处错**（比 C 批那次省事）：
+>   ① §D.3 说「新建 `app_meta` 表 + schema 2→3」**不成立** —— `schema_meta`（`key`+`value`）
+>   早就是 PRD 登记的 KV 表，`SPEC-F7.3` §3 也把它列为「零迁移」备选 → **复用，本批根本没动 schema**；
+>   ② §E.1 写 `/record?date=YYYY-MM-DD`，实际约定是**毫秒**（`app.dart` 里 `int.tryParse` → `occurredAtMs`）。
+> - analyze 等效 **0 issue**；测试计数 **361**（287 `test()` + 74 `testWidgets`，本批 **+32**）——
+>   改动的纯测试本机实测全绿（search 54 例）；⏳ **全量待用户终端 `flutter test` 回归（预期 361）→ 通过后打 `v0.7.10`**。
+> - 🔥 **真机走查（MuMu 12，AI 经 adb 全包）通过**，逐条记录见 **`docs/acceptance-F7.7-DE.md`**。
+>   ⚠️ **走查抓到 1 个真 bug（已修）**：搜索结果是**过期快照**（F7.4 起就存在的老问题）——
+>   `searchProvider` 是常驻 provider、只 watch 了 `activeBookIdProvider` → **刚加完账户 / 刚记一笔后
+>   回搜索搜不到**（实测搜新账户名与新账金额都落空，重启 App 立刻命中）。
+>   修法：`build()` 里 `ref.watch(dataEpochProvider)`（项目既有的写操作版本号）。
+>   回归测试 `test/features/search/search_freshness_test.dart`（**实测注释掉那行 watch 必失败**）。
+> - ⚠️ **构建路径变了（重要）**：`gradlew assembleDebug` **现在也会撞 231**（`:app:compileFlutterBuildDebug`
+>   内部是 `flutter.bat → dart → frontend_server`）。新的可行路径 =
+>   **`python tool/build_kernel_fallback.py`（Python 起 frontend_server 产 kernel_blob）
+>   + `./gradlew assembleDebug -x compileFlutterBuildDebug`**，细节见 `docs/acceptance-F7.7-DE.md` 文末。
+> - **F7.7 backlog 五批至此全部落地**（`v0.7.7`/`v0.7.8`/`v0.7.9` 已打 tag；D/E 合并的 `v0.7.10` 待回归后打）。
+>   **下一轮 = 等用户排新需求**。
+
+> **上一轮（F7.7 C 批「账户图标 / 颜色选择」已收尾 ✅）**：
 > - 用户终端 `flutter test` **329 passed / 0 skipped**（= `test()` 263 + `testWidgets` 66；C 批新增纯测试 **+14**）
 >   → CHANGELOG `[Unreleased]` 转 `## [v0.7.9]` → **`v0.7.9` 已打 tag 并推远端**
 >   （tag 对象 `1cc9340` → 提交 `f782ec2`，`git ls-remote --tags` 已核对）。
@@ -13,13 +34,13 @@
 > - 3 例 widget 测试因表单加高失败（「删除账户」折屏外 / 遮罩点被弹窗吃掉）→ 已修：
 >   tap 前 `ensureVisible`；「点遮罩关弹窗」用例改**竖屏视口**（默认 800×600 太矮，弹窗顶边会贴到 y=0）
 >   + `sheet.top > 100` 几何硬断言。
-> - 收尾时把我的页 `_BrandTip` 版本角标 `v0.7.8` → `v0.7.9`（等宽字符串替换，无布局变化；D 批走查顺带复验）。
-> - **剩余 = D（搜索增强，动 schema —— 必须写 `v3 → v4`）/ E（日历增强）两批待用户签字**。
+> - 收尾时把我的页 `_BrandTip` 版本角标 `v0.7.8` → `v0.7.9`（等宽字符串替换，无布局变化）。
+> - 当时剩余 = D（搜索增强）/ E（日历增强）两批待签字 → **本轮已一并交付**（见最上）。
 >
 > **上一轮（F7.7 B 批「数据导出」，2026-09-23）**：用户签字「全部按 B.4 默认」→ 已交付并打 `v0.7.8`
 >   （**315 全绿** + 走查无阻断）；A 批已打 `v0.7.7`（F2 / F5 两项「待裁定」用户裁定**保持现状**）。
-> - 🔥 **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：发现 **`flutter build` 撞 231 但
->   `cd android && ./gradlew assembleDebug` 直连能通**（Java 进程链不吃 Dart 管道；须验 kernel_blob 新鲜度防旧码）——
+> - 🔥 **真机走查已由 AI 经 adb 全包完成（2026-09-23）**：当时 `cd android && ./gradlew assembleDebug`
+>   直连能通（⚠️ **2026-09-24 该路径已失效，见最上方「构建路径变了」**；须验 kernel_blob 新鲜度防旧码）——
 >   构建装机走查一条龙全在本机完成，CSV / JSON 两路径全过、无崩溃。已写入 `dart-toolchain-python-fallback` skill。
 >
 > **上一轮（A 批门禁补齐 + 交接，零产品代码改动）**：
@@ -262,15 +283,23 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
+- **F7.7 D 批（搜索增强）+ E 批（日历增强）已实现 + 走查通过**（测试计数 **361** = `test()` 287 + `testWidgets` 74，本批 +32；
+  提交线 `bce6305`（D）→ `cfe17ff`（E）→ `04c2bfd`（快照修复）→ `27689a2`（构建工具 + skill））。
+  ⏳ **`v0.7.10` 待用户终端 `flutter test` 回归（预期 361）后打**。
+  ⚠️ **本批不动 schema**（SPEC §D.3 的「新建 `app_meta` 表 + schema 2→3」两处前提都不成立 → 复用既有
+  `schema_meta` KV）；§E.1 的 `date` 参数实际约定是**毫秒**。
+  ⚠️ 走查抓到并修了一个**老 bug**：搜索结果是过期快照（`searchProvider` 未接 `dataEpochProvider`）——
+  详见 `docs/acceptance-F7.7-DE.md` 与 §G。
 - **F7.7 C 批「账户图标 / 颜色」已交付：`v0.7.9` 已打 tag 推远端**（**329 全绿** + 覆盖安装验迁移走查通过，2026-09-24；
   提交线 `9dd2d9b`（实现）→ `6653988`/`6e192b7`（测试视口修复）→ `079dd09`（角标）→ `f782ec2`（CHANGELOG 转正，= tag 指向）。
   ⚠️ **SPEC §C.1 前提有误**：accounts 表本来没有 icon/color（在 books/categories 上）→ 实际做了 **schema v2→v3**
   （ALTER TABLE ADD COLUMN DEFAULT ''，onUpgrade 带 PRAGMA table_info 防御）。
 - **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
 - **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
-- **下一批 = D / E 两批待用户签字**；**D 批迁移动 schema 时改 `v3 → v4`**（C 批已用掉 v3）。
-- **门禁（B 批前基线）**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
-  `flutter test` ✅ **用户在自己终端已跑通、整个套件全部通过**（2026-09-23 下午；A 批预期 **289 passed / 0 skipped**）。
+- ✅ **F7.7 backlog 五批（A→E）全部落地**（`v0.7.7`/`v0.7.8`/`v0.7.9` 已打 tag；D/E 合并的 `v0.7.10` 待回归后打）
+  → **无待签字批次**；下一轮等用户排新需求。
+- **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
+  `flutter test` 最近一次 **用户终端 329 passed**（C 批收尾时），本批新增 +32 → **预期 361**（待用户终端复跑确认）。
 - **本机（A 机）代码基线 = `ecf5e09` = `origin/master`**（F7.6 P1 + P2 + P3 + 走查修复 + 版本记录 + F7.7 SPEC
   + **F7.7 A 批** + **F1 修复** + 三个门禁等效工具 已入库；**tag = `v0.7.6`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
@@ -286,17 +315,19 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
 - **本机 = 远端（代码线同步）** —— 已用 `git ls-remote origin refs/heads/master` 核对：
-  **代码基线 `f782ec2` = `v0.7.9`**（含 F7.7 A/B/C 三批 + 三个门禁等效工具 + `build_drift_runner`），
-  其后只有交接文档提交；
+  **代码基线 = D/E 批提交 `27689a2`**（含 F7.7 A/B/C/D/E 五批 + 四个门禁/构建等效工具），其后只有交接文档提交；
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
-  工作区有三个**已入库**的门禁 / 验证替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
-  `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）。
-  tag `v0.7.1`…`v0.7.9` 已推远端（**`v0.7.9` = 当前最新**，指向 `f782ec2`），剩 D / E 两批。
+  工作区有四个**已入库**的门禁 / 构建替代工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
+  `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）+
+  **`tool/build_kernel_fallback.py`（等效 `flutter assemble` 的 kernel 步骤，配合
+  `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）**。
+  tag `v0.7.1`…`v0.7.9` 已推远端（**`v0.7.9` = 当前最新**；`v0.7.10` 待回归后打）。
 
 # 未解决问题
 
-> 说明：**最高优先 = D / E 两批签字**（A / B / C 批已全部交付并分别打 `v0.7.7` / `v0.7.8` / `v0.7.9`）；
-> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机**、已由 3 个等效工具 + `gradlew` 直连构建绕开；
+> 说明：**F7.7 backlog 五批已全部交付**（`v0.7.7`/`v0.7.8`/`v0.7.9`/`v0.7.10`），**无待签字批次**；
+> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 4 个等效工具绕开
+> （analyze / test / 数据层 / **APK 构建**，见第 1 条末尾的「构建路径」）；
 > F2 / F5 已裁定保持现状（2026-09-23）。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
@@ -354,8 +385,19 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
        即 **`flutter test` 门禁已闭合**；本机这个脚本从此只作「本机自查」手段，**不再算门禁前置**。
      - ⚠️ 解析坑：计数顺序是 `+通过 ~跳过 -失败`（不是 `+ - ~`）且只打非零项；进度行时间戳自带冒号，
        先剥 `^\d\d:\d\d ` 再切。**上线前务必用「必然失败」的探针校准**。
-   - ❌ **构建（`flutter build`）/ 真机走查仍无替代方案** —— 那条链路是多层 spawn（`flutter_tools` → Gradle
-     → 插件里的 `dart`），`inheritStdio` 包装器只救第一层（堆栈见 `flutter_08.log`）。**只能在正常环境跑**。
+   - ✅ **构建（APK）：2026-09-24 找到可行路径**（推翻此前的「无替代方案」结论）——
+     `flutter build` 与 `cd android && ./gradlew assembleDebug` **都会撞 231**
+     （`:app:compileFlutterBuildDebug` 里是 `flutter.bat → dart → frontend_server`；2026-09-23 那次
+     `gradlew` 直连能通，是当时的偶发宽松期，**现在已稳定复现失败**）。
+     新路径（**Python 当父进程**，`subprocess` 走匿名管道不受影响）：
+     ```bash
+     source env.sh                                       # GRADLE_USER_HOME 必须指进工作区
+     python tool/build_kernel_fallback.py                 # ≡ flutter assemble 的 kernel_snapshot + copy_flutter_bundle
+     cd android && ./gradlew assembleDebug -x compileFlutterBuildDebug
+     ```
+     参数逐字照抄构建日志里 `kernel_snapshot_program` 的命令行；**上线前必须核验** APK 内
+     `assets/flutter_assets/kernel_blob.bin` 的 sha256 与盘上一致 + grep 本次新增文案（防「装到旧包」）。
+     细节见 `docs/acceptance-F7.7-DE.md` 文末。**2026-09-24 D/E 批走查即用这条路完成装机。**
 2. 【**只剩真机走查 + 待打 tag**】F7.7 **A 批** + 首次使用验收的修复已落地 → **`v0.7.7` 待走查后打**
    （用户 2026-09-23 明确「先不打」）：
    - ✅ `flutter analyze` 0 issue：**已闭合**（`python tool/dart_analyze_fallback.py` → `No issues found!`）。

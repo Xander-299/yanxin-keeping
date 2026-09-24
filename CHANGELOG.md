@@ -21,6 +21,54 @@
 | `v0.7.8` | F7.7 B 批 数据导出（流水 CSV + 备份 JSON，SAF 免权限；真机走查 AI 经 adb 全包完成） | 本段所在提交 |
 | `v0.7.9` | F7.7 C 批 账户图标 / 颜色选择（schema v3）+ widget 测试视口修复 | 本段所在提交 |
 
+## [Unreleased] · F7.7 D 批（搜索增强）+ E 批（日历增强）
+
+> **本批不动 schema**（⚠️ 又一处 SPEC 前提修正）：§D.3 原计划新建 `app_meta` KV 表并把 schema
+> 推到 v4，但 `schema_meta`（`key` + `value`）本来就是 PRD 登记的 KV 元数据表，
+> `docs/SPEC-F7.3-budget.md` §3 也把它列为「零迁移」备选 → **复用现有表，schema 仍是 v3**。
+> 另一处：§E.1 写「`/record?date=YYYY-MM-DD`」，实际约定是**毫秒**（`app.dart` 里
+> `int.tryParse(queryParameters['date'])` → `occurredAtMs`）→ 按毫秒传。
+> 门禁：analyze 等效 **0 issue** ✅；测试计数 **361**（287 `test()` + 74 `testWidgets`，本次 **+32**）——
+> 改动的纯测试本机实测全绿 ✅（search 三文件 54 例），**全量以用户终端 `flutter test` 为准**
+> （本机跑不了 `testWidgets`）；
+> 真机走查（MuMu 12，AI 经 adb 全包）**通过**，走查记录见 `docs/acceptance-F7.7-DE.md`。
+> ⚠️ 走查抓到 1 个**真 bug**（搜索快照过期，见「修复」段）——D 批新增的「账户名命中」正好踩在它上面。
+
+### 新增
+
+- **D 批 · 搜索增强**（入口与关闭手势不变）
+  - **关键词高亮**：命中的分类名 / 备注 / **账户名** / 金额子串标 `brandTint2` 底色（`TxTile` 可选参数）。
+  - **账户名命中**：新增一路命中口径，搜「招行」「支付宝」也能搜到流水（账户查不到回退空串，不会误命中）。
+  - **搜索历史**：最近 10 条关键词，落在**已存在**的 `schema_meta` KV（`search_history`，JSON 容错解析）；
+    引导态下方 `ToonChip` 一点即搜，可「清空历史」；记录时机 = 回车提交 / 点历史词 / 点开某条结果。
+  - **时间区间**：类型 chips 下**独立一行**「时间：全部 / 本月 / 近3月」（单选，默认全部）；
+    区间与关键词、类型词取**交集**，只选区间也出结果（结果条标「· 本月」；空态点明区间，避免误判搜不到）。
+- **E 批 · 日历增强**
+  - **长按日历格子 → 直接记这一天的账**（`/record?date=<毫秒>`，并顺带把那天选中，回来即见新流水）。
+  - **左右滑动翻月**：阈值 = 1/3 格宽，左滑下一个月、右滑上一个月；年月与下方日列表同源自动同步。
+    只注册**横向** drag → 竖向滚动仍归外层（不能出现「上下滚不动」）。
+
+### 变更
+
+- 搜索输入框 hint 与引导文案：「分类、备注或金额」→「分类、**账户**、备注或金额」；日历空态提示改为「长按日历里任意一天，也能直接记这一天的账」。
+
+### 修复
+
+- **搜索结果是过期快照**（真机走查抓到，**F7.4 起就存在**的老问题）：`searchProvider` 是常驻
+  provider（非 autoDispose，浮层关掉再打开不重建），原先没有任何失效信号 → **「刚加完账户 /
+  刚记一笔」后回搜索是搜不到的**（实测：新账户名、新流水金额都命中不到，杀进程重启 App 才出现；
+  走查中搜新账户 `QABank` 与新账 `66` 均落空，重启后立刻命中，据此定位）。
+  修法：`SearchController.build()` 里 `ref.watch(dataEpochProvider)` —— 复用项目既有的
+  「写操作版本号」（所有写操作成功后都会 bump），一处接入即自动作废重取，不必在 N 个写入口补
+  `refresh()`。回归测试 `test/features/search/search_freshness_test.dart`（去掉该 watch 即失败，已验证）。
+
+### 测试
+
+- 新增 **+32**（`test()` +24 / `testWidgets` +8）：`search_history_test` 9、
+  `search_query_test` +14（账户名命中 / 区间窗口 / 高亮区间）、`search_freshness_test` 1、
+  `search_overlay_test` +5、`calendar_page_test` +3（长按带日期 / 左右滑翻月 / 竖向不吃手势）。
+- 全量 **361**（287 `test()` + 74 `testWidgets`）。
+
 ## [v0.7.9] — 2026-09-24 · F7.7 C 批 账户图标 / 颜色选择
 
 > **门禁全闭合**：`flutter analyze` 等效 **0 issue**；`flutter test` **329 passed / 0 skipped**

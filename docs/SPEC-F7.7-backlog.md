@@ -1,8 +1,9 @@
 # SPEC — F7.7 backlog 五批（报表明细 / 数据导出 / 账户图标 / 搜索增强 / 日历增强）
 
 > 状态：**A 批已签字并交付**（`v0.7.7`，2026-09-23 · 真机走查通过）；**B 批已签字并实施**（`v0.7.8`，2026-09-23，见 §B.4 + §G）；
-> **C 批已签字、已交付**（`v0.7.9`，2026-09-24 · 329 全绿 + 覆盖安装验迁移走查通过，见 §G）；**D / E 两批待签字**。
-> **C / D / E 三批 ⬜ 待签字**（可分批签）
+> **C 批已签字、已交付**（`v0.7.9`，2026-09-24 · 329 全绿 + 覆盖安装验迁移走查通过，见 §G）；
+> **D / E 两批已实现 + 走查通过**（2026-09-24 · 测试计数 361 = +32；待用户终端全量回归后合并打 `v0.7.10`，
+> 见 §G + `docs/acceptance-F7.7-DE.md`）—— **F7.7 backlog 五批全部落地 ✅**
 > 上游：`docs/PRD-yanxin-flutter.md`（口径汇总）· `HANDOFF.md`「未解决问题」
 > 前置：F7.6 卡通视觉改版已收尾（`v0.7.6`）。本批**全是新功能**，视觉一律沿用 F7.6 的令牌 + 通用件。
 > 目的：把 backlog 里剩下的 5 项**一次性写清楚**，签一次字就能按 A→E 顺序逐批交付，每批单独打 tag。
@@ -15,9 +16,9 @@
 |---|---|---|---|---|
 | **A** | 报表明细清单 —— 点亮 4 处「报表（建设中）」占位（**含前置：记一笔支持选账户**） | 否 | `v0.7.7` | 占位最多、用户可感知度最高；数据层已齐（`stats_aggregate`） |
 | **B** | 数据导出（「我的 → 数据导出」） | 否（用已装的 `file_picker.saveFile`） | `v0.7.8` | 「我的」页最后一个占位；纯读 + 落盘，风险低 |
-| **C** | 账户图标 / 颜色选择 | 否 | `v0.7.9` | `accounts.icon` / `color` 列**早已存在**，只缺界面 |
-| **D** | 搜索增强（高亮 / 账户名 / 历史 / 日期区间） | 待确认（拼音见 D.5） | `v0.7.10` | 打磨已有功能 |
-| **E** | 日历增强（长按记账 / 页内翻月） | 待确认（农历见 E.5） | `v0.7.11` | 同上 |
+| **C** | 账户图标 / 颜色选择 | 否 | `v0.7.9` | 原以为 `accounts.icon` / `color` 列早已存在、只缺界面 —— **实测不成立**（两列在 `books` / `categories` 上），实际做了 **schema v2→v3** |
+| **D** | 搜索增强（高亮 / 账户名 / 历史 / 日期区间） | 否（KV 复用既有 `schema_meta`） | `v0.7.10` | 打磨已有功能 |
+| **E** | 日历增强（长按记账 / 页内翻月） | 否 | `v0.7.10` | 同上 —— 与 D 批**合并成同一版本**（同 `F7.7` 阶段号） |
 
 **统一约定**
 
@@ -268,7 +269,8 @@
 |---|---|---|
 | 用户 | ✅ **A 批已签字开工**（2026-09-23）。三点默认处理逐条确认：<br>① **A.0 前置「记一笔支持选账户」→ 做，按 SPEC**（默认仍是列表首个账户）；<br>② **D.5 拼音 / 首字母匹配 → 不做**（不引新依赖）；<br>③ **E.5 农历 / 节假日 → 不做**（不引新依赖）。<br>另：**A.3 与 A.4 冲突已由用户裁定** —— 报表页的流水行**只读、不可点**（按 A.4，不做长按删除）。 | 2026-09-23 |
 | 用户 | ✅ **B 批已签字开工**（2026-09-23）：确认「**全部按 B.4 默认**」——<br>B.4.1 CSV 金额用元无符号 / B.4.2 来源列原样英文 / B.4.3 备份金额用整数分 / B.4.4 JSON 结构照列 /<br>B.4.5 不导软删 / B.4.6 空账本可导出 / B.4.7 底部弹层入口 / B.4.8 修 `_BrandTip` 过时文案 / B.4.9 转账行分类留空。 | 2026-09-23 |
-| 用户 | ⬜ 待签字 —— C / D / E 三批 | |
+| 用户 | ✅ **D + E 两批已签字开工**（2026-09-24，「DE都签字」）——默认项沿用 A 批时的裁定：<br>**D.5 拼音 / 首字母匹配 → 不做**、**E.5 农历 / 节假日 → 不做**（均不引新依赖）；<br>实施时发现并修正三处 SPEC 前提（见 §G：D 批零迁移、E 批 date 用毫秒）。 | 2026-09-24 |
+| AI | ✅ **D + E 两批已实现 + 真机走查通过**（2026-09-24）：analyze 0 issue、测试计数 **361**（+32），<br>改动的纯测试本机实测全绿（search 54 例）、全量待用户终端回归 → 通过后打 `v0.7.10`；<br>走查另抓到 1 个老 bug（搜索快照过期，见 §G D 批段），已修 + 加回归测试。 | 2026-09-24 |
 
 **签了哪些批就做哪些批**；未签的批次保持 `⬜ 待排期`。
 
@@ -501,4 +503,83 @@ flutter_tools 生成的 listener 把 `main()` 的异常转成 `IsolateSpawnExcep
 「点遮罩关弹窗」坐标被弹窗吃掉）→ 修法 = `ensureVisible` + **竖屏视口** + 几何硬断言；
 我的页 `_BrandTip` 版本角标 `v0.7.8` → `v0.7.9`。
 
-**⚠️ D 批注意**：schema 已到 **v3**，D 批的 `app_meta` 表迁移应写 **v3 → v4**。
+**⚠️ D 批注意（已被推翻）**：原文写「schema 已到 v3，D 批的 `app_meta` 表迁移应写 v3 → v4」——
+D 批实施时复查发现 **`schema_meta` KV 表早就存在且可直接复用** → **D 批根本没有动 schema**（见下）。
+
+---
+
+### D 批 —— 搜索增强 · ✅ 已实现 + 走查通过（待用户终端回归后打 `v0.7.10`）
+
+**日期**：2026-09-24 · **签字**：用户 2026-09-24 一次签 D + E 两批（默认项沿用早前裁定：
+D.5 拼音 / 首字母 **不做**、E.5 农历 / 节假日 **不做**，均不引新依赖）。
+
+**⚠️ SPEC 前提修正（第二处）**：§D.3 计划「`tables.dart` 新增 `AppMeta` 表 + `schemaVersion` 2 → 3」——
+**两处都不成立**：
+1. **KV 表已存在**：`SchemaMeta`（`key` 主键 + `value`）就是通用 KV，PRD §表清单登记为
+   「KV 元数据（含 `active_book_id`）」，`docs/SPEC-F7.3-budget.md` §3 也把它列为**零迁移**备选；
+2. **版本号前提过期**：C 批已把 schema 推到 v3，「2 → 3」无论如何都不对。
+
+→ **本批复用 `schema_meta`**（新建 `AppMetaRepository` 薄封装 + `appMetaRepositoryProvider`），
+**schema 保持 v3、零迁移**。搜索历史是本机偏好、不入备份 JSON（备份本来只导 5 张业务表，语义一致）。
+
+**实现（全按 D.1 DoD）**：
+
+- `core/db`：**未改**。新增 `data/repositories/app_meta_repository.dart`（`get` / `set` / `remove`，upsert 覆盖写）。
+- `features/search/application/search_query.dart`：账户名参与关键词并集（`matchesQuery` 加 `accountName`）；
+  新增 `SearchRange`（全部 / 本月 / 近 3 月）+ `rangeWindow` / `inRange` / `hasAnyFilter`；
+  `filterTx` 加 `accountNameOf` / `range` / `now`（区间 = 自然月半开区间，与 `listByMonth` 口径一致）。
+- `core/utils/highlight.dart`（**新增，放 core 避免 `features/ledger` 反向依赖 `features/search`**）：
+  `MatchRange` + `highlightRanges`（纯函数，多段命中 / 大小写不敏感 / 不重叠）；`search_query.dart` re-export。
+- `features/search/application/search_history.dart`（新增）：`pushKeyword`（去重提前 + 截断 10 条）/
+  `decodeHistory`（**坏 JSON 一律当空历史，不抛**）/ `encodeHistory` + `SearchHistoryController`（落 KV）。
+- `features/ledger/presentation/widgets/tx_group_list.dart`：`TxGroupList` / `TxTile` 加**可选**
+  `highlightQuery`；有命中才切 `Text.rich`（`find.text` 走 `toPlainText`，既有断言不受影响），其余页面不传 = 原样。
+- `features/search/presentation/search_overlay.dart`：类型 chips 下**独立一行**「时间」区间 chips
+  （与类型挤同一 Row，360dp 窄屏必溢出）；引导态加「最近搜过」chips + 「清空历史」；
+  结果条标「· 本月」；空态按区间给不同话术。
+  - **区间不进输入框**（与类型词不同）：没有可解析的指令词，写进去只会被 `parsePlan` 当普通关键词 → 恒搜不到；
+    改为浮层单选状态 + chip 高亮（条件仍可见）。
+  - **只选区间也出结果**（`hasAnyFilter`）：与「只输类型词 → 列出该类型全部」同一逻辑。
+  - 历史记录时机 = 回车提交 / 点历史词 / 点开某条结果（逐键不记）。
+- `features/calendar/...`：**未动**（E 批范围）。
+
+### E 批 —— 日历增强 · ✅ 已实现 + 走查通过（与 D 批合并打 `v0.7.10`）
+
+**⚠️ SPEC 前提修正（第三处）**：§E.1 写「长按 → `/record?date=YYYY-MM-DD`」——
+实际约定是**毫秒**（`app.dart` 路由里 `int.tryParse(state.uri.queryParameters['date'])` → `RecordPage.occurredAtMs`，
+既有的空态「记一笔」也是传 `selectedDayMs`）→ 按**毫秒**传，与既有链路一致。
+
+**实现（全按 E.1 DoD）**：
+
+- `features/calendar/presentation/widgets/month_grid.dart`：加两个**可选**回调
+  `onLongPressDay`（只对「在当月且未被 maxDate 禁」的格子生效，与点击同口径）+
+  `onShiftMonth`；新增私有薄壳 `_MonthSwipe`（StatefulWidget）承担横向拖拽累计 ——
+  累计量必须跨帧稳定，放 `build` 局部变量会被重建清零。
+  - **手势安全**：只注册**横向** drag → 竖向仍归外层 `SingleChildScrollView`（手势竞技场按轴判定）；
+    `HitTestBehavior.opaque` 只吃网格矩形内的点。阈值 = 1/3 格宽（`width / 7 / 3`），左滑 = 下一月。
+  - 记一笔的日期选择弹层（`date_picker_sheet.dart`）不传这两个回调 → 行为与改动前完全一致。
+- `features/calendar/presentation/calendar_page.dart`：长按 → 先 `selectDay`（回来即见刚记的那笔）
+  再 `context.push('/record?date=<毫秒>')`；滑动 → `calendarProvider.notifier.shiftMonth(delta)`；
+  空态提示文案改为「长按日历里任意一天，也能直接记这一天的账」。年月 header 与日列表都 watch 同一 provider → 自动同步。
+
+**门禁**：`dart_analyze_fallback` ✅ No issues found!；全量测试 **361**
+（287 `test()` + 74 `testWidgets`，本批 **+32**：`search_history_test` 9 +
+`search_query_test` 14 + `search_freshness_test` 1 + `search_overlay_test` 5 + `calendar_page_test` 3）。
+
+**真机走查（2026-09-24，AI 经 adb 全包，MuMu 12）✅ 通过**，逐条记录见 `docs/acceptance-F7.7-DE.md`：
+
+- **D 批**：区间行独立成行未挤压；点「餐饮」出 2 笔且分类名带暖黄高亮底；
+  回车后「最近搜过」出现且 `schema_meta` 里真有 `search_history` 键；点历史 chip 一点即搜；
+  只点「本月」= `共 5 笔 286.88` + 后缀「· 本月」（与首页月支出口径一致）。
+- **E 批**：长按 9月10日 → 记一笔页日期 = `2026年9月10日 周四`；返回后选中日变成 9月10日；
+  左滑 9月→10月、右滑回 9月且下方日列表同步。
+- 崩溃：0（`logcat -b crash` 无本 App 记录，进程存活）。
+
+**⚠️ 走查抓到 1 个真 bug（已修，F7.4 起就存在的老问题）**：搜索结果是**过期快照** ——
+`searchProvider` 是常驻 provider（非 autoDispose，浮层关掉再打开不重建），原先只 `watch`
+`activeBookIdProvider`，没有任何「数据变了」的信号 → **刚加完账户 / 刚记一笔后回搜索搜不到**
+（实测：搜新账户 `QABank`、搜新账金额 `66` 都落空，`force-stop` 重启立刻命中 → 据此定位为内存快照，
+不是匹配口径）。D 批新增的「账户名命中」正好把这条老问题暴露到主路径上。
+**修法**：`SearchController.build()` 加 `ref.watch(dataEpochProvider)`（项目既有的写操作版本号，
+一处接入即自动作废重取）。回归测试 `test/features/search/search_freshness_test.dart`
+（**实测注释掉那行 watch 该用例必失败**）。改完重打包 → 不重启 `记一笔 ¥66 → 搜 66` → 命中 ✅。
