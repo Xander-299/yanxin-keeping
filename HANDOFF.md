@@ -1,13 +1,20 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · **F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.9` 已打 tag；D/E 待用户终端回归后打 `v0.7.10`）**）
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10` 已打 tag）· **F7.8 流水左滑删除** 已实现 + 走查通过 ✅（`v0.7.11` 待用户终端 `flutter test` 后打））
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-25 03:40 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-25 04:25 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **本轮（交接固化 —— D/E 批已实现 + 走查通过 ✅ · backlog 五批清零 · 只剩「用户终端全量回归 → 打 `v0.7.10`」）**：
-> - 代码 / 文档 / tag 全部就位：功能代码基线 = **`de04841`**（D → E → 快照修复 → 构建工具），
->   交接文档提交在 `de04841` 之后（**别记哈希**，用 `git log --oneline -3` 查），工作区干净。
-> - ✅ analyze 等效 **0 issue**；✅ 真机走查（MuMu 12，AI 经 adb 全包）**通过、0 崩溃**（记录 `docs/acceptance-F7.7-DE.md`）。
-> - ⏳ **唯一剩项 = 用户在 Git Bash 终端跑 `flutter test`（预期 361 passed / 0 skipped）→ 回报后打 `v0.7.10` 并做发布收尾**。
+> **本轮（`v0.7.10` 已收尾 ✅ · 新需求 F7.8「流水左滑删除」已实现 + 走查通过 ✅ · 只剩「用户终端全量回归 → 打 `v0.7.11`」）**：
+> - **`v0.7.10` 已打 tag 并推远端**：用户终端 `flutter test` **361 passed / 0 skipped** → CHANGELOG 转正
+>   （`## [v0.7.10]`）→ 我的页角标 → tag 对象指向提交 **`16b6a00`**（`git ls-remote --tags` 已核对）。
+> - **F7.8（新需求，用户三项裁定见 `docs/SPEC-F7.8-swipe-delete.md` §7）**：删除入口由**长按**改为
+>   **左滑露出红色「删除」按钮 → 点按钮才删**（不采用「滑走即删」）；范围 = 首页 + 日历日账单 + 搜索结果；
+>   报表页仍只读；**零新依赖**（手写滑动件 `SwipeActionRow`）。
+> - 功能代码基线 = **`0d5cf16`**（**别记哈希**，用 `git log --oneline -3` 查），工作区干净。
+> - ✅ analyze 等效 **0 issue**；✅ 真机走查（MuMu 12，AI 经 adb 全包）**通过、0 崩溃**
+>   （记录 `docs/acceptance-F7.8-swipe-delete.md`）；走查抓到 1 个**只有真机能发现**的视觉 bug
+>   （行无自身底色 → 红色动作区透出）**已修并复验**。
+> - ⏳ **唯一剩项 = 用户在 Git Bash 终端跑 `flutter test`（预期 371 passed / 0 skipped，本批 +10）→
+>   回报后打 `v0.7.11` 并做发布收尾**。
 >
 > **上一条（F7.7 D 批「搜索增强」+ E 批「日历增强」已实现 + 走查通过 ✅ · backlog 五批清零）**：
 > - 用户一次签 D + E 两批（默认项沿用早前裁定：D.5 拼音匹配 **不做**、E.5 农历 **不做**，不引新依赖）。
@@ -170,9 +177,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 2** |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（2026-09-25 · F7.7 D/E 批）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **用户终端最近一次全绿 = 329**（2026-09-24，C 批收尾时），本批 **+32** → ⏳ **预期 361 passed / 0 skipped（待用户终端复跑确认）**；真机走查 ✅ **已完成**（D/E 批，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 287/287 实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤，配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）。 |
-| git | **功能代码基线** = **`de04841`**；交接文档提交在 `de04841` 之后（**本文件自身也在提交，别记哈希**）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.9`**（`v0.7.10` **待用户终端全量回归后打**；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
-| 源码规模 | `lib/` **83** 个 `.dart`，`test/` **43** 个 `.dart`（其中 **12** 个文件含 `testWidgets`），`tool/` **7** 个脚本（4 个等效 / 验证工具 + 3 个 `.dart` 辅助）；用例静态计数 **361** = `test()` 287 + `testWidgets` 74；`lib/core/db/database.g.dart` 已入库 |
+| **门禁（2026-09-25 · F7.8 左滑删除）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **用户终端最近一次全绿 = 361**（2026-09-25，F7.7 D/E 批），本批 **+10** → ⏳ **预期 371 passed / 0 skipped（待用户终端复跑确认）**；真机走查 ✅ **已完成**（F7.8，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 292 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**），后两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
+| git | **功能代码基线** = **`0d5cf16`**（F7.8 实现 + 白底修复 + 走查记录）；交接文档提交在其后（**本文件自身也在提交，别记哈希**）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.10`**（`v0.7.11` **待用户终端全量回归后打**；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| 源码规模 | `lib/` **84** 个 `.dart`（+`swipe_action_row.dart`），`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **8** 个脚本（4 个等效 / 验证工具 + `verify_apk_kernel.py` + 3 个 `.dart` 辅助）；用例静态计数 **371** = `test()` 292 + `testWidgets` 79；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
@@ -310,9 +317,17 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **F7.7 D 批（搜索增强）+ E 批（日历增强）已实现 + 走查通过**（测试计数 **361** = `test()` 287 + `testWidgets` 74，本批 +32；
-  提交线 `bce6305`（D）→ `cfe17ff`（E）→ `04c2bfd`（快照修复）→ `27689a2`（构建工具 + skill）→ `de04841`（文档回写）+ 其后的交接文档提交 = **`origin/master`**）。
-  ⏳ **`v0.7.10` 待用户终端 `flutter test` 回归（预期 361）后打**。
+- **F7.8 流水左滑删除 已交付（待用户终端 `flutter test` 后打 `v0.7.11`）**：删除入口由长按改为**左滑露出红色
+  「删除」按钮 → 点按钮才删**（用户三项裁定，SPEC `docs/SPEC-F7.8-swipe-delete.md`）；范围 = 首页 + 日历日账单 +
+  搜索结果（报表页仍只读）；**零新依赖**（`SwipeActionRow` 手写：行程 ≥45% 或向左甩 ≥350px/s 吸附；单开协调；
+  展开时点整行 = 收起）。测试计数 **371** = `test()` 292 + `testWidgets` 79（本批 **+10**，另改 2 例长按用例）。
+  提交线 `8d8dc8e`（实现 + 测试）→ `29b5431`（SPEC + CHANGELOG）→ `0d5cf16`（白底修复 + 走查记录）→
+  `5ecdcef`（`tool/verify_apk_kernel.py` + 走查技能补坑）= **`origin/master`**。
+  ✅ 真机走查 D1–D7 全过、0 崩溃（`docs/acceptance-F7.8-swipe-delete.md`）；⚠️ 走查抓到 1 个**只真机能发现**的
+  视觉 bug（`TxTile` 无自身底色 → 红色动作区透过行露出）**已修并复验**；走查删的 2 笔已还原。**不动 schema**（仍 v3）。
+- **F7.7 D 批（搜索增强）+ E 批（日历增强）已交付：`v0.7.10` 已打 tag 推远端**（测试计数 **361** = `test()` 287 + `testWidgets` 74 +32；
+  提交线 `bce6305`（D）→ `cfe17ff`（E）→ `04c2bfd`（快照修复）→ `27689a2`（构建工具 + skill）→ `de04841`（文档回写）
+  → `16b6a00`（CHANGELOG 转正 = tag 指向））。
   ⚠️ **本批不动 schema**（SPEC §D.3 的「新建 `app_meta` 表 + schema 2→3」两处前提都不成立 → 复用既有
   `schema_meta` KV）；§E.1 的 `date` 参数实际约定是**毫秒**。
   ⚠️ 走查抓到并修了一个**老 bug**：搜索结果是过期快照（`searchProvider` 未接 `dataEpochProvider`）——
@@ -352,10 +367,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 未解决问题
 
-> 说明：**F7.7 backlog 五批（A→E）实现全部交付**（`v0.7.7`/`v0.7.8`/`v0.7.9` 已打 tag；
-> D+E 合并的 `v0.7.10` ⏳ **待用户终端全量回归后打**），**无待签字批次**；
-> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 4 个等效工具绕开
-> （analyze / test / 数据层 / **APK 构建**，见第 1 条末尾的「构建路径」）；
+> 说明：**F7.7 五批（A→E）+ F7.8 左滑删除 全部实现并交付**（`v0.7.7`–`v0.7.10` 已打 tag；
+> F7.8 的 `v0.7.11` ⏳ **待用户终端全量回归后打**），**无待签字批次**；
+> 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 5 个等效 / 核验工具绕开
+> （analyze / test / 数据层 / **APK 构建** / **装机前 kernel 核验**，见第 1 条末尾的「构建路径」）；
 > 第 **2** 条是**唯一剩项**；F2 / F5 已裁定保持现状（2026-09-23）。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
@@ -426,25 +441,26 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      参数逐字照抄构建日志里 `kernel_snapshot_program` 的命令行；**上线前必须核验** APK 内
      `assets/flutter_assets/kernel_blob.bin` 的 sha256 与盘上一致 + grep 本次新增文案（防「装到旧包」）。
      细节见 `docs/acceptance-F7.7-DE.md` 文末。**2026-09-24 D/E 批走查即用这条路完成装机。**
-2. 【**唯一剩项 · 等用户终端全量 `flutter test` → 打 `v0.7.10`**】F7.7 D/E 批实现 + 走查通过已全部落地
-   （功能代码基线 `de04841`，交接文档提交在其后，工作区干净）：
+2. 【**唯一剩项 · 等用户终端全量 `flutter test` → 打 `v0.7.11`**】F7.8 左滑删除实现 + 走查通过已全部落地
+   （功能代码基线 `0d5cf16`，交接文档提交在其后，工作区干净）：
    - ✅ `flutter analyze`：**已闭合** 0 issue（`python tool/dart_analyze_fallback.py` → `No issues found!`）。
-   - ✅ **真机走查：已闭合**（2026-09-24，MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）——
-     D 批：高亮暖黄底 / 账户名命中 / 历史 chip 一点即搜 / 只点「本月」= `共 5 笔 支出 286.88 · 本月`；
-     E 批：长按 9月10日 → 记一笔页日期 `2026年9月10日`、左滑 9月→10月 / 右滑回退且日列表同步、竖向未误翻月；
-     `logcat -b crash` **0 崩溃**。记录：`docs/acceptance-F7.7-DE.md`。
-     走查残留数据已复核还原（账户数回 **2**、净资产回 **¥-235.48**）。
-   - ⏳ `flutter test`：**只差这一步**。本批新增 **+32** → **预期 361 passed / 0 skipped**
-     （= `test()` **287** + `testWidgets` **74**）。用户终端最近一次全绿是 C 批收尾的 **329**（2026-09-24）。
-     本机跑不了 `testWidgets`（见第 1 条），但**纯 `test()` 287 例本机已实测全绿**（search 三文件 54 例全过）。
+   - ✅ **真机走查：已闭合**（2026-09-25，MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）——
+     左滑露出红色「删除」（行内金额节点 x 450 → 363）/ 点动作区弹既有确认框 / 取消回弹且数据不变 /
+     单开（滑第二行时第一行自动收起）/ 点已展开行 = 收起且不跳编辑 / 竖向滚动正常 /
+     月历翻月 9月↔10月 正常 / 报表页左滑零位移（只读保持）；`logcat -b crash` **0 崩溃**。
+     记录：`docs/acceptance-F7.8-swipe-delete.md`。走查删的 2 笔（-74 / -33）已改库还原
+     （备份 `yanxin.sqlite.bak-20260925`）→ 重启复核首页 286.88 一致。
+   - ⏳ `flutter test`：**只差这一步**。本批新增 **+10** → **预期 371 passed / 0 skipped**
+     （= `test()` **292** + `testWidgets` **79**）。用户终端最近一次全绿是 F7.7 D/E 批的 **361**（2026-09-25）。
+     本机跑不了 `testWidgets`（见第 1 条），但**纯 `test()` 新增 5 例本机已实测全绿**。
      请在**自己的 Git Bash 终端**跑 `source env.sh && fx-test`（或 `flutter test`）；
      若终端同样报 `CreateFile failed 231` → 重启 Windows / WorkBuddy 再试。
-   - **回归通过后收尾四步**：① `CHANGELOG.md` 把 `## [Unreleased] · F7.7 D 批（搜索增强）+ E 批（日历增强）`
-     段转成 `## [v0.7.10] — <日期> · <标题>`（段首写门禁数字 + 走查结论 + 回滚命令）+ tag 表补一行；
-     ② 我的页 `_BrandTip` 版本角标 `v0.7.9` → `v0.7.10`（**等宽替换、无布局变化**，单独提交）；
-     ③ `git tag -a v0.7.10 -m '…'` → `git push && git push --tags`（**直推、不加管道**）→
-     `git ls-remote --tags origin | grep v0.7.10` 核对 tag 对象 → 记录提交哈希；
-     ④ 文档收尾：本文件 + `docs/SPEC-F7.7-backlog.md` §G + `tasks/todo-flutter.md` 勾选。
+   - **回归通过后收尾四步**：① `CHANGELOG.md` 把 `## [Unreleased] · F7.8 流水左滑删除`
+     段转成 `## [v0.7.11] — <日期> · <标题>`（段首写门禁数字 + 走查结论 + 回滚命令）+ tag 表补一行；
+     ② 我的页 `_BrandTip` 版本角标 `v0.7.10` → `v0.7.11`（**等宽替换、无布局变化**，单独提交）；
+     ③ `git tag -a v0.7.11 -m '…'` → `git push && git push --tags`（**直推、不加管道**）→
+     `git ls-remote --tags origin | grep v0.7.11` 核对 tag 对象 → 记录提交哈希；
+     ④ 文档收尾：本文件 + `docs/SPEC-F7.8-swipe-delete.md` §8 + `tasks/todo-flutter.md` 勾选。
    - ⚠️ **若用户报失败，先索要完整失败原文**（文件名 + 用例名 + `[E]` 块）再动手 ——
      本批易踩点已固化：widget 视口 800×600 太矮（bottom sheet 用例要切竖屏视口）、
      `find.text` 默认 `skipOffstage: true` 搜不到视口外元素（见「盲区防护」第 30/31/39 条）。
@@ -634,21 +650,24 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事（只剩一件）**：**等用户在自己的 Git Bash 终端跑一次全量 `flutter test`（预期 **361**）
-   → 通过后打 `v0.7.10` 并做发布收尾**。其余门禁均已闭合。
+1. **当前最重要的事（只剩一件）**：**等用户在自己的 Git Bash 终端跑一次全量 `flutter test`（预期 **371**）
+   → 通过后打 `v0.7.11` 并做发布收尾**。其余门禁均已闭合。
    - ✅ `flutter analyze` **已闭合**（`python tool/dart_analyze_fallback.py` → `No issues found!`），**不用再跑**。
-   - ✅ **真机走查已闭合**（2026-09-24，D/E 批，MuMu 12，AI 经 adb 全包，0 崩溃）→ `docs/acceptance-F7.7-DE.md`。
-   - ⏳ `flutter test`：本批新增 **+32** → **预期 361 passed / 0 skipped**（`test()` **287** + `testWidgets` **74**）。
-     用户终端最近一次全绿 = **329**（2026-09-24，C 批收尾）。**本机跑不了 `testWidgets`**，
-     别拿本机脚本当最终判据；纯 `test()` 287 例本机已实测全绿。若终端也报 `CreateFile failed 231` → 重启 Windows / WorkBuddy。
-   - **回归通过后的收尾四步**见「未解决问题」第 2 条 —— ① CHANGELOG `[Unreleased]` 转 `## [v0.7.10]` + tag 表补行；
-     ② 我的页 `_BrandTip` 角标 `v0.7.9` → `v0.7.10`（等宽替换，单独提交）；③ `git tag -a v0.7.10` →
+   - ✅ **真机走查已闭合**（2026-09-25，F7.8，MuMu 12，AI 经 adb 全包，0 崩溃）→ `docs/acceptance-F7.8-swipe-delete.md`。
+   - ⏳ `flutter test`：本批新增 **+10** → **预期 371 passed / 0 skipped**（`test()` **292** + `testWidgets` **79**）。
+     用户终端最近一次全绿 = **361**（2026-09-25，F7.7 D/E 批）。**本机跑不了 `testWidgets`**，
+     别拿本机脚本当最终判据。若终端也报 `CreateFile failed 231` → 重启 Windows / WorkBuddy。
+   - **回归通过后的收尾四步**见「未解决问题」第 2 条 —— ① CHANGELOG `[Unreleased]` 转 `## [v0.7.11]` + tag 表补行；
+     ② 我的页 `_BrandTip` 角标 `v0.7.10` → `v0.7.11`（等宽替换，单独提交）；③ `git tag -a v0.7.11` →
      `git push && git push --tags`（**直推、不加管道**）→ `git ls-remote --tags` 核对；④ 文档收尾
-     （本文件 + SPEC §G + `tasks/todo-flutter.md`）。
-   - **D/E 批的代码与测试已经写完并已落地**（`de04841` 已在 `origin/master`）：**别重写**。
-     实现细节、等效门禁原理与「已放弃的替代路线」都在 `docs/SPEC-F7.7-backlog.md` §G；
-     也别重试已否掉的路线（LSP 全量 / `Content-Length` 帧 / 迷你 `flutter_test` 替身 / `inheritStdio` 包装器）。
-   - **F7.7 五批（A–E）全部交付** → **无待签字批次**；打完 `v0.7.10` 后**等用户排新需求**。
+     （本文件 + SPEC-F7.8 §8 + `tasks/todo-flutter.md`）。
+   - **F7.8 的代码与测试已经写完并已落地**（`0d5cf16` 已在 `origin/master`）：**别重写**。
+     实现细节在 `docs/SPEC-F7.8-swipe-delete.md` §8；走查记录（含「只真机能发现」的那个视觉 bug）在
+     `docs/acceptance-F7.8-swipe-delete.md`。
+   - **改动面**：新增 `lib/features/ledger/presentation/widgets/swipe_action_row.dart`；`tx_group_list.dart`
+     （`TxGroupList` → `StatefulWidget`，`onDelete` 变 `Future<void> Function(TxRow)`）与
+     `calendar_page.dart`（`_SelectedDaySection` → `StatefulWidget`）接入；`TxTile` 摘掉 `onLongPress`。
+   - **F7.7 五批（A–E）+ F7.8 全部交付** → **无待签字批次**；打完 `v0.7.11` 后**等用户排新需求**。
    - **已关闭的测试反馈**：`real_bills_test.dart` 曾报 `loading ...`（全仓唯一在 `main()` 里做 IO 的文件）
      → 已加固为懒读 + 降级 `markTestSkipped`，**复跑未再出现**。**若再复现，要那行 `loading` 的完整 `[E]` 块**。
 2. **要真机走查**：两条构建路径 —— ① **正常环境（用户终端）**：`source env.sh && flutter build apk --debug`；
@@ -702,9 +721,11 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `env.sh` **自动识别机器**，开终端先 `source env.sh`。
 - **F1–F7.6 全部 ✅**（日历 / 统计 / 预算 schema v2 / 搜索 / 搜索浮层 / 资产页 / 全站卡通浅色 `v0.7.6`）。
 - **F7.7 五批（A 报表明细 → B 数据导出 → C 账户图标·颜色 → D 搜索增强 → E 日历增强）全部已签字 + 已实现 + 已走查**：
-  `v0.7.7` / `v0.7.8` / `v0.7.9` 已打 tag；**D + E 合并的 `v0.7.10` ⏳ 待用户终端全量回归后打**。
+  `v0.7.7`–`v0.7.10` 已打 tag（D + E 合并为 `v0.7.10`，**361 全绿**）。
   **DB schema = v3**（v2 加 budgets、v3 加 `accounts.icon` / `accounts.color`）；**D 批零迁移**（复用既有 `schema_meta` KV）。
-- **功能代码基线 = `de04841`**（交接文档提交在其后）；**最新 tag `v0.7.9`**。
+- **F7.8 流水左滑删除 已实现 + 走查通过 ✅**：长按删除 → **左滑露出红色「删除」按钮，点按钮才删**
+  （首页 / 日历日账单 / 搜索 3 处；报表页仍只读；零新依赖；**不动 schema**）→ ⏳ `v0.7.11` 待用户终端回归后打。
+- **功能代码基线 = `0d5cf16`**（交接文档提交在其后）；**最新 tag `v0.7.10`**。
 - ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（`CreateFile failed 231` / `process_win.cc:744`）
   → `flutter analyze / test / pub / build_runner` / **构建** 在本机直连全废。**别怀疑代码、别换 Dart 版本、别开 `dangerouslyDisableSandbox`**。
   四个等效工具（已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
@@ -712,10 +733,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `python tool/data_layer_probe.py`（数据层实跑）、
   `python tool/build_kernel_fallback.py` + `./gradlew assembleDebug -x compileFlutterBuildDebug`（出 APK）。
   **用户自己的 Git Bash 终端不受影响**。协议三坑见 SPEC §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
-- **门禁状态**：analyze ✅ 0 issue；真机走查 ✅ 已闭合（D/E 批，0 崩溃，`docs/acceptance-F7.7-DE.md`）；
-  ⏳ `flutter test` 只差用户终端跑一次 → **预期 361 passed / 0 skipped**（`test()` 287 + `testWidgets` 74；上一轮 329）。
-  → **通过后打 `v0.7.10`**：CHANGELOG `[Unreleased]` 转 `## [v0.7.10]` + 我的页角标 `v0.7.9`→`v0.7.10` +
-  `git tag -a v0.7.10` + **`git push && git push --tags` 直推**（不加管道）→ `git ls-remote --tags` 核对。
+- **门禁状态**：analyze ✅ 0 issue；真机走查 ✅ 已闭合（F7.8，0 崩溃，`docs/acceptance-F7.8-swipe-delete.md`）；
+  ⏳ `flutter test` 只差用户终端跑一次 → **预期 371 passed / 0 skipped**（`test()` 292 + `testWidgets` 79；上一轮 361）。
+  → **通过后打 `v0.7.11`**：CHANGELOG `[Unreleased]` 转 `## [v0.7.11]` + 我的页角标 `v0.7.10`→`v0.7.11` +
+  `git tag -a v0.7.11` + **`git push && git push --tags` 直推**（不加管道）→ `git ls-remote --tags` 核对。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`。版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。
