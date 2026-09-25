@@ -23,6 +23,7 @@ import 'package:yanxin/features/category/presentation/category_manage_page.dart'
 import 'package:yanxin/features/import/presentation/import_page.dart';
 import 'package:yanxin/features/ledger/presentation/home_page.dart';
 import 'package:yanxin/features/nav/presentation/app_shell.dart';
+import 'package:yanxin/features/onboarding/presentation/onboarding_page.dart';
 import 'package:yanxin/features/profile/presentation/profile_page.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
@@ -98,6 +99,8 @@ class _YanxinAppState extends State<YanxinApp> {
         path: '/categories',
         builder: (_, _) => const CategoryManagePage(),
       ),
+      // 新手引导（F7.14）：首启由 AppShell 判定后 push；也可从「我的」随时重看
+      GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingPage()),
     ],
   );
 

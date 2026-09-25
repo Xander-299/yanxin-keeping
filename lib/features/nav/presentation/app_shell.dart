@@ -1,6 +1,8 @@
 /// 底部导航壳：4 tab + 中央「记一笔」按钮（卡通风，对齐页面原型 `.tabbar`）。
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,32 +10,67 @@ import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/book_drawer.dart';
+import 'package:yanxin/features/onboarding/application/onboarding_prompt.dart';
 
 /// 导航壳：持有抽屉（账本列表）+ 底栏。
-class AppShell extends ConsumerWidget {
+///
+/// F7.14 起兼任**新手引导的首启触发点**：首帧后查一次 [onboardingPromptProvider]，
+/// 判定该弹就 push `/onboarding`。**不阻塞首帧** —— 首页照常构建，引导盖在其上。
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  /// 只查一次（State 跨 tab 切换存活，不会因为切分支重复弹）。
+  bool _checkedOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (Duration _) => unawaited(_maybeShowOnboarding()),
+    );
+  }
+
+  Future<void> _maybeShowOnboarding() async {
+    if (_checkedOnboarding || !mounted) return;
+    _checkedOnboarding = true;
+    final bool shouldShow;
+    try {
+      shouldShow = await ref.read(onboardingPromptProvider.future);
+    } catch (_) {
+      // 读库失败不阻断冷启动（引导是锦上添花）
+      return;
+    }
+    if (!shouldShow || !mounted) return;
+    unawaited(context.push('/onboarding'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final StatefulNavigationShell shell = widget.navigationShell;
     return Scaffold(
       drawer: const BookDrawer(),
-      body: navigationShell,
+      body: shell,
       bottomNavigationBar: _BottomNav(
-        currentIndex: navigationShell.currentIndex,
+        currentIndex: shell.currentIndex,
         onTap: (int slot) {
           switch (slot) {
             case 0:
-              navigationShell.goBranch(0, initialLocation: true);
+              shell.goBranch(0, initialLocation: true);
             case 1:
-              navigationShell.goBranch(1, initialLocation: true);
+              shell.goBranch(1, initialLocation: true);
             case 2: // 中央 +：记一笔（保存后的首页刷新由记一笔页自己触发）
               context.push('/record');
             case 3:
-              navigationShell.goBranch(2, initialLocation: true);
+              shell.goBranch(2, initialLocation: true);
             case 4:
-              navigationShell.goBranch(3, initialLocation: true);
+              shell.goBranch(3, initialLocation: true);
           }
         },
       ),

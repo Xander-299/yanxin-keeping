@@ -33,9 +33,16 @@ class ProfilePage extends ConsumerWidget {
                 child: Column(
                   children: <Widget>[
                     _Entry(
+                      icon: Icons.tips_and_updates_outlined,
+                      title: '新手引导',
+                      sub: '没有文字的按钮、藏起来的手势，30 秒看懂',
+                      onTap: () => context.push('/onboarding'),
+                    ),
+                    _Entry(
                       icon: Icons.label_outline_rounded,
                       title: '分类管理',
                       sub: '预置分类 · 支持自定义增改删',
+                      dashedTop: true,
                       onTap: () => context.push('/categories'),
                     ),
                     _Entry(
@@ -243,7 +250,7 @@ class _BrandTip extends StatelessWidget {
               ),
               Spacer(),
               Text(
-                'v0.7.13',
+                'v0.7.14',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,

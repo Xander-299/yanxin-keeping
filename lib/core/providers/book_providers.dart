@@ -14,10 +14,21 @@ final activeBookIdProvider = AsyncNotifierProvider<ActiveBookIdController, Strin
 );
 
 class ActiveBookIdController extends AsyncNotifier<String?> {
+  /// 本次 build 时「库里**还完全没有**主账本记录」→ 这份 App 数据是本机第一次使用。
+  ///
+  /// 用途：新手引导（F7.14）**只在全新安装**时自动弹 —— 老用户（含从旧包覆盖安装上来的）
+  /// 不弹。`active_book_id` 自 F1 起每次冷启动都会落库，老用户必有值，是「是否新装」的唯一真源。
+  ///
+  /// ⚠️ 判据是「读到的瞬间 `getActiveBookId()` 返回 null」，**不是**「本次走了
+  /// `ensureDefaultBook` 分支」—— 后者在「当前账本被软删」等边缘情况也会命中
+  /// （那时 `active_book_id` 其实有值），会把老用户误判成新装。
+  bool isFreshInstall = false;
+
   @override
   Future<String?> build() async {
     final repo = ref.watch(bookRepositoryProvider);
     final stored = await repo.getActiveBookId();
+    isFreshInstall = stored == null;
     if (stored != null) {
       final book = await repo.getById(stored);
       if (book != null) return stored;
