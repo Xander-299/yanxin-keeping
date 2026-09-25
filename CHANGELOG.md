@@ -24,6 +24,77 @@
 | `v0.7.11` | F7.8 流水左滑删除（长按 → 左滑露出按钮；首页 / 日历日账单 / 搜索结果 3 处） | 本段所在提交 |
 | `v0.7.12` | F7.9 记一笔双保存入口收敛（删顶部 + 底部吸底常驻）+ 启动图标 adaptive icon + `signingConfigs` 构建阻塞修复 | 本段所在提交 |
 | `v0.7.13` | 统计页图表绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱） | 本段所在提交 |
+| `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
+
+## [v0.7.14] — 2026-09-25 · 新手引导（7 页全屏导览）
+
+> **门禁**：`flutter test` **400 passed / 0 skipped**（2026-09-25 用户终端全量；
+> = `test()` **312** + `testWidgets` **88**，本批 **+17** —— `test()` +10 / `testWidgets` +7）；
+> `flutter analyze` 等效 —— **本批新增文件 `No issues found!`** ✅（全项目残留 5 条为
+> `D:\` / `d:\` 同一文件双身份造成的**既有环境假阳性**，与本批无关，见本节末 §门禁备注）。
+> 真机走查（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）**D1–D10 全部通过、0 崩溃**
+> → `docs/acceptance-F7.14-onboarding.md`。**回滚**：`git checkout v0.7.13`。
+> **零新依赖、不动 schema**（引导标记复写既有 `schema_meta` KV，DB 仍 **v3**）。
+> SPEC：`docs/SPEC-F7.14-onboarding.md`（用户裁定四项，见其 §7）。
+
+### A · 需求与范围
+
+- **起因**（用户）：让第一次使用的用户知道「没有明显标识的按钮」是做什么的。
+- **现状**：全站 **17 处**「无文字 / 只有手势」入口，其中 3 处**连 tooltip 都没有**
+  （日历长按格子记账、月历左右滑翻月、流水行左滑删除）；纯图标按钮的 `Tooltip` 在触屏上要
+  **长按**才现，等于不存在。
+- **用户裁定四项**：① 形式 = **全屏分页导览**（否掉遮罩高亮真实控件 / 首页常驻提示卡）；
+  ② 覆盖范围 = 底栏中央按钮 + 首页三图标 / 三处隐藏手势 / 翻月箭头 + 预算铅笔 / 资产页 `+` 与账户行 +
+  报表三档（→ **7 页**）；③ 重看入口 = 「我的」页新增可点条目「新手引导」；
+  ④ **老用户不弹** —— 只在新装时自动弹，老用户走「我的 → 新手引导」主动看。
+
+### B · 新增
+
+- `lib/features/onboarding/`：`onboarding_keys.dart`（KV 键）、`application/onboarding_prompt.dart`
+  （该不该弹的判定）、`presentation/onboarding_page.dart`（页骨架）、
+  `presentation/widgets/onboarding_slides.dart`（7 页文案 + `parseEmphasis`）、
+  `presentation/widgets/onboarding_art.dart`（迷你示意图件：`MiniScreen` / `HighlightBox` / `Callout` + 7 页画面）。
+- **7 页**（一页一件事，横向可滑 + 「下一步」，顶部 7 点进度可点跳页，右上「跳过」）：
+  ① 欢迎 → ② 底栏中央歪 4° 的琥珀方块 = 记一笔 → ③ 右上角三个图标（搜流水 / 报表 / 统计）→
+  ④ 翻月 `‹ ›` + 预算卡铅笔 → ⑤ 三个藏起来的手势 → ⑥ 资产页 `+` 与账户行 + 报表三档 → ⑦ 完成。
+- **示意图全部矢量手绘**（不引图片资源）：复刻真实比例与同一组 `IconData`；目标控件用**品牌色高亮圈**
+  圈住，配**折线箭头 + 标签**；只用 `Tok.*` 令牌与现成 `Toon*` 件，无裸色值。
+- 「我的」页条目卡**首位**新增「新手引导」（`分类管理` 补 `dashedTop`）→ `push('/onboarding')` 随时重看。
+- 新增路由 `/onboarding`（全屏，在 shell 之外 → 盖住底栏）。
+
+### C · 判定逻辑（「该不该弹」）
+
+- **两个条件同时成立**才弹：① `schema_meta` 无 `onboarding_done`；②
+  `ActiveBookIdController.isFreshInstall`（新字段）= 本次 build 读到的 `active_book_id` 为 `null`。
+- `active_book_id` 自 F1 起每次冷启动都会落库 → **老用户必有值**，是「本机是否第一次用」的唯一真源。
+  ⚠️ **不能**用「本次是否走了 `ensureDefaultBook` 分支」当判据 —— 「当前账本被软删」也会命中该分支
+  （此时 `active_book_id` 其实有值），会把老用户误判成新装。
+- **首启触发点**：`AppShell` 首帧后（`addPostFrameCallback`）查一次 `onboardingPromptProvider` → `push`。
+  不阻塞首帧；读库失败不弹、静默。
+- **「看过」标记收口在 `dispose()`**：跳过 / 开始记账 / 系统返回三条路径都是 `pop()`，pop 后页面即摘除
+  → 一处写入即可，不需要 `PopScope`。写失败静默吞掉（不能把用户困在引导页）。
+- 老用户**不写标记**（`onboarding_done` 只表示「看过」）。
+
+### D · 测试
+
+- 新增 `test/features/onboarding/onboarding_slides_test.dart`（**10 例纯 `test()`**：页数 / 标题顺序 /
+  每页文案非空 / 标记键值 / `parseEmphasis` 6 例含未闭合与空串）—— 本机实测 **10 passed** ✅。
+- 新增 `test/features/onboarding/onboarding_flow_test.dart`（**7 例 `testWidgets`**：首启自动弹 /
+  翻页且只建当前页 / 连点到末页文案变「开始记账」+ 完成写标记 / 跳过写标记 / 已看过不弹 /
+  老用户（`active_book_id` 有值）不弹且不写标记 / 「我的」入口可 push 并回得来）。
+- ⚠️ **测试基建必须改**：`test/helpers/pump_app.dart` 的 `pumpApp` 默认**预写** `onboarding_done`
+  —— 内存库对 App 而言都是「全新安装」，不预写会让首启引导盖住首页，**打断既有 9 个测试文件**；
+  首启专项用例显式传 `onboardingDone: false`。用户终端全量实跑 **400 passed** = `test()` 312 + `testWidgets` 88。
+
+### 门禁备注（analyze 等效工具的环境假阳性）
+
+`tool/dart_analyze_fallback.py` 本次全项目报 **5 error**，形如
+`Map<int, DayAgg> (where DayAgg is defined in D:\…catalog…) can't be assigned to Map<int, DayAgg> (…d:\…catalog…)`
+—— 同一文件在同一分析里出现**两种盘符大小写身份**（`D:\` / `d:\`），源于代码里
+`package:yanxin/…` 与相对导入（`import '../db/database.dart'`）混用 + 本机路径大小写。
+**证据（与本批无关）**：未改动的 `lib/features/ledger` 单独作为根跑即复现其中 3 个；
+本次新增的 `lib/features/onboarding` + `test/features/onboarding` 单独跑 **No issues found!**。
+→ 待用户在终端跑 `flutter analyze` 复核；若同样报这 5 条，需另开一批统一导入风格（`always_use_package_imports`）。
 
 ## [v0.7.13] — 2026-09-25 · 统计页图表两处绘制修复
 
