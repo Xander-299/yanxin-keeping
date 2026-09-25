@@ -218,7 +218,8 @@
 - [x] 门禁：analyze 0 issue；test **269 通过 0 skip**（新增 16：聚合 10 + 资产页 widget 6）
 - [x] **MuMu 12 真机走查（首次使用验收规范）**：15 步全过，阻断 0 / 卡住 0 / 状态丢失 0；
       报告 `docs/acceptance-F7.5b-assets.md`
-- [ ] 账户图标选择（体验摩擦 F1：`accounts.icon` / `color` 列已存在，界面未暴露）
+- [x] 账户图标选择（体验摩擦 F1：`accounts.icon` / `color` 列已存在，界面未暴露）
+      → **F7.7 C 批已实现**（schema v2→v3 补列 + 表单图标/颜色两块）→ `v0.7.9`
 
 ### F7.6 卡通浅色视觉改版（2026-09-23 全部交付，版本 `v0.7.6`，SPEC 已签字）
 
@@ -238,7 +239,8 @@
 
 ### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A–E 五批全部交付 ✅（v0.7.7 / v0.7.8 / v0.7.9 / v0.7.10）**）
 
-- [x] 小 SPEC 起草（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.11`
+- [x] 小 SPEC 起草（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.10`
+      （**D/E 合并为一个 tag `v0.7.10`**）
 - [x] **A 批签字**（2026-09-23）：A.0 做 / D.5 拼音不做 / E.5 农历不做；且裁定「报表页流水行只读不可点」
 - [x] **A 批真机走查通过（2026-09-23，MuMu 12 无阻断）→ `v0.7.7` 已打 tag 并推远端**；
       F2 / F5 两项「待裁定」用户裁定**保持现状**不改
@@ -321,6 +323,43 @@
 - [x] 新增 `tool/verify_apk_kernel.py`（装机前核 APK 内 `kernel_blob.bin` sha256 + grep 新文案，防「装到旧包」）
 - [x] **tag `v0.7.11`**：✅ 已打并推远端（tag 对象 `6357de1` → 提交 `e984023`；CHANGELOG 已转正）
 
+### F7.9 记一笔双保存入口收敛（用户新需求，2026-09-25 · **已交付 / 已打 `v0.7.12`**）
+
+- [x] 小 SPEC 起草并签字（`docs/SPEC-F7.9-record-sticky-save.md`）：用户四选一裁定
+      **底部主按钮改吸底常驻 + 删顶部入口**（否掉「去底部、只留顶部」）
+- [x] `record_page.dart`：删 AppBar `actions` 的「保存」；`body` 改
+      `Column(Expanded(滚动区) + 吸底栏)`，滚动区 bottom padding `24 → 16`
+- [x] ⚠️ **SPEC 前提修正**：初稿写「用 `Scaffold.bottomNavigationBar`」**不成立** ——
+      它按 `size.height - h` 贴**屏幕**底，只有 body 会被 `viewInsets.bottom` 压缩 →
+      键盘弹起会被盖住。改 body 内 `Column`（已回写 §3 / §6）
+- [x] 吸底栏：`Tok.paper` 底 + 顶部墨色描边（与 AppBar 底边对称）+ `SafeArea(top: false)` +
+      `ToonButton(block: true)`（文案：新建「记一笔」/ 编辑「保存修改」）
+- [x] 零新依赖、**不动 schema**（仍 v3）
+- [x] 测试：重写 `record_save_entry_test`（矮视口 800×400 口径：AppBar 无「保存」/ 吸底按钮唯一且在视口内 /
+      滚动 400px 后按钮 y 不变 / 走同一套校验）+ `record_account_test` 的 `_tapSave` 改点吸底按钮
+      + **删 3 处 `ensureVisible`**（`widget_test` ×2 / `calendar_page_test` ×1 —— 吸底按钮不在
+      `Scrollable` 内，`Scrollable.of` 返回 null 会直接抛错）
+- [x] **`flutter analyze` 0 issue** ✅（等效达成）；顺带修 `sort_pub_dependencies` 1 条 info
+- [x] **`flutter test` 372 passed / 0 skipped** —— ✅ **2026-09-25 用户终端全量通过**（本批 +1）；
+      首轮曾 1 例失败（`home_empty_state_test` 仍断言 AppBar 有「保存」）→ **`661ec6b` 已修**
+- [x] **真机走查（MuMu 12，AI 经 adb 全包）** ✅ 0 崩溃 —— `docs/acceptance-F7.9-record-sticky-save.md`：
+      D1 无顶部入口 / D2 未滚动即在视口内 `@(450,1528)` / D3 矮视口 900×1000 后仍 `@(450,928)` /
+      D5 保存链路（286.88 → 299.22）/ D6 编辑态文案「保存修改」/ D8 0 崩溃；
+      ⚠️ **D4 键盘项未直接取证**（MuMu 有硬件键盘映射不弹软键盘）→ 改矮视口做等价验证
+- [x] **tag `v0.7.12`**：✅ 已打并推远端（tag 对象 `dcab296` → 提交 `1f3ec96`；CHANGELOG 两段已合并转正）
+
+### 启动图标 adaptive icon（2026-09-25 · **已交付 / 含于 `v0.7.12`**）
+
+- [x] 问题：`flutter_launcher_icons` 只产 legacy `mipmap-*/ic_launcher.png`、**默认不产 adaptive** →
+      API 26+ 回落 legacy，系统给图标**套白底 + 圆形遮罩**（真机一圈白边）
+- [x] 补 `mipmap-anydpi-v26/ic_launcher.xml` + `values/ic_launcher_background.xml`（`#FFD81B`）+
+      5 个 density 前景层（108/162/216/324/432）+ 前景源图（1024²、透明底、66% 安全区）
+- [x] `pubspec.yaml`：`flutter_launcher_icons` 从 `dependencies` 移回 `dev_dependencies`（重复声明）+ 补配置段
+- [x] 新增工具（纯 Python 标准库）：`tool/png_util.py` / `gen_launcher_icons.py` / `inspect_icons.py` / `check_pubspec.py`
+- [x] **顺带修构建阻塞**（`b795541`）：`signingConfigs { }` 必须声明在 `buildTypes { }` **之前**，
+      否则 `getByName("release")` 在配置阶段先求值报错，**连 `assembleDebug` 都挂**
+- [x] 验证：`inspect_icons` + `check_pubspec` 全绿 + debug APK 构建成功（过 aapt2）+ 装机桌面无白底白圈
+
 ### F7.7-a 首次使用验收（2026-09-23，报告 `docs/acceptance-first-run.md`）
 
 验收对象：零配置新用户「第一次打开 → 记下第一笔账 → 在首页 / 报表看到这笔账被正确归集」。
@@ -333,20 +372,22 @@
       → 修：`build()` 里 `ref.listen(dataEpochProvider) → refresh()`（保留档位 / 月份，**不用 `watch`**）
 - [x] 新增测试 2 例（`reports_page_test` 7 → 9）：空月写账后自动刷新且保留档位 / 翻月后写账仍停原月
 - [x] 新增工具 `tool/data_layer_probe.py` + `tool/data_layer_probe.dart`（`flutter test` 不可用时的数据层替代）
-- [ ] **F2（卡住 · 待裁定）** 首页 header「报表」与「全部账单 ›」**不带年月** → 报表落到「它自己记得的月份」
+- [x] **F2（已裁定 · 保持现状，2026-09-23）** 首页 header「报表」与「全部账单 ›」**不带年月** → 报表落到「它自己记得的月份」
       （日历页 / 月份选择页入口都带）。SPEC §A.2.3 未写这两条
 - [ ] **F3（反馈不可懂）** 8 处 `加载失败：$e` 直出异常字符串、无重试 → 抽 `LoadFailure`，先接首页 / 报表页
 - [ ] **F4（摩擦）**「我的 → 设置」副标题承诺「主题、默认账户、货币单位」但整行不可点（文案 1 行）
-- [ ] **F5（摩擦 · 待裁定）** 入口「全部账单 ›」vs 落地页标题「报表」（SPEC 要求入口文案保持）
+- [x] **F5（已裁定 · 保持现状，2026-09-23）** 入口「全部账单 ›」vs 落地页标题「报表」（SPEC 要求入口文案保持）
 - [ ] **F6（摩擦）** 记一笔页返回即丢已输金额 / 备注（可加 `PopScope` 二次确认）
 
 ### F7.5 剩余项（待排期 · **属新产品功能，须先出小 SPEC 并签字**）
 
 - [x] 资产页（F7.5-b 已交付）
-- [ ] 数据导出（「我的」页占位转 `v0.7.8`）
+- [x] 数据导出（「我的」页占位 → **F7.7 B 批已实现**，`v0.7.8`）
 - [ ] 分类预算（每个分类单独额度）
-- [ ] 搜索增强：关键词高亮、账户名匹配、搜索历史、日期区间筛选、拼音 / 首字母匹配（转 F7.7 D 批）
-- [ ] 日历增强：农历 / 节假日、长按某天快速记一笔、日历页内直接改月份（转 F7.7 E 批）
+- [x] 搜索增强：关键词高亮、账户名匹配、搜索历史、日期区间筛选、拼音 / 首字母匹配
+      （转 F7.7 D 批 → ✅ `v0.7.10`；**拼音 / 首字母匹配用户裁定不做**）
+- [x] 日历增强：农历 / 节假日、长按某天快速记一笔、日历页内直接改月份
+      （转 F7.7 E 批 → ✅ `v0.7.10`；**农历 / 节假日用户裁定不做**）
 - [x] 报表：按分类/账户的明细清单 —— 即首页/日历页 header 的「报表」占位（**F7.7 A 批已实现**）
 
 > **F7.3 坑**：① drift 的数据库迁移必须在**真机覆盖安装**路径上验，内存库单测只能证明

@@ -1,7 +1,7 @@
 # SPEC — F7.9 记一笔：底部吸底保存 + 去顶部保存入口
 
-> **状态：已签字（2026-09-25）** —— 用户在四个候选方案中明确裁定，见 §7。
-> **版本**：实现走查通过后打 tag **`v0.7.12`**（沿用递增：F7.7 五批占 `v0.7.7`–`v0.7.10`，F7.8 占 `v0.7.11`）。
+> **状态：已交付 ✅（2026-09-25 · `v0.7.12` 已打 tag 并推远端）** —— 用户在四个候选方案中明确裁定，见 §7。
+> **版本**：tag **`v0.7.12`**（tag 对象 `dcab296` → 提交 `1f3ec96`；F7.7 五批占 `v0.7.7`–`v0.7.10`，F7.8 占 `v0.7.11`）。
 > **前置**：F7.8 左滑删除已交付（`v0.7.11`，371 全绿 + 走查 0 崩溃）。
 > **不动 schema / 零新依赖**（本项目硬约束）。
 
@@ -111,7 +111,8 @@
     「点 `find.widgetWithText(ToonButton, '记一笔')`」（历史坑注释保留）。
   - `widget_test.dart` ×2、`calendar_page_test.dart` ×1：**删除 `ensureVisible`** ——
     吸底按钮是滚动区的兄弟节点、**不在 `Scrollable` 内**，`Scrollable.of` 返回 null 会直接抛错。
-- 测试计数预计 **+1**（`record_save_entry_test` 由 1 例 → 2 例）：**372**（= `test()` 292 + `testWidgets` **80**）。
+- 测试计数 **+1**（`record_save_entry_test` 由 1 例 → 2 例）：实跑 **372 passed / 0 skipped** ✅
+  （= `test()` **292** + `testWidgets` **80**，2026-09-25 用户终端全量）。
   ⚠️ 基线：`v0.7.11` = **371**（`test()` 292 + `testWidgets` 79）；本批只增 1 例 `testWidgets`。
 
 **真机走查** —— `docs/acceptance-F7.9-record-sticky-save.md`（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
@@ -138,5 +139,12 @@
 - 顺带修 `pubspec.yaml` 的 `sort_pub_dependencies`（图标批次把 `flutter_launcher_icons` 挪进
   `dev_dependencies` 后落错位置）→ analyze 复跑 `No issues found!`（`004f10a`）。
 
-**版本**：收尾后打 tag **`v0.7.12`**（沿用递增；F7.7 五批占 `v0.7.7`–`v0.7.10`，F7.8 占 `v0.7.11`）。
+**版本**：**`v0.7.12` 已打 tag 并推远端**（tag 对象 `dcab296` → 提交 `1f3ec96`；远端 `master` 亦 `1f3ec96`）。
+收尾四步：① CHANGELOG 两个 `[Unreleased]` 段**合并转正** `## [v0.7.12]`（A/B 小节）+ tag 表补行；
+② 我的页 `_BrandTip` 角标 `v0.7.11` → `v0.7.12`（`5ccb7c2`）；③ `git tag -a v0.7.12` + 推送 + `ls-remote` 核对；
+④ 文档收尾（`HANDOFF.md` / 本文件 §8 / `tasks/todo-flutter.md`）。
+
+> ⚠️ 本次收尾时发现 `CHANGELOG.md` 的一处结构缺陷：上一轮补 F7.9 段时把「启动图标」段的标题行
+> `## [Unreleased] · 启动图标（adaptive icon）` 吃掉了（只剩正文引用块）→ 已随转正补回。
+> 同类风险提示：**用 `Edit` 做「整段替换」时，务必确认 `new_string` 里保留了被替换段的标题行**。
 
