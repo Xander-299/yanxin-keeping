@@ -68,6 +68,20 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+  # 图标生成（`dart run flutter_launcher_icons`）—— ⚠️ 只属构建期，
+  # **不要**再往上面的 dependencies 里加一份（会把它当运行时依赖、lock 标成 direct main）
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  # ⚠️ 官方建议方形（1024×1024）。当前源图 1000×970 → 生成时横向压 ~3%（肉眼不可见）。
+  image_path: "assets/icon/app_icon.png"
+  # Android 8.0+（API 26+）的 adaptive icon。**不配这两项时 flutter_launcher_icons
+  # 只产 legacy 的 mipmap-*/ic_launcher.png**，系统便给图标套白底 + 圆形遮罩（真机一圈白边）。
+  # 前景图由 `python tool/gen_launcher_icons.py` 生成：透明底 + 图形缩进 66% 安全区。
+  adaptive_icon_background: "#FFD81B"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -23,6 +23,37 @@
 | `v0.7.10` | F7.7 D 批 搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批 日历增强（长按记账 / 左右滑翻月） | 本段所在提交 |
 | `v0.7.11` | F7.8 流水左滑删除（长按 → 左滑露出按钮；首页 / 日历日账单 / 搜索结果 3 处） | 本段所在提交 |
 
+## [Unreleased] · 启动图标（adaptive icon）
+
+> **背景**：`flutter_launcher_icons` 只产 legacy 的 `mipmap-*/ic_launcher.png`，
+> **默认不产 adaptive icon**（`mipmap-anydpi-v26/ic_launcher.xml`）→ Android 8.0+（API 26+）
+> 拿不到 adaptive 资源就回落 legacy 路径，由系统给图标**套白底 + 圆形遮罩**（真机上一圈白边）。
+> 本次补齐 adaptive 三层资源；同时把 `flutter_launcher_icons` 从 `dependencies` 移回
+> `dev_dependencies`（构建期工具，重复声明会让 `pubspec.lock` 标成 `direct main`）。
+> **不动 schema、零新依赖**（生成脚本纯 Python 标准库 —— 本机 `dart run` 起不了管道子进程，见 `HANDOFF.md`）。
+> **验证**：`python tool/inspect_icons.py` 全绿 + `python tool/check_pubspec.py` 全绿 +
+> 构建 debug APK 成功（资源过 aapt2）+ 装机后 MuMu 桌面图标 = 黄底圆角方 + 「记账」，**无白底白圈**。
+> 此段与 `v0.7.12` 一并转正（F7.9 记一笔吸底保存）。
+
+### 新增
+
+- **adaptive icon 三层资源**：`mipmap-anydpi-v26/ic_launcher.xml`（声明）+
+  `values/ic_launcher_background.xml`（背景色 `#FFD81B`，取自源图主色）+
+  5 个 `mipmap-<density>/ic_launcher_foreground.png`（108/162/216/324/432）。
+- **前景源图** `assets/icon/app_icon_foreground.png`（1024²，透明底 + 图形缩进 66% 安全区），
+  连同 `pubspec.yaml` 的 `adaptive_icon_background` / `adaptive_icon_foreground` 一起入库 ——
+  以后重跑 `dart run flutter_launcher_icons` 能原样复现。
+
+### 新增（工具 · `tool/`）
+
+- `png_util.py` —— 纯标准库 PNG 编解码 + 面积平均缩放（沙箱无 Pillow）。
+- `gen_launcher_icons.py` —— 生成上述 adaptive 资源；`--probe` 看源图特征，
+  默认还会出**圆形遮罩合成预览**（`.workbuddy/qa-icons/`）供肉眼核验安全区。
+- `inspect_icons.py` —— 图标资源体检（源图 / legacy / 前景层的像素尺寸 + adaptive 资源齐备度）。
+- `check_pubspec.py` —— `pubspec.yaml` / `pubspec.lock` 一致性体检（YAML 卫生 +
+  构建期工具不得待在 `dependencies` + lock 的 `dependency` 字段与声明位置一致 + 配置引用的图片存在）。
+  本机跑不了 `flutter pub get`，用它补这个缺口。
+
 ## [v0.7.11] — 2026-09-25 · F7.8 流水左滑删除
 
 > **诉求**：删除入口原是**长按**（无视觉提示，且与日历页「长按空格子记一笔」语义撞车）→ 用户要求改为**左滑**。
