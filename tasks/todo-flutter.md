@@ -360,6 +360,34 @@
       否则 `getByName("release")` 在配置阶段先求值报错，**连 `assembleDebug` 都挂**
 - [x] 验证：`inspect_icons` + `check_pubspec` 全绿 + debug APK 构建成功（过 aapt2）+ 装机桌面无白底白圈
 
+### F7.13 统计页图表两处绘制修复（用户反馈，2026-09-25 · **已交付 / 已打 `v0.7.13`**）
+
+- [x] 问题：用户报「统计页面中的统计图样式有问题」→ MuMu 走查 + 截图放大定位到两处
+- [x] **A · 分类占比圆环画成「风车楔形」**：`_DonutPainter` 的 `drawArc` 误传 `useCenter: true`
+      —— 该参数**与描边样式无关**，为 true 时路径 `moveTo(圆心)` 再连回圆心，
+      `strokeWidth = outer * 0.34`（约 25px）的粗描边把两条半径线画成实心带 → 五瓣叠成风车 + 盖住圆心文字。
+      同项目 `toon.dart` 的 `_RingPainter` 传的是 `false`（对照即知是笔误）。**两处 → `false`**（含空态底槽）
+- [x] 接缝改**两端各让一半**（`start + gap/2`、`sweep - gap`）：原先整段缝从瓣尾扣，
+      首尾收口宽成 `gap·n`（5 瓣时 5.7° vs 其余 1.1°）；缝隙提为常量 `kDonutGap`
+- [x] `_DonutPainter` → 公开 `DonutPainter`（纯 `test()` 内可直接构造）
+- [x] **B · 趋势图零值月仍画柱**：`_Bar` 里 `cents == 0 → height = 2.0` 的基座占位 →
+      4 个月无数据看着像「每月都有小额收支」→ 用户裁定**不画**；抽纯函数
+      `double? trendBarHeight(cents, max)`（**返回 null = 不画**；`cents <= 0 || max <= 0` 都走 null，顺带挡住除零）
+- [x] `_Bar` 早退 `if (height == null) return SizedBox(width: kTrendBarWidth)` —— **保留同宽占位**，
+      否则有数据的柱子会左右漂移、标签错位；宽度硬编码 13 → 常量 `kTrendBarWidth`
+- [x] 零新依赖、**不动 schema**（仍 v3）
+- [x] 测试 **+11**（纯 `test()` 10 + `testWidgets` 1）：`category_pie_test.dart` 5 例（**记录型 Canvas** ——
+      `implements Canvas` + `noSuchMethod` 只实现 `drawArc` / `drawCircle`，直喂 painter 断言入参）+
+      `trend_bars_test.dart` 5 例（0 分 → null / `max = 0` 全不画 / 等比缩放 / 极小金额仍正高 / 负数按无数据）+
+      `stats_page_test.dart` +1 例（独立 pump `TrendBars`，断言 `Tooltip` 恰好 1 个 + 无数据月标签仍在）
+- [x] **`flutter analyze` 0 issue** ✅（等效达成）
+- [x] **`flutter test` 383 passed / 0 skipped** —— ✅ **2026-09-25 用户终端全量通过**（本轮 +11）
+- [x] **真机走查（MuMu 12，AI 经 adb 全包）** ✅ 0 崩溃 —— `docs/acceptance-F7.13-stats-charts-fix.md`：
+      圆环无楔形、缝隙均匀；4–7 月零柱、8/9 月柱位置与高度**零漂移**（前后对比图在 `.workbuddy/qa-stats/`）
+- [x] ⚠️ 踩坑：`gradlew` 必须在 `source env.sh` **之后**跑 —— 否则 `GRADLE_USER_HOME` 未注入 →
+      `journal-1.lock (拒绝访问。)` 2 秒即 BUILD FAILED（像「构建链路坏了」，实为环境变量缺失）
+- [x] **tag `v0.7.13`**：✅ 已打并推远端（tag 对象 `19fb246` → 提交 `0773333`；CHANGELOG 已转正）
+
 ### F7.7-a 首次使用验收（2026-09-23，报告 `docs/acceptance-first-run.md`）
 
 验收对象：零配置新用户「第一次打开 → 记下第一笔账 → 在首页 / 报表看到这笔账被正确归集」。

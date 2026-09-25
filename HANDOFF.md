@@ -1,41 +1,45 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10` 已打 tag）· **F7.8 流水左滑删除** 已交付 ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** 已交付 ✅（`v0.7.12` 已打 tag 并推远端））
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13` 已打 tag 并推远端））
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-25 11:20 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-25 12:35 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **本轮（`v0.7.12` 已收尾 ✅ · F7.9 记一笔吸底保存 + 启动图标 adaptive + 1 处构建阻塞修复 全部交付并推远端 ✅ · 无遗留项，等用户排新需求）**：
-> - **`v0.7.12` 已打 tag 并推远端**：用户终端 `flutter test` **372 passed / 0 skipped**（本批 **+1**）→
->   CHANGELOG **两个 `[Unreleased]` 段合并转正**（`## [v0.7.12]`，分 A/B 小节）→ 我的页角标 →
->   tag 对象指向提交 **`1f3ec96`**（tag 对象 `dcab296`；远端 `master` 亦为 `1f3ec96`，`git ls-remote --tags` 已核对）。
-> - **A · F7.9 记一笔保存入口收敛**（用户需求：顶部 AppBar「保存」+ 底部「记一笔」双入口）→
->   删顶部、底部改**吸底常驻**。⚠️ 吸底栏放 body 的 `Column(Expanded(滚动区) + 吸底栏)`，
->   **不能用 `Scaffold.bottomNavigationBar`** —— 它按 `size.height - h` 贴**屏幕**底、**不随键盘上移**会被盖住。
->   SPEC `docs/SPEC-F7.9-record-sticky-save.md`（§3/§6 含该前提修正）、走查
->   `docs/acceptance-F7.9-record-sticky-save.md`（D1–D3 / D5 / D6 / D8 通过；**D4 键盘项未取证** ——
->   MuMu 有硬件键盘映射不弹软键盘，改矮视口做等价验证）。**零新依赖、不动 schema**（仍 v3）。
-> - **B · 启动图标 adaptive icon**（`ec55229`）：`flutter_launcher_icons` 默认**不产** adaptive →
->   API 26+ 回落 legacy，被系统**套白底 + 圆遮罩**。已补三层资源（`mipmap-anydpi-v26/ic_launcher.xml` +
->   `values/ic_launcher_background.xml` + 5 个 density 前景层）+ 前景源图（1024²、66% 安全区）；
->   生成脚本纯 Python 标准库（本机 `dart run` 跑不了），已固化为用户级技能 `flutter-adaptive-icon-offline`。
-> - **C · 构建阻塞修复**（`b795541`）：`android/app/build.gradle.kts` 的 `signingConfigs { }` 写在
->   `buildTypes { }` **之后** → 配置阶段 `getByName("release")` 先求值，报 `SigningConfig ... not found`，
->   **连 `./gradlew assembleDebug` 都挂**。已上移 + 无 `key.properties` 时回退 debug 签名。
-> - ✅ analyze 等效 **0 issue**；✅ 真机走查 0 崩溃；✅ **收尾四步已执行完毕**（CHANGELOG / 角标 /
->   tag + 推送 + 远端核对 / 文档）→ **无剩项**。
+> **本轮（`v0.7.13` 已收尾 ✅ · 统计页图表两处绘制修复 已交付并推远端 ✅ · 无遗留项，等用户排新需求）**：
+> - **`v0.7.13` 已打 tag 并推远端**：用户终端 `flutter test` **383 passed / 0 skipped**（本轮 **+11**）→
+>   CHANGELOG 新增 `## [v0.7.13]`（A / B 小节）→ 我的页角标 → `git tag -a v0.7.13`（tag 对象 **`19fb246`** →
+>   提交 **`0773333`**）→ 直推 → `git ls-remote` 核对通过（远端 `master` 亦 `0773333`）。
+>   **纯修复版**：零新依赖、不动 schema（仍 v3）。
+> - **A · 分类占比圆环画成「风车楔形」**（用户报「统计图样式有问题」）：根因是 `drawArc` 的 `useCenter`
+>   误传 `true` —— 该参数**与描边样式无关**，为 true 时路径 `moveTo(圆心)` 再连回圆心，
+>   `strokeWidth = outer*0.34`（约 25px）的粗描边把两条半径线画成实心带（五瓣叠成风车 + 盖住圆心文字）。
+>   两处 `useCenter` → `false`（含空态底槽）；接缝改**两端各让一半**（原先首尾收口宽成 `gap·n`，5 瓣时 5.7° vs 1.1°）。
+> - **B · 趋势图零值月也画柱**：4–7 月无流水却各画一对 2px 内高的基座胶囊（像「每月都有小额收支」）→
+>   用户裁定**不画**；抽纯函数 `trendBarHeight(cents, max) → double?`（null = 不画，`max <= 0` 一并挡住除零），
+>   `_Bar` 早退留**同宽占位**（有数据的柱不漂移、标签不错位）。
+> - **新增测试 +11**：`category_pie_test.dart`（5 例，**记录型 Canvas** —— `implements Canvas` +
+>   `noSuchMethod` 只实现 `drawArc`/`drawCircle`，直喂 painter 断言入参）/ `trend_bars_test.dart`（5 例纯函数）/
+>   `stats_page_test.dart` +1 例 `testWidgets`（独立 pump `TrendBars`，断言 `Tooltip` 恰好 1 个）。
+> - ✅ analyze 等效 **0 issue**；✅ 真机走查（`.workbuddy/qa-stats/` 前后对比图 + 柱位置零漂移核验）0 崩溃；
+>   ✅ **收尾四步已执行完毕** → 报告 `docs/acceptance-F7.13-stats-charts-fix.md`。**无剩项**。
+>   ⚠️ 本轮踩坑：`gradlew` **必须在 `source env.sh` 之后跑**，否则 `GRADLE_USER_HOME` 缺失 →
+>   `journal-1.lock (拒绝访问。)` 2 秒即 BUILD FAILED（像「构建坏了」，实为环境变量没注入）。
 >
-> **上一轮（`v0.7.11` · F7.8 流水左滑删除）**：删除入口由**长按**改为**左滑露出红色「删除」按钮 →
->   点按钮才删**（三项裁定见 `docs/SPEC-F7.8-swipe-delete.md` §7）；范围 = 首页 + 日历日账单 + 搜索结果
->   （报表页仍只读）；**零新依赖**（手写 `SwipeActionRow`）、**不动 schema**。`371 passed`（+10）；
->   走查 0 崩溃（`docs/acceptance-F7.8-swipe-delete.md`）；⚠️ 走查抓到 1 个**只有真机能发现**的视觉 bug
->   （`TxTile` 无自身底色 → 红色动作区透出）**已修并复验**。收尾：tag 对象 `6357de1` → 提交 `e984023`。
+> **上一轮（`v0.7.12` · F7.9 记一笔吸底保存 + 启动图标 adaptive + 1 处构建阻塞修复）**：删 AppBar 顶部
+>   「保存」、底部主按钮改**吸底常驻**（⚠️ 必须放 body 的 `Column`，**不能用 `Scaffold.bottomNavigationBar`**
+>   —— 它按屏幕高贴底、**不随键盘上移**）；启动图标补三层 adaptive 资源（API 26+ 不再被套白底白圈）；
+>   顺带修掉 `signingConfigs { }` 写在 `buildTypes { }` 之后的顺序错误（连 `./gradlew assembleDebug` 都挂）。
+>   `372 passed`；tag 对象 `dcab296` → 提交 `1f3ec96`。
 >
-> **更早轮次（F7.7 A–E 五批 / F7.6 P1–P3 视觉改版 / F1–F7.5）** —— 细节看 `CHANGELOG.md` 各版本段 +
->   `docs/acceptance-*.md`（`acceptance-F7.7-DE.md`、`acceptance-first-run.md` 等）。其中**仍有效**的两条：
->   ① **构建路径** = `python tool/build_kernel_fallback.py`（产 kernel_blob）
+> **更早轮次（`v0.7.11` F7.8 左滑删除 / F7.7 A–E 五批 / F7.6 P1–P3 视觉改版 / F1–F7.5）** —— 细节看
+>   `CHANGELOG.md` 各版本段 + `docs/acceptance-*.md`（`acceptance-F7.9-record-sticky-save.md`、
+>   `acceptance-F7.8-swipe-delete.md`、`acceptance-F7.7-DE.md`、`acceptance-first-run.md` 等）。
+>   其中**仍有效**的三条：
+>   ① **构建路径** = `source env.sh` → `python tool/build_kernel_fallback.py`（产 kernel_blob）
 >   + `./gradlew assembleDebug -x compileFlutterBuildDebug` —— `gradlew assembleDebug` **直连会撞 231**
 >   （`:app:compileFlutterBuildDebug` 内部是 `flutter.bat → dart → frontend_server`）；
 >   ② **常驻 provider 要 `ref.watch(dataEpochProvider)`** 才不「过期快照」
->   （回归测试 `test/features/search/search_freshness_test.dart`，注释掉那行 watch 必失败）。
+>   （回归测试 `test/features/search/search_freshness_test.dart`，注释掉那行 watch 必失败）；
+>   ③ **验证 `CustomPainter` 用「记录型 Canvas」**：`implements Canvas` + `noSuchMethod`，
+>   只实现要断言的 `drawArc` / `drawCircle` → 纯 `test()` 即可锁死画笔入参，不必上 golden（见 `category_pie_test.dart`）。
 
 ---
 
@@ -99,9 +103,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`） |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（2026-09-25 · F7.9 吸底保存 + 启动图标 · 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **372 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过**，本批 **+1** = `test()` 292 + `testWidgets` 80）；真机走查 ✅ **已完成**（F7.9，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 292 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**）+ 图标 / pubspec 链 `inspect_icons.py` / `check_pubspec.py`（生成用 `gen_launcher_icons.py`），前两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
-| git | **功能代码基线** = **`1f3ec96`**（= `v0.7.12` tag 指向；F7.9 + 启动图标 + 构建阻塞修复 + 收尾提交），**文档收尾提交在其后**（本文件自身也在提交，**别记哈希**）；查最新用 `git log --oneline -5`；工作区干净；**最新 tag = `v0.7.12`**（tag 对象 `dcab296` → 提交 `1f3ec96`；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
-| 源码规模 | `lib/` **84** 个 `.dart`，`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **12** 个脚本 = **9 个 Python + 3 个 `.dart`**（Python：4 个门禁等效 —— `dart_analyze_fallback` / `dart_test_fallback` / `build_kernel_fallback` / `data_layer_probe`；`verify_apk_kernel.py` 装机核验；4 个图标与 pubspec 工具 —— `png_util` / `gen_launcher_icons` / `inspect_icons` / `check_pubspec`）；用例 **372 passed** = `test()` 292 + `testWidgets` 80（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
+| **门禁（2026-09-25 · F7.13 统计页图表绘制修复 · 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **383 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过**，本轮 **+11** = `test()` 302 + `testWidgets` 81）；真机走查 ✅ **已完成**（F7.13，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 302 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**）+ 图标 / pubspec 链 `inspect_icons.py` / `check_pubspec.py`（生成用 `gen_launcher_icons.py`），前两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
+| git | **功能代码基线** = **`0773333`**（= `v0.7.13` tag 指向；统计页图表绘制修复 + 收尾提交），**文档收尾提交在其后**（本文件自身也在提交，**别记哈希**）；查最新用 `git log --oneline -5`；**最新 tag = `v0.7.13`**（tag 对象 `19fb246` → 提交 `0773333`；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。<br>⚠️ 工作区可能有一处**用户自己改的** `android/app/src/main/AndroidManifest.xml`（桌面名 `yanxin` → `颜芯记账`），未提交 —— 属产品命名决定，**别擅自提交** |
+| 源码规模 | `lib/` **84** 个 `.dart`，`test/` **46** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **12** 个脚本 = **9 个 Python + 3 个 `.dart`**（Python：4 个门禁等效 —— `dart_analyze_fallback` / `dart_test_fallback` / `build_kernel_fallback` / `data_layer_probe`；`verify_apk_kernel.py` 装机核验；4 个图标与 pubspec 工具 —— `png_util` / `gen_launcher_icons` / `inspect_icons` / `check_pubspec`）；用例 **383 passed** = `test()` 302 + `testWidgets` 81（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
@@ -301,14 +305,15 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   （ALTER TABLE ADD COLUMN DEFAULT ''，onUpgrade 带 PRAGMA table_info 防御）。
 - **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
 - **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
-- ✅ **F7.7 backlog 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive 全部落地**
-  （`v0.7.7`–`v0.7.12` 已打 tag）→ **无待签字批次、无遗留项**；下一轮等用户排新需求。
+- ✅ **F7.7 backlog 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive + 统计页图表绘制修复 全部落地**
+  （`v0.7.7`–`v0.7.13` 已打 tag）→ **无待签字批次、无遗留项**；下一轮等用户排新需求。
 - **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
-  `flutter test` ✅ **372 passed / 0 skipped**（**2026-09-25 用户终端全量**，本批 +1
-  = `test()` **292** + `testWidgets` **80**）。
-- **本机（A 机）代码基线 = `1f3ec96`**（`v0.7.12` tag 指向；文档收尾提交在其后）（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
-  + **F7.7 A/B/C/D/E 五批** + **F7.8 左滑删除** + **F7.9 吸底保存** + **启动图标 adaptive** + **F1 修复**
-  + 构建阻塞修复 + 九个等效 / 核验 / 生成工具 已入库；**tag = `v0.7.12`**）。
+  `flutter test` ✅ **383 passed / 0 skipped**（**2026-09-25 用户终端全量**，本轮 +11
+  = `test()` **302** + `testWidgets` **81**）。
+- **本机（A 机）代码基线 = `0773333`**（`v0.7.13` tag 指向；文档收尾提交在其后）（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
+  + **F7.7 A/B/C/D/E 五批** + **F7.8 左滑删除** + **F7.9 吸底保存** + **启动图标 adaptive**
+  + **统计页图表绘制修复** + **F1 修复**
+  + 构建阻塞修复 + 九个等效 / 核验 / 生成工具 已入库；**tag = `v0.7.13`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
   工作区干净；**F7.7 A 批**（报表明细 + A.0 记一笔选账户）已入库。
 - **本机门禁历史**：F7.6 P3 后曾复跑 `flutter analyze` No issues found + `flutter test` **269 passed / 0 skipped**；
@@ -322,23 +327,23 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
 - **本机 = 远端（代码线同步）** —— 已用 `git ls-remote origin refs/heads/master` 核对：
-  **代码基线 = `1f3ec96`**（含 F7.7 A/B/C/D/E 五批 + F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive
-  + 构建阻塞修复 + 全部门禁 / 构建 / 核验 / 生成等效工具），其后只有交接文档提交；
+  **代码基线 = `0773333`**（含 F7.7 A/B/C/D/E 五批 + F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive
+  + 统计页图表绘制修复 + 构建阻塞修复 + 全部门禁 / 构建 / 核验 / 生成等效工具），其后只有交接文档提交；
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区已有九个**已入库**的工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）+
   **`tool/build_kernel_fallback.py`（等效 `flutter assemble` 的 kernel 步骤，配合
   `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）** + `tool/verify_apk_kernel.py`（装机前核验）
   + 图标链 `tool/png_util.py` / `gen_launcher_icons.py` / `inspect_icons.py` + `tool/check_pubspec.py`。
-  tag `v0.7.1`…`v0.7.12` 已推远端（**`v0.7.12` = 当前最新**）。
+  tag `v0.7.1`…`v0.7.13` 已推远端（**`v0.7.13` = 当前最新**）。
 
 # 未解决问题
 
-> 说明：**F7.7 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive 全部实现并交付**
-> （`v0.7.7`–`v0.7.12` 已打 tag），**无待签字批次、无遗留项**；
+> 说明：**F7.7 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive + 统计页图表绘制修复
+> 全部实现并交付**（`v0.7.7`–`v0.7.13` 已打 tag），**无待签字批次、无遗留项**；
 > 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 9 个等效 / 核验 / 生成工具绕开
 > （analyze / test / 数据层 / **APK 构建** / **装机前 kernel 核验** / 图标链 / pubspec 体检，见第 1 条末尾的「构建路径」）；
-> 第 **2** 条**已闭合**（F7.9 + 启动图标 收尾完毕）；
+> 第 **2** 条**已闭合**（F7.13 统计页图表绘制修复收尾完毕；其下含 F7.9 / F7.8 留档）；
 > F2 / F5 已裁定保持现状（2026-09-23）。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
@@ -409,9 +414,26 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      参数逐字照抄构建日志里 `kernel_snapshot_program` 的命令行；**上线前必须核验** APK 内
      `assets/flutter_assets/kernel_blob.bin` 的 sha256 与盘上一致 + grep 本次新增文案（防「装到旧包」）。
      细节见 `docs/acceptance-F7.7-DE.md` 文末。**2026-09-24 D/E 批走查即用这条路完成装机。**
-2. 【**已闭合** · F7.9 记一笔吸底保存 + 启动图标 adaptive → `v0.7.12` 已交付并推远端】
-  功能代码 `d0ab794`（F7.9）→ `ec55229`（图标）→ `661ec6b`（回归修复）→ `004f10a`（pubspec 重排）→
-  `5ccb7c2`（角标）→ `1f3ec96`（CHANGELOG 转正 = tag 指向），工作区干净：
+2. 【**已闭合** · **F7.13 统计页图表两处绘制修复** → `v0.7.13` 已交付并推远端】
+  功能代码 `8826b57`（修复 + 新增测试）→ `c5847b4`（角标）→ `0773333`（CHANGELOG 转正 = tag 指向），工作区干净：
+   - ✅ `flutter analyze`：**0 issue**（`python tool/dart_analyze_fallback.py` → `No issues found!`）。
+   - ✅ `flutter test`：**383 passed / 0 skipped**（用户终端，2026-09-25；= `test()` **302** + `testWidgets` **81**，
+     本轮 **+11** = `category_pie_test` 5 + `trend_bars_test` 5 + `stats_page_test` 1）。
+   - ✅ **真机走查**（F7.13，MuMu 12，AI 经 adb 全包）：圆环无楔形、缝隙均匀；4–7 月零柱、8/9 月柱位置与高度**零漂移**；
+     `logcat -b crash` **0 崩溃**。报告 `docs/acceptance-F7.13-stats-charts-fix.md`（含前后对比图，
+     截图在 `.workbuddy/qa-stats/`）。
+   - ⚠️ **本轮踩坑**：`gradlew` 必须在 `source env.sh` **之后**跑 —— 否则 `GRADLE_USER_HOME` 没注入 →
+     `journal-1.lock (拒绝访问。)` **2 秒即 BUILD FAILED**（看着像「构建链路坏了」，实为环境变量缺失）。
+   - ✅ **收尾四步已执行**：① CHANGELOG 新增 `## [v0.7.13]`（A/B 小节）+ tag 表补行；
+     ② 我的页 `_BrandTip` 角标 `v0.7.12` → `v0.7.13`（`c5847b4`）；③ `git tag -a v0.7.13`
+     （tag 对象 `19fb246` → 提交 `0773333`）→ `git push && git push --tags` →
+     `git ls-remote --tags` 核对通过（远端 master 亦 `0773333`）；
+     ④ 文档收尾：本文件 + `tasks/todo-flutter.md`。
+
+   **以下为 F7.9 记一笔吸底保存 + 启动图标（`v0.7.12`，已闭合）细节留档** ——
+
+   - 功能代码 `d0ab794`（F7.9）→ `ec55229`（图标）→ `661ec6b`（回归修复）→ `004f10a`（pubspec 重排）→
+     `5ccb7c2`（角标）→ `1f3ec96`（CHANGELOG 转正 = tag 指向）。
    - ✅ `flutter analyze`：**0 issue**（`python tool/dart_analyze_fallback.py` → `No issues found!`；
      顺带修掉 `sort_pub_dependencies` 1 条 info）。
    - ✅ **真机走查**（F7.9，MuMu 12）：D1 / D2 / D3 / D5 / D6 / D8 通过、**0 崩溃**；**D4（键盘）未直接取证** ——
@@ -652,27 +674,36 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
     给 CHANGELOG 插 F7.9 段时把紧邻的 `## [Unreleased] · 启动图标（adaptive icon）` 标题行吃掉了，
     只剩正文引用块 → 段落在文件里「没有名字」，转正时会直接漏掉一整段。**改完扫一遍
     `grep -n "^## \|^### " <文件>` 核对层级**，别只看 diff 的增删行数。
+46. **`gradlew` 必须在 `source env.sh` 之后跑**（F7.13 收尾时踩到）：不 source 就没有
+    `GRADLE_USER_HOME`（= `<repo>/.gradle-home`）→ Gradle 退回 `<USER_HOME>\.gradle`，
+    而该目录**拒绝删除** → `journal-1.lock (拒绝访问。)`，**2 秒即 BUILD FAILED**。
+    表现极像「构建链路坏了 / 缓存损坏」，实为**环境变量没注入** —— 先看有没有 `source env.sh`，别急着清缓存。
+47. **验证 `CustomPainter` 用「记录型 Canvas」**（F7.13 新增手法）：`class _Recorder implements Canvas`
+    + `noSuchMethod` 只实现要断言的 `drawArc` / `drawCircle`，把入参记下来 → **纯 `test()` 就能锁死画笔行为**
+    （如断言 `useCenter == false`、缝隙角度均等），不必上 golden（golden 在无 GPU 的 CI/沙箱里更脆）。
+    范例：`test/features/stats/category_pie_test.dart`。
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：**F7.9 吸底保存 + 启动图标 adaptive 已交付完毕（`v0.7.12` 已打 tag 并推远端），
+1. **当前最重要的事**：**统计页图表两处绘制修复已交付完毕（`v0.7.13` 已打 tag 并推远端），
    当前无遗留项 —— 等用户排新需求**。
    - ✅ `flutter analyze` **已闭合**（`python tool/dart_analyze_fallback.py` → `No issues found!`），**不用再跑**。
-   - ✅ `flutter test` **372 passed / 0 skipped**（**2026-09-25 用户终端全量通过**，本批 **+1**
-     = `test()` **292** + `testWidgets` **80**）。**本机跑不了 `testWidgets`**，别拿本机脚本当最终判据。
-   - ✅ **真机走查已闭合**（2026-09-25，F7.9，MuMu 12，AI 经 adb 全包，0 崩溃）
-     → `docs/acceptance-F7.9-record-sticky-save.md`。
-   - ✅ **收尾四步已执行完毕**（详见「未解决问题」第 2 条）：① CHANGELOG 两个 `[Unreleased]` 段**合并转正**
-     `## [v0.7.12]`（A/B 小节）+ tag 表补行；② 我的页 `_BrandTip` 角标 `v0.7.11` → `v0.7.12`（`5ccb7c2`）；
-     ③ `git tag -a v0.7.12`（tag 对象 `dcab296` → 提交 `1f3ec96`）→ `git push && git push --tags`
-     （**直推、不加管道**）→ `git ls-remote --tags` 核对；④ 文档收尾（本文件 + SPEC-F7.9 §8 + `tasks/todo-flutter.md`）。
-   - **F7.9 / 启动图标 的代码与测试已经写完并已落地**（`1f3ec96` 已在 `origin/master`）：**别重写**。
-     实现细节在 `docs/SPEC-F7.9-record-sticky-save.md`（§3/§6 含 `bottomNavigationBar` 前提修正）；
-     走查记录在 `docs/acceptance-F7.9-record-sticky-save.md`。
-   - **改动面（F7.9）**：`lib/features/record/presentation/record_page.dart`（删 AppBar `actions`；body 改
-     `Column(Expanded(滚动区) + 吸底栏)`）；测试 4 个文件（删 3 处 `ensureVisible`、重写 `record_save_entry_test`、
-     `_tapSave` 改点吸底、`home_empty_state_test` 改判据）。**图标**：`mipmap-anydpi-v26/` + 前景层 + `values/`。
-   - **F7.7 五批（A–E）+ F7.8 + F7.9 + 图标 全部交付** → **无待签字批次**；**等用户排新需求**。
+   - ✅ `flutter test` **383 passed / 0 skipped**（**2026-09-25 用户终端全量通过**，本轮 **+11**
+     = `test()` **302** + `testWidgets` **81**）。**本机跑不了 `testWidgets`**，别拿本机脚本当最终判据。
+   - ✅ **真机走查已闭合**（2026-09-25，F7.13，MuMu 12，AI 经 adb 全包，0 崩溃）
+     → `docs/acceptance-F7.13-stats-charts-fix.md`（含修复前后对比图、趋势柱位置零漂移核验）。
+   - ✅ **收尾四步已执行完毕**（详见「未解决问题」第 2 条）：① CHANGELOG 新增 `## [v0.7.13]`（A/B 小节）+ tag 表补行；
+     ② 我的页 `_BrandTip` 角标 `v0.7.12` → `v0.7.13`（`c5847b4`）；③ `git tag -a v0.7.13`
+     （tag 对象 `19fb246` → 提交 `0773333`）→ `git push && git push --tags`（**直推、不加管道**）→
+     `git ls-remote --tags` 核对；④ 文档收尾（本文件 + `tasks/todo-flutter.md`）。
+   - **F7.13 的代码与测试已经写完并已落地**（`0773333` 已在 `origin/master`）：**别重写**。
+     A 圆环 `useCenter` 楔形（`category_pie.dart`）、B 趋势零值月不画柱（`trend_bars.dart`）；
+     报告在 `docs/acceptance-F7.13-stats-charts-fix.md`。
+   - **上一轮 F7.9 吸底保存 + 启动图标 adaptive**（`v0.7.12`，`1f3ec96`）已交付：删 AppBar 顶部「保存」、
+     底部主按钮改**吸底常驻**（⚠️ 必须放 body 的 `Column`，**不能用 `Scaffold.bottomNavigationBar`**
+     —— 它按屏幕高贴底、**不随键盘上移**）；启动图标补三层 adaptive 资源。细节在
+     `docs/SPEC-F7.9-record-sticky-save.md`（§3/§6 含前提修正）+ `docs/acceptance-F7.9-record-sticky-save.md`。
+   - **F7.7 五批（A–E）+ F7.8 + F7.9 + 图标 + F7.13 全部交付** → **无待签字批次**；**等用户排新需求**。
    - **已关闭的测试反馈**：`real_bills_test.dart` 曾报 `loading ...`（全仓唯一在 `main()` 里做 IO 的文件）
      → 已加固为懒读 + 降级 `markTestSkipped`，**复跑未再出现**。**若再复现，要那行 `loading` 的完整 `[E]` 块**。
 2. **要真机走查**：两条构建路径 —— ① **正常环境（用户终端）**：`source env.sh && flutter build apk --debug`；
@@ -731,6 +762,11 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.8 流水左滑删除 已交付 ✅（`v0.7.11` 已打 tag 并推远端：371 全绿 + 走查 0 崩溃）**：
   长按删除 → **左滑露出红色「删除」按钮，点按钮才删**
   （首页 / 日历日账单 / 搜索 3 处；报表页仍只读；零新依赖；**不动 schema**）。
+- **统计页图表两处绘制修复 已交付 ✅（`v0.7.13` 已打 tag 并推远端：383 全绿 + 走查 0 崩溃）**：
+  ① 分类圆环 `drawArc(useCenter: true)` 笔误 → 每瓣从圆心辐射实心楔形（风车）并盖住圆心文字，已改 `false`
+  两处（含空态底槽），接缝改两端各让一半；② 趋势图零值月仍画 2px 基座胶囊 → 用户裁定**不画**，
+  抽纯函数 `trendBarHeight(cents, max) → double?`（null = 不画），`_Bar` 早退留同宽占位防漂移。
+  报告 `docs/acceptance-F7.13-stats-charts-fix.md`。**别重写**（代码已在 `0773333`）。
 - **F7.9 记一笔「保存」入口改吸底常驻 + 启动图标 adaptive 已交付 ✅（`v0.7.12` 已打 tag 并推远端）**：
   删掉 AppBar 右上角「保存」，底部主按钮**吸底常驻**（body 内 `Column`，**不能用
   `Scaffold.bottomNavigationBar`** —— 它不随键盘上移、会被键盘盖住）；零新依赖、不动 schema。
@@ -739,8 +775,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   （`home_empty_state_test` 仍断言 AppBar 有「保存」）**已修 `661ec6b`**。
   启动图标：Android 8+ 不再套白底白圈（`ec55229`）；`flutter_launcher_icons` **只留在 `dev_dependencies`**
   （**别再往 `dependencies` 加一份**）。
-- **功能代码基线** = **`1f3ec96`**（= `v0.7.12` tag 指向；收尾线 `5ccb7c2` 角标 → `1f3ec96` CHANGELOG 转正，
-  tag 对象 `dcab296`，文档收尾提交在其后）；**最新 tag `v0.7.12`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。
+- **功能代码基线** = **`0773333`**（= `v0.7.13` tag 指向；收尾线 `c5847b4` 角标 → `0773333` CHANGELOG 转正，
+  tag 对象 `19fb246`，文档收尾提交在其后）；**最新 tag `v0.7.13`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。
 - ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（`CreateFile failed 231` / `process_win.cc:744`）
   → `flutter analyze / test / pub / build_runner` / **构建** 在本机直连全废。**别怀疑代码、别换 Dart 版本、别开 `dangerouslyDisableSandbox`**。
   九个工具 / 替代链路（已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
