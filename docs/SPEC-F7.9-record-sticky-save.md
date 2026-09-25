@@ -111,7 +111,8 @@
     「点 `find.widgetWithText(ToonButton, '记一笔')`」（历史坑注释保留）。
   - `widget_test.dart` ×2、`calendar_page_test.dart` ×1：**删除 `ensureVisible`** ——
     吸底按钮是滚动区的兄弟节点、**不在 `Scrollable` 内**，`Scrollable.of` 返回 null 会直接抛错。
-- 测试计数预计 **+1**（`record_save_entry_test` 由 1 例 → 2 例）：**372**（= `test()` 297 + `testWidgets` 75）。
+- 测试计数预计 **+1**（`record_save_entry_test` 由 1 例 → 2 例）：**372**（= `test()` 292 + `testWidgets` **80**）。
+  ⚠️ 基线：`v0.7.11` = **371**（`test()` 292 + `testWidgets` 79）；本批只增 1 例 `testWidgets`。
 
 **真机走查** —— `docs/acceptance-F7.9-record-sticky-save.md`（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
 

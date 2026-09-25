@@ -178,9 +178,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 2** |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（2026-09-25 · F7.8 左滑删除 · 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **371 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过**，本批 **+10** = `test()` 297 + `testWidgets` 84）；真机走查 ✅ **已完成**（F7.8，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 297 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**），后两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
+| **门禁（2026-09-25 · F7.8 左滑删除 · 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **371 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过**，本批 **+10** = `test()` 292 + `testWidgets` 79）；真机走查 ✅ **已完成**（F7.8，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 292 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**），后两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
 | git | **功能代码基线** = **`0d5cf16`**（F7.8 实现 + 白底修复 + 走查记录）；交接文档提交在其后（**本文件自身也在提交，别记哈希**）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.11`**（已推远端；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
-| 源码规模 | `lib/` **84** 个 `.dart`（+`swipe_action_row.dart`），`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **8** 个脚本（4 个等效 / 验证工具 + `verify_apk_kernel.py` + 3 个 `.dart` 辅助）；用例 **371 passed** = `test()` 297 + `testWidgets` 84（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
+| 源码规模 | `lib/` **84** 个 `.dart`（+`swipe_action_row.dart`），`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **8** 个脚本（4 个等效 / 验证工具 + `verify_apk_kernel.py` + 3 个 `.dart` 辅助）；用例 **371 passed** = `test()` 292 + `testWidgets` 79（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
@@ -344,7 +344,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   → **无待签字批次**；下一轮等用户排新需求。
 - **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
   `flutter test` ✅ **371 passed / 0 skipped**（**2026-09-25 用户终端全量**，本批 +10
-  = `test()` **297** + `testWidgets` **84**）。
+  = `test()` **292** + `testWidgets` **79**）。
 - **本机（A 机）代码基线 = `e984023` = `origin/master`**（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
   + **F7.7 A/B/C/D/E 五批** + **F7.8 左滑删除** + **F1 修复** + 五个等效 / 核验工具 已入库；**tag = `v0.7.11`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
@@ -447,7 +447,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    - ✅ `flutter analyze`：**0 issue**（`python tool/dart_analyze_fallback.py` → `No issues found!`）；
      顺带修掉 1 个 `directives_ordering`（`calendar_page.dart` 新增 import 位置）。
    - ✅ `flutter test`：**371 passed / 0 skipped**（**2026-09-25 用户终端全量通过**，本批 +10,
-     = `test()` **297** + `testWidgets` **84**）；本机纯 `test()` 新增 5 例亦实测全绿。
+     = `test()` **292** + `testWidgets` **79**）；本机纯 `test()` 新增 5 例亦实测全绿。
    - ✅ **真机走查**（2026-09-25，MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）——
      左滑露出红色「删除」（行内金额节点 x 450 → 363）/ 点动作区弹既有确认框 / 取消回弹且数据不变 /
      单开（滑第二行时第一行自动收起）/ 点已展开行 = 收起且不跳编辑 / 竖向滚动正常 /
@@ -652,7 +652,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 1. **当前最重要的事**：**F7.8 已交付完毕（`v0.7.11` 已打 tag 并推远端），当前无遗留项 —— 等用户排新需求**。
    - ✅ `flutter analyze` **已闭合**（`python tool/dart_analyze_fallback.py` → `No issues found!`），**不用再跑**。
    - ✅ `flutter test` **371 passed / 0 skipped**（**2026-09-25 用户终端全量通过**，本批 **+10**
-     = `test()` **297** + `testWidgets` **84**）。**本机跑不了 `testWidgets`**，别拿本机脚本当最终判据。
+     = `test()` **292** + `testWidgets` **79**）。**本机跑不了 `testWidgets`**，别拿本机脚本当最终判据。
    - ✅ **真机走查已闭合**（2026-09-25，F7.8，MuMu 12，AI 经 adb 全包，0 崩溃）→ `docs/acceptance-F7.8-swipe-delete.md`。
    - ✅ **收尾四步已执行完毕**（详见「未解决问题」第 2 条）：① CHANGELOG `## [v0.7.11]` 转正 + tag 表补行；
      ② 我的页 `_BrandTip` 角标 `v0.7.10` → `v0.7.11`（`8c56e9f`）；③ `git tag -a v0.7.11`
@@ -727,7 +727,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（`CreateFile failed 231` / `process_win.cc:744`）
   → `flutter analyze / test / pub / build_runner` / **构建** 在本机直连全废。**别怀疑代码、别换 Dart 版本、别开 `dangerouslyDisableSandbox`**。
   四个等效工具（已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
-  `python tool/dart_test_fallback.py`（≡ test，纯 `test()` **297** 例，⚠️ `testWidgets` 跑不了）、
+  `python tool/dart_test_fallback.py`（≡ test，纯 `test()` **292** 例，⚠️ `testWidgets` 跑不了）、
   `python tool/data_layer_probe.py`（数据层实跑）、
   `python tool/build_kernel_fallback.py` + `./gradlew assembleDebug -x compileFlutterBuildDebug`（出 APK）。
   **用户自己的 Git Bash 终端不受影响**。协议三坑见 SPEC §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
