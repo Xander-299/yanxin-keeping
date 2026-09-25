@@ -1,7 +1,17 @@
-/// 回归：首次使用验收 P5 —— 保存入口不能藏在折叠下方。
+/// 回归：保存入口的可见性与唯一性（**F7.9 口径**）。
 ///
-/// 原问题：大屏（横屏模拟器 / 平板）下「备注 + 记一笔」落到视口外，
-/// 用户填完金额和分类后看不到「下一步」。
+/// 沿革：
+/// - F7.7 首次使用验收 P5 发现「大屏（横屏 / 平板）下『备注 + 记一笔』落到视口外」，
+///   当时在 AppBar 加了常驻「保存」兜底 → 于是页面上有了两个保存入口。
+/// - F7.9 用户裁定改方案：**底部按钮吸底常驻 + 删掉顶部入口**
+///   （`docs/SPEC-F7.9-record-sticky-save.md`）。本文件随之改口径：
+///   ① AppBar 与全页再无「保存」（唯一入口 = 底部吸底按钮）；
+///   ② **矮视口**（逻辑 800×400，内容必然溢出）下按钮也一直落在视口内；
+///   ③ 内容滚到底之后按钮位置**不变**（真的吸底，不随内容滚走）；
+///   ④ 吸底按钮走同一套 `_save()` 校验。
+///
+/// ⚠️ 吸底按钮位于滚动区的**兄弟节点**（不在 `Scrollable` 内）→ 这里**不能**用
+/// `tester.ensureVisible`（`Scrollable.of` 返回 null 会直接抛错）。
 library;
 
 import 'package:flutter/material.dart';
@@ -9,36 +19,66 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 
 import '../../helpers/test_database.dart';
 
-void main() {
-  testWidgets('记一笔页：AppBar 常驻「保存」，无需滚动即可见', (WidgetTester tester) async {
-    final db = openTestDatabase();
-    addTearDown(db.close);
+/// 逻辑视口高（矮视口：内容必然溢出，用来验证「吸底不随滚动走」）。
+const double _viewportHeight = 400;
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
-        child: const MaterialApp(home: RecordPage()),
-      ),
+Future<void> _pumpRecordPage(WidgetTester tester) async {
+  // 矮视口 + 显式重置（默认 800×600 时内容可能刚好不溢出，验证力不足）
+  tester.view.physicalSize = const Size(800, _viewportHeight);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+
+  final db = openTestDatabase();
+  addTearDown(db.close);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      child: const MaterialApp(home: RecordPage()),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+void main() {
+  testWidgets('保存入口只有一个：底部吸底按钮；AppBar 里没有「保存」', (WidgetTester tester) async {
+    await _pumpRecordPage(tester);
+
+    // ① 顶部入口已删除（AppBar 与全页都不该有裸 Text「保存」）
+    expect(find.widgetWithText(AppBar, '保存'), findsNothing);
+    expect(find.text('保存'), findsNothing);
+
+    // ② 唯一入口 = 底部吸底按钮（新建模式文案是「记一笔」）
+    final Finder saveBtn = find.widgetWithText(ToonButton, '记一笔');
+    expect(saveBtn, findsOneWidget);
+
+    // ③ 未滚动时就必须在视口内（这是吸底的核心保证）
+    final Rect before = tester.getRect(saveBtn);
+    expect(before.top, greaterThanOrEqualTo(0));
+    expect(before.bottom, lessThanOrEqualTo(_viewportHeight));
+
+    // ④ 把内容滚到底 → 按钮位置**不变**（吸底，不随内容滚走）
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -400),
     );
     await tester.pumpAndSettle();
 
-    // 记录：底部按钮是「记一笔」，因此「保存」只会命中 AppBar 那一个
-    expect(find.widgetWithText(AppBar, '保存'), findsOneWidget);
-    final save = find.text('保存');
+    final Rect after = tester.getRect(saveBtn);
+    expect(after.top, before.top);
+    expect(after.bottom, lessThanOrEqualTo(_viewportHeight));
+  });
 
-    // 必须落在首屏视口内（不依赖滚动）
-    final rect = tester.getRect(save);
-    final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-    expect(rect.top, greaterThanOrEqualTo(0));
-    expect(rect.bottom, lessThanOrEqualTo(screen.height));
+  testWidgets('吸底按钮走同一套校验：金额为空 → 「请输入金额」', (WidgetTester tester) async {
+    await _pumpRecordPage(tester);
 
-    // 功能对齐底部按钮：金额为空时给出同一句校验提示
-    // （不能用 pumpAndSettle —— SnackBar 的自动消失定时器会被一并推进）
-    await tester.tap(save);
+    // 不能用 pumpAndSettle —— 会把 SnackBar 的自动消失定时器一并推进
+    await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('请输入金额'), findsOneWidget);

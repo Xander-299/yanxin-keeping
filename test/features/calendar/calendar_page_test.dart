@@ -225,9 +225,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(cat.name).last);
     await tester.pumpAndSettle();
-    // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton
-    await tester.ensureVisible(find.widgetWithText(ToonButton, '记一笔'));
-    await tester.pumpAndSettle();
+    // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton；
+    // F7.9 起吸底常驻（不在 Scrollable 内）→ 不能再 ensureVisible
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
 

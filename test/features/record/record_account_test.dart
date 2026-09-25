@@ -21,17 +21,18 @@ import '../../helpers/pump_app.dart';
 /// 按键外面包着 `ToonPress`，显示区没有 → 用 `widgetWithText` 精确定位。
 Finder _key(String label) => find.widgetWithText(ToonPress, label);
 
-/// 点 AppBar 右上角常驻的「保存」。
+/// 点底部**吸底**的主按钮 —— F7.9 起这是全页唯一的保存入口。
 ///
-/// ⚠️ **不能**写 `tester.tap(find.widgetWithText(AppBar, '保存'))` —— 那个 finder
+/// 历史坑（F7.7–F7.8 时期，顶部 AppBar 还有个「保存」，现已移除）：
+/// **不能**写 `tester.tap(find.widgetWithText(AppBar, '保存'))` —— 那个 finder
 /// 命中的是 **AppBar 自身**，`tap` 取它的中心点（标题区那一带），根本点不到
 /// 右上角的按钮 → 静默不生效（`warnIfMissed` 也不会警告，因为中心点确实在
 /// AppBar 内），表现为「保存没反应、库里没有这笔」。
-/// 要点的是按钮里的那段 `Text`（对齐 `record_save_entry_test.dart` 的写法）。
+///
+/// ⚠️ 吸底按钮**不在 `Scrollable` 内**（它是滚动区的兄弟节点），
+/// `ensureVisible` 会因 `Scrollable.of` 返回 null 而抛错 → 直接 tap。
 Future<void> _tapSave(WidgetTester tester) async {
-  final Finder save = find.text('保存');
-  await tester.ensureVisible(save);
-  await tester.tap(save);
+  await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
   await tester.pumpAndSettle();
 }
 
@@ -91,7 +92,7 @@ void main() {
     await tester.tap(find.text('餐饮'));
     await tester.pumpAndSettle();
 
-    // 5) 保存（AppBar 常驻入口）
+    // 5) 保存（F7.9：底部吸底按钮，全页唯一入口）
     await _tapSave(tester);
 
     // 6) 库里那笔的账户必须是「招行」（写库是真实异步 → 轮询到出现为止）

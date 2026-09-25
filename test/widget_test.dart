@@ -50,10 +50,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text(cat.name).last);
     await tester.pumpAndSettle();
-    // 保存（内容可能超出测试视口，先滚到可见）
-    // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton
-    await tester.ensureVisible(find.widgetWithText(ToonButton, '记一笔'));
-    await tester.pumpAndSettle();
+    // 保存：F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton；
+    // F7.9 起按钮**吸底常驻**、位于 Scrollable 的兄弟节点 →
+    // **不能**再 ensureVisible（`Scrollable.of` 返回 null 会直接报错）。
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
 
@@ -79,8 +78,6 @@ void main() {
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
     await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();

@@ -8,6 +8,13 @@
 /// build 会在转场动画中途换内容，肉眼可见卡顿）；编辑模式的流水详情异步填充。
 ///
 /// F7.7 A.0：新增第 4 个字段「账户」（默认仍是账户列表首个，老行为不变）。
+///
+/// F7.9：保存入口**只留底部一处**（原 AppBar 右上角「保存」已移除）—— 底部按钮改为
+/// **吸底常驻**（`Column` + `Expanded` 包滚动区，按钮不随内容滚走），于是「大屏 / 横屏下
+/// 主按钮被折叠到视口外」的兜底理由不再成立，顶部冗余入口即可删掉。
+/// 吸底栏放在 **body 内**而非 `Scaffold.bottomNavigationBar`：后者按 `size.height - h`
+/// 贴屏幕底、**不随键盘上移**（会被键盘盖住）；而 body 会被 `viewInsets.bottom` 压缩，
+/// 吸底栏自然落到键盘上方。细节见 `docs/SPEC-F7.9-record-sticky-save.md`。
 library;
 
 import 'dart:async';
@@ -244,142 +251,148 @@ class _RecordPageState extends ConsumerState<RecordPage> {
     final selectedAccount = _effectiveAccount(accounts);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? '编辑流水' : '记一笔'),
-        // 大屏（如横屏平板/模拟器）下底部按钮会被折叠到视口外，
-        // AppBar 常驻保存入口保证「填完就能保存」；底部按钮保留作为主要入口。
-        actions: <Widget>[
-          TextButton(
-            onPressed: _saving ? null : _save,
-            style: TextButton.styleFrom(
-              foregroundColor: Tok.brandDeep,
-              textStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
+      // F7.9：保存入口只留底部一处（原右上角「保存」已移除，见 SPEC-F7.9）
+      appBar: AppBar(title: Text(_isEdit ? '编辑流水' : '记一笔')),
       body: SafeArea(
         // 原型这一页的 pbody 用 `--surface`（纯白），不是全局暖白画布
         child: Container(
           color: Tok.paper,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
-            child: Column(
-              children: <Widget>[
-                Center(
-                  child: ToonSeg(
-                    labels: const <String>['支出', '收入'],
-                    index: _type == 'income' ? 1 : 0,
-                    onChanged: (int i) {
-                      setState(() {
-                        _type = i == 1 ? 'income' : 'expense';
-                        // 切类型后原分类不再适用，清空让用户重选
-                        final bool stillValid = categories.any(
-                          (Category c) =>
-                              c.id == _categoryId && c.kind == _type,
-                        );
-                        if (!stillValid) _categoryId = null;
-                      });
-                    },
-                  ),
-                ),
-                const SizedBox(height: 14),
-                AmountKeyboard(
-                  value: _amount,
-                  onKey: (String key) =>
-                      setState(() => _amount = applyAmountKey(_amount, key)),
-                ),
-                const SizedBox(height: 6),
-                ToonField(
-                  label: '分类',
-                  value: selected?.name ?? '请选择分类',
-                  placeholder: selected == null,
-                  onTap: () => _pickCategory(categories),
-                  trailing: selected == null
-                      ? null
-                      : ToonAvatar(
-                          text: selected.name.isEmpty
-                              ? '?'
-                              : selected.name.substring(0, 1),
-                          small: true,
-                          bg: _type == 'income' ? Tok.greenTint : Tok.redTint,
-                          fg: _type == 'income' ? Tok.green : Tok.red,
+          child: Column(
+            children: <Widget>[
+              // 滚动区。吸底栏是它的**兄弟**节点 → 按钮不随内容滚走。
+              // 外层用 Expanded 是因为键盘弹起时 body 会被压缩，吸底栏要跟着上移，
+              // 只能让滚动区吃掉剩余高度。
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+                  child: Column(
+                    children: <Widget>[
+                      Center(
+                        child: ToonSeg(
+                          labels: const <String>['支出', '收入'],
+                          index: _type == 'income' ? 1 : 0,
+                          onChanged: (int i) {
+                            setState(() {
+                              _type = i == 1 ? 'income' : 'expense';
+                              // 切类型后原分类不再适用，清空让用户重选
+                              final bool stillValid = categories.any(
+                                (Category c) =>
+                                    c.id == _categoryId && c.kind == _type,
+                              );
+                              if (!stillValid) _categoryId = null;
+                            });
+                          },
                         ),
-                ),
-                ToonField(
-                  label: '日期',
-                  value: formatFullDay(
-                    DateTime.fromMillisecondsSinceEpoch(_occurredAtMs),
-                  ),
-                  onTap: _pickDate,
-                  dashedTop: true,
-                ),
-                ToonField(
-                  label: '备注',
-                  dashedTop: true,
-                  child: TextField(
-                    controller: _noteController,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    // 原型这里是裸 input（`style="border:0"`）：必须逐项关掉主题的
-                    // 填充 + 描边，否则 `InputDecoration.collapsed` 仍会吃到
-                    // `inputDecorationTheme.filled` 渲染出一个白框。
-                    decoration: const InputDecoration(
-                      hintText: '选填',
-                      hintStyle: TextStyle(
-                        color: Tok.ink3,
-                        fontWeight: FontWeight.w600,
                       ),
-                      filled: false,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                    ),
+                      const SizedBox(height: 14),
+                      AmountKeyboard(
+                        value: _amount,
+                        onKey: (String key) => setState(
+                          () => _amount = applyAmountKey(_amount, key),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ToonField(
+                        label: '分类',
+                        value: selected?.name ?? '请选择分类',
+                        placeholder: selected == null,
+                        onTap: () => _pickCategory(categories),
+                        trailing: selected == null
+                            ? null
+                            : ToonAvatar(
+                                text: selected.name.isEmpty
+                                    ? '?'
+                                    : selected.name.substring(0, 1),
+                                small: true,
+                                bg: _type == 'income'
+                                    ? Tok.greenTint
+                                    : Tok.redTint,
+                                fg: _type == 'income' ? Tok.green : Tok.red,
+                              ),
+                      ),
+                      ToonField(
+                        label: '日期',
+                        value: formatFullDay(
+                          DateTime.fromMillisecondsSinceEpoch(_occurredAtMs),
+                        ),
+                        onTap: _pickDate,
+                        dashedTop: true,
+                      ),
+                      ToonField(
+                        label: '备注',
+                        dashedTop: true,
+                        child: TextField(
+                          controller: _noteController,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          // 原型这里是裸 input（`style="border:0"`）：必须逐项关掉主题的
+                          // 填充 + 描边，否则 `InputDecoration.collapsed` 仍会吃到
+                          // `inputDecorationTheme.filled` 渲染出一个白框。
+                          decoration: const InputDecoration(
+                            hintText: '选填',
+                            hintStyle: TextStyle(
+                              color: Tok.ink3,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            filled: false,
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            focusedErrorBorder: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                      // F7.7 A.0：第 4 个字段「账户」；默认沿用列表首个（老行为不变）
+                      ToonField(
+                        label: '账户',
+                        value: selectedAccount?.name ?? '请选择账户',
+                        placeholder: selectedAccount == null,
+                        onTap: () => _pickAccount(accounts),
+                        dashedTop: true,
+                        trailing: selectedAccount == null
+                            ? null
+                            : ToonAvatar(
+                                text: selectedAccount.name.isEmpty
+                                    ? '?'
+                                    : selectedAccount.name.substring(0, 1),
+                                small: true,
+                              ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        '保存后首页 / 日历 / 统计 / 资产同步刷新',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Tok.ink2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                // F7.7 A.0：第 4 个字段「账户」；默认沿用列表首个（老行为不变）
-                ToonField(
-                  label: '账户',
-                  value: selectedAccount?.name ?? '请选择账户',
-                  placeholder: selectedAccount == null,
-                  onTap: () => _pickAccount(accounts),
-                  dashedTop: true,
-                  trailing: selectedAccount == null
-                      ? null
-                      : ToonAvatar(
-                          text: selectedAccount.name.isEmpty
-                              ? '?'
-                              : selectedAccount.name.substring(0, 1),
-                          small: true,
-                        ),
+              ),
+              // F7.9 吸底保存栏：全页唯一的保存入口，常驻视口底部。
+              // 顶部墨色描边与 AppBar 底边对称（同一 `Tok.bw`）。
+              Container(
+                decoration: const BoxDecoration(
+                  color: Tok.paper,
+                  border: Border(
+                    top: BorderSide(color: Tok.ink, width: Tok.bw),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                ToonButton(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                child: ToonButton(
                   label: _isEdit ? '保存修改' : '记一笔',
                   block: true,
                   onPressed: _saving ? null : _save,
                 ),
-                const SizedBox(height: 10),
-                const Text(
-                  '保存后首页 / 日历 / 统计 / 资产同步刷新',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
