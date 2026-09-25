@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 取自 assets/icon/app_icon.png 的主色（黄底），与前景边缘残留同色 → 无缝融合 -->
+    <!-- 取自源图主色，与前景边缘残留同色 → 无缝融合 -->
     <color name="ic_launcher_background">#FFD81B</color>
 </resources>

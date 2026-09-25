@@ -2,38 +2,40 @@
 
 ## 为什么需要这个脚本
 
-启动图标本身由 `flutter_launcher_icons` 生成，但有两个缺口：
+启动图标本身由 `flutter_launcher_icons` 生成，但它有两个缺口：
 
-1. **本机 Dart 起不了子进程**（`CreateFile failed 231`）→ `dart run flutter_launcher_icons`
-   在沙箱里跑不了，无法补生成资源。
-2. **`flutter_launcher_icons` 默认不生成 adaptive icon**（`mipmap-anydpi-v26/ic_launcher.xml`）
-   —— 它只出 legacy 的 `mipmap-*/ic_launcher.png`。Android 8.0+（API 26+）拿不到
-   adaptive icon 就会走 legacy 降级路径，由系统给图标**套白底 + 圆形遮罩**，真机上
-   表现为图标周围一圈白边。
+1. **它默认不生成 adaptive icon**（`mipmap-anydpi-v26/ic_launcher.xml`）—— 只出 legacy 的
+   `mipmap-*/ic_launcher.png`。Android 8.0+（API 26+）拿不到 adaptive icon 就会走 legacy
+   降级路径，由系统给图标**套白底 + 圆形遮罩**，真机上表现为图标周围一圈白边。
+2. **本机 Dart 起不了子进程**（`CreateFile failed 231`）→ `dart run flutter_launcher_icons`
+   在沙箱里跑不了，无法补生成资源。沙箱里也没有 Pillow。
 
-## 产出（三层）
+## 产出（三层 + 一张预览）
 
 | 文件 | 说明 |
 |---|---|
-| `assets/icon/app_icon_foreground.png` | 前景源图 1024²：透明底 + 图形缩进 66% 安全区 |
-| `res/mipmap-<density>/ic_launcher_foreground.png` | 各 density 前景层（108dp 基准） |
-| `res/mipmap-anydpi-v26/ic_launcher.xml` | adaptive icon 声明 |
-| `res/values/ic_launcher_background.xml` | 背景色资源（取自源图主色） |
+| `<root>/assets/icon/app_icon_foreground.png` | 前景源图 1024²：透明底 + 图形缩进 66% 安全区 |
+| `<root>/android/app/src/main/res/mipmap-<density>/ic_launcher_foreground.png` | 各 density 前景层（108dp 基准） |
+| `<root>/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` | adaptive icon 声明 |
+| `<root>/android/app/src/main/res/values/ic_launcher_background.xml` | 背景色资源（取自源图主色） |
+| `<root>/.workbuddy/qa-icons/adaptive-preview.png` | 圆形遮罩合成预览（仅肉眼核验，不入库） |
 
 legacy `ic_launcher.png`（flutter_launcher_icons 的产物）**保持不动** ——
 API < 26 的设备回落到它，两边视觉一致。
 
 ## 口径
 
-- **66% 安全区**：adaptive icon 前景层画布 108dp，只有中间 66dp 不会被系统遮罩裁掉,
-  所以图形最长边必须 ≤ 66/108 ≈ 61.1% 画布，否则圆/方形遮罩会切到笔画。
-- **抠底**：按「与背景主色的距离」映射 alpha（`dist / 阈值` 截断）。
+- **66% 安全区**：adaptive icon 前景层画布 108dp，只有中间 66dp 不会被系统遮罩裁掉，
+  所以图形最长边必须 ≤ 66/108 ≈ 61.1% 画布，否则圆 / 方形遮罩会切到笔画。
+- **抠底**：按「与背景主色的距离」映射 alpha（两段式：死区内全透明 + 区间内线性过渡）。
   边缘抗锯齿像素得到中间 alpha，过渡自然；且背景层用的是**同一个颜色**，
   所以边缘残留的同色不必处理 —— 与背景天然融合。
 
-用法：
-    python tool/gen_launcher_icons.py --probe   # 只看源图特征，不写文件
-    python tool/gen_launcher_icons.py           # 生成资源
+用法（以下参数都有默认值，放进 `<项目>/tool/` 时可直接裸跑）：
+
+    python gen_launcher_icons.py --probe          # 只看源图特征，不写文件
+    python gen_launcher_icons.py                  # 生成资源
+    python gen_launcher_icons.py --root <项目根>   # 在项目外（如技能目录）调用时
 """
 
 from __future__ import annotations
@@ -55,14 +57,9 @@ from png_util import (  # noqa: E402
     save_png,
 )
 
-ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / "assets/icon/app_icon.png"
-FOREGROUND_SOURCE = ROOT / "assets/icon/app_icon_foreground.png"
-RES = ROOT / "android/app/src/main/res"
-
 FG_SOURCE_SIZE = 1024  # 官方推荐的前景源图边长
 SAFE_ZONE_RATIO = 66 / 108  # adaptive icon 安全区占画布比例
-CUTOUT_THRESHOLD = 100.0  # 与背景色距离 < 该值 → 视为背景（0..441 的 3D 欧氏距离）
+CUTOUT_THRESHOLD = 100.0  # 与背景色距离 > 该值 → 完全不透明（0..441 的 3D 欧氏距离）
 
 # 抠底死区（见 cutout_background 文档）。
 # 实测源图右下角有一块 `#FFD322` 残留，距背景主色 `#FFD81B` 仅 8.6 → 只用连续映射
@@ -70,9 +67,9 @@ CUTOUT_THRESHOLD = 100.0  # 与背景色距离 < 该值 → 视为背景（0..44
 CUTOUT_DEADZONE = 24.0
 
 # 求图形包围盒时的 alpha 门槛。
-# ⚠️ 抠底是**连续**的（alpha = dist/阈值），所以背景里的轻微噪点会留下 alpha 4~8 的
+# ⚠️ 抠底是**连续**的（alpha = 距离映射），所以背景里的轻微噪点会留下 alpha 4~8 的
 #    弱残留；用低门槛（如 16）算 bbox 会把整张图边界算进去（实测 x1/y1 落到 999/969），
-#    于是「图形占比」失去意义。128 让只有真正的字 + 强抗锯齿边参与。
+#    于是「图形占比」失去意义。128 让只有真正的图形 + 强抗锯齿边参与。
 BBOX_ALPHA_MIN = 128
 
 # adaptive icon 前景层边长（108dp 基准）
@@ -85,8 +82,8 @@ FG_DENSITIES = {
 }
 
 ADAPTIVE_XML = """<?xml version="1.0" encoding="utf-8"?>
-<!-- F7.9f 起手工维护：flutter_launcher_icons 不产 adaptive 资源，
-     本文件由 tool/gen_launcher_icons.py 生成。改图标 → 重跑该脚本。 -->
+<!-- 手工维护：flutter_launcher_icons 不产 adaptive 资源，
+     本文件由 gen_launcher_icons.py 生成。改图标 → 重跑该脚本。 -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@mipmap/ic_launcher_foreground" />
@@ -95,10 +92,24 @@ ADAPTIVE_XML = """<?xml version="1.0" encoding="utf-8"?>
 
 COLOR_XML = """<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- 取自 assets/icon/app_icon.png 的主色（黄底），与前景边缘残留同色 → 无缝融合 -->
+    <!-- 取自源图主色，与前景边缘残留同色 → 无缝融合 -->
     <color name="ic_launcher_background">{color}</color>
 </resources>
 """
+
+
+def default_root() -> Path:
+    """脚本在 `<项目>/tool/` 下时项目根 = 上两级；否则退回当前工作目录。"""
+    guess = Path(__file__).resolve().parent.parent
+    return guess if (guess / "pubspec.yaml").exists() else Path.cwd()
+
+
+def rel(path: Path, root: Path) -> str:
+    """尽量显示相对路径（不在 root 下则显示绝对路径）。"""
+    try:
+        return str(path.relative_to(root))
+    except ValueError:
+        return str(path)
 
 
 def dominant_opaque_color(px: bytearray, w: int, h: int) -> tuple[int, int, int]:
@@ -116,11 +127,10 @@ def cutout_background(
     """把接近背景主色的像素变透明，返回新像素数组（不改原数组）。
 
     两段式：
-    - `dist ≤ deadzone` → alpha 直接 0。实测源图右下角有一块 `#FFD322`
-      （距背景色仅 8.6）的淡色残留，只用连续映射会留下 alpha≈22 的弱色斑；
-      死区把它彻底抹平。
+    - `dist ≤ deadzone` → alpha 直接 0。实测源图边缘常有距主色 <10 的淡色残留，
+      只用连续映射会留下 alpha≈22 的弱色斑；死区把它彻底抹平。
     - `deadzone < dist < threshold` → 线性过渡，保留抗锯齿边缘。
-    - `dist ≥ threshold` → alpha 255。
+    - `dist ≥ threshold` → 原样保留。
     """
     out = bytearray(len(px))
     br, bgc, bb = bg
@@ -202,17 +212,29 @@ def render_round_preview(
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="生成 adaptive icon 资源")
+    ap.add_argument("--root", type=Path, default=None, help="项目根（默认：脚本上两级，否则 CWD）")
+    ap.add_argument("--source", type=Path, default=None, help="图标源图（默认 <root>/assets/icon/app_icon.png）")
+    ap.add_argument("--fg-source", type=Path, default=None, help="前景源图输出路径")
+    ap.add_argument("--res", type=Path, default=None, help="Android res 目录")
+    ap.add_argument("--preview", type=Path, default=None, help="圆形遮罩预览输出路径")
     ap.add_argument("--probe", action="store_true", help="只打印源图特征，不写文件")
     ap.add_argument("--threshold", type=float, default=CUTOUT_THRESHOLD, help="抠底距离阈值")
     ap.add_argument("--deadzone", type=float, default=CUTOUT_DEADZONE, help="抠底死区（≤ 该距离直接全透明）")
     args = ap.parse_args()
 
-    if not SOURCE.exists():
-        print(f"❌ 源图不存在：{SOURCE}")
+    root = (args.root or default_root()).resolve()
+    source = (args.source or root / "assets/icon/app_icon.png").resolve()
+    fg_source = (args.fg_source or root / "assets/icon/app_icon_foreground.png").resolve()
+    res = (args.res or root / "android/app/src/main/res").resolve()
+    preview = (args.preview or root / ".workbuddy/qa-icons/adaptive-preview.png").resolve()
+
+    if not source.exists():
+        print(f"❌ 源图不存在：{source}")
         return 2
 
-    print(f"解码 {SOURCE.relative_to(ROOT)} …")
-    w, h, px = load_png(SOURCE)
+    print(f"项目根 {root}")
+    print(f"解码 {rel(source, root)} …")
+    w, h, px = load_png(source)
     print(f"  尺寸 {w}x{h}" + ("" if w == h else f"  ⚠️ 非正方形（差 {abs(w - h)}px）"))
 
     bg = dominant_opaque_color(px, w, h)
@@ -263,32 +285,31 @@ def main() -> int:
 
     # 1) 前景源图（1024²，图形占 61.1% 安全区）
     fg = fit_into_square(cut, w, h, box, FG_SOURCE_SIZE, SAFE_ZONE_RATIO)
-    save_png(FOREGROUND_SOURCE, FG_SOURCE_SIZE, FG_SOURCE_SIZE, fg)
-    print(f"  ✅ {FOREGROUND_SOURCE.relative_to(ROOT)}  {FG_SOURCE_SIZE}²  "
+    save_png(fg_source, FG_SOURCE_SIZE, FG_SOURCE_SIZE, fg)
+    print(f"  ✅ {rel(fg_source, root)}  {FG_SOURCE_SIZE}²  "
           f"内容占比 {SAFE_ZONE_RATIO:.1%}（安全区）")
 
     # 2) 各 density 前景层
     for folder, size in FG_DENSITIES.items():
         _, _, scaled = resize_box(fg, FG_SOURCE_SIZE, FG_SOURCE_SIZE, size, size)
-        out = RES / folder / "ic_launcher_foreground.png"
+        out = res / folder / "ic_launcher_foreground.png"
         save_png(out, size, size, scaled)
-        print(f"  ✅ {out.relative_to(ROOT)}  {size}²")
+        print(f"  ✅ {rel(out, root)}  {size}²")
 
     # 3) adaptive icon 声明 + 背景色
-    xml_dir = RES / "mipmap-anydpi-v26"
+    xml_dir = res / "mipmap-anydpi-v26"
     xml_dir.mkdir(parents=True, exist_ok=True)
     (xml_dir / "ic_launcher.xml").write_text(ADAPTIVE_XML, encoding="utf-8", newline="\n")
-    print(f"  ✅ {(xml_dir / 'ic_launcher.xml').relative_to(ROOT)}")
+    print(f"  ✅ {rel(xml_dir / 'ic_launcher.xml', root)}")
 
-    color_xml = RES / "values" / "ic_launcher_background.xml"
+    color_xml = res / "values" / "ic_launcher_background.xml"
     color_xml.parent.mkdir(parents=True, exist_ok=True)
     color_xml.write_text(COLOR_XML.format(color=hex_bg), encoding="utf-8", newline="\n")
-    print(f"  ✅ {color_xml.relative_to(ROOT)}  background = {hex_bg}")
+    print(f"  ✅ {rel(color_xml, root)}  background = {hex_bg}")
 
-    # 4) 圆形遮罩预览（只看效果，落在 .workbuddy/qa-icons/，不入库）
-    preview = ROOT / ".workbuddy/qa-icons/adaptive-preview.png"
+    # 4) 圆形遮罩预览（只看效果，不入库）
     render_round_preview(fg, FG_SOURCE_SIZE, bg, preview)
-    print(f"  👁  {preview.relative_to(ROOT)}  （圆形遮罩合成预览，用于肉眼核验安全区）")
+    print(f"  👁  {rel(preview, root)}  （圆形遮罩合成预览，用于肉眼核验安全区）")
 
     print("\n完成。legacy ic_launcher.png 未改动（API<26 回落用，视觉一致）。")
     return 0
