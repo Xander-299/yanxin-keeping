@@ -9,6 +9,8 @@ import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
+import 'package:yanxin/features/stats/application/stats_aggregate.dart';
+import 'package:yanxin/features/stats/presentation/widgets/trend_bars.dart';
 
 import '../../helpers/pump_app.dart';
 
@@ -171,5 +173,36 @@ void main() {
           : '${d.year % 100}年${d.month}月';
       expect(find.text(label), findsOneWidget, reason: '缺少 $label 这根柱子');
     }
+  });
+
+  testWidgets('趋势柱：没有流水的月份不画柱（只留占位 + 月份标签）', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: TrendBars(
+            anchorYear: 2026,
+            points: <MonthPoint>[
+              MonthPoint(year: 2026, month: 7, incomeCents: 0, expenseCents: 0),
+              MonthPoint(
+                year: 2026,
+                month: 8,
+                incomeCents: 5000,
+                expenseCents: 0,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 7 月整月无流水 → 一根柱都不画；8 月只有收入 50.00 → 正好一根
+    expect(find.byType(Tooltip), findsOneWidget);
+    expect(find.byTooltip('收入 50.00 元'), findsOneWidget);
+    // 标签仍按月份铺开（无数据月份只少了柱子，位置不塌）
+    expect(find.text('7月'), findsOneWidget);
+    expect(find.text('8月'), findsOneWidget);
   });
 }

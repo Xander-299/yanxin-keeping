@@ -1,6 +1,7 @@
 /// 近 N 月收支趋势柱状图（自绘布局，不引图表库）。
 ///
 /// 每个月两根柱：支出红 / 收入绿（中国习惯），高度按区间内最大值等比缩放。
+/// **该月该方向没有流水（0 分）就不画柱** —— 只留同宽占位，月份标签与其余柱的位置不变。
 library;
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,18 @@ import '../../application/stats_aggregate.dart';
 
 /// 趋势柱高度上限（逻辑像素）。
 const double kTrendBarHeight = 96;
+
+/// 柱子宽度（逻辑像素）；无数据时的占位也用这个宽度，保证水平位置一致。
+const double kTrendBarWidth = 13;
+
+/// 单根柱的**内容高度**（逻辑像素）。
+///
+/// 返回 `null` = 该月该方向没有数据 → **不画柱子**（区间最大值也为 0 时全不画）。
+/// 控件实际高度 = 返回值 + 4（上下各 2px 墨色描边，画在尺寸内侧）。
+double? trendBarHeight(int cents, int max) {
+  if (cents <= 0 || max <= 0) return null;
+  return (cents / max) * kTrendBarHeight;
+}
 
 /// 近 N 月趋势。
 class TrendBars extends StatelessWidget {
@@ -94,13 +107,13 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = max == 0 || cents == 0
-        ? 2.0
-        : (cents / max) * kTrendBarHeight;
+    final height = trendBarHeight(cents, max);
+    // 无数据不画柱：留同宽空位，否则有数据的那几根会左右漂移
+    if (height == null) return const SizedBox(width: kTrendBarWidth);
     return Tooltip(
       message: '$tooltip ${centsToYuan(cents)} 元',
       child: Container(
-        width: 13,
+        width: kTrendBarWidth,
         // +4 抵消 2px 描边（Container 的 border 画在尺寸内侧，原型是 content-box）
         height: height + 4,
         decoration: BoxDecoration(
