@@ -65,12 +65,12 @@ dev_dependencies:
 
   # drift 代码生成
   drift_dev: 2.31.0
-  flutter_lints: ^6.0.0
-  flutter_test:
-    sdk: flutter
   # 图标生成（`dart run flutter_launcher_icons`）—— ⚠️ 只属构建期，
   # **不要**再往上面的 dependencies 里加一份（会把它当运行时依赖、lock 标成 direct main）
   flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
 
 flutter_launcher_icons:
   android: true
