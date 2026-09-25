@@ -100,7 +100,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-25 · F7.9 吸底保存 + 启动图标 · 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **372 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过**，本批 **+1** = `test()` 292 + `testWidgets` 80）；真机走查 ✅ **已完成**（F7.9，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 292 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**）+ 图标 / pubspec 链 `inspect_icons.py` / `check_pubspec.py`（生成用 `gen_launcher_icons.py`），前两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
-| git | **功能代码基线** = **`1f3ec96` = `origin/master`**（F7.9 + 启动图标 + 构建阻塞修复 + 收尾提交）；交接文档提交在其后（**本文件自身也在提交，别记哈希**）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.12`**（tag 对象 `dcab296` → 提交 `1f3ec96`；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
+| git | **功能代码基线** = **`1f3ec96`**（= `v0.7.12` tag 指向；F7.9 + 启动图标 + 构建阻塞修复 + 收尾提交），**文档收尾提交在其后**（本文件自身也在提交，**别记哈希**）；查最新用 `git log --oneline -5`；工作区干净；**最新 tag = `v0.7.12`**（tag 对象 `dcab296` → 提交 `1f3ec96`；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
 | 源码规模 | `lib/` **84** 个 `.dart`，`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **12** 个脚本 = **9 个 Python + 3 个 `.dart`**（Python：4 个门禁等效 —— `dart_analyze_fallback` / `dart_test_fallback` / `build_kernel_fallback` / `data_layer_probe`；`verify_apk_kernel.py` 装机核验；4 个图标与 pubspec 工具 —— `png_util` / `gen_launcher_icons` / `inspect_icons` / `check_pubspec`）；用例 **372 passed** = `test()` 292 + `testWidgets` 80（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
@@ -306,7 +306,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
   `flutter test` ✅ **372 passed / 0 skipped**（**2026-09-25 用户终端全量**，本批 +1
   = `test()` **292** + `testWidgets` **80**）。
-- **本机（A 机）代码基线 = `1f3ec96` = `origin/master`**（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
+- **本机（A 机）代码基线 = `1f3ec96`**（`v0.7.12` tag 指向；文档收尾提交在其后）（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
   + **F7.7 A/B/C/D/E 五批** + **F7.8 左滑删除** + **F7.9 吸底保存** + **启动图标 adaptive** + **F1 修复**
   + 构建阻塞修复 + 九个等效 / 核验 / 生成工具 已入库；**tag = `v0.7.12`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
@@ -739,8 +739,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   （`home_empty_state_test` 仍断言 AppBar 有「保存」）**已修 `661ec6b`**。
   启动图标：Android 8+ 不再套白底白圈（`ec55229`）；`flutter_launcher_icons` **只留在 `dev_dependencies`**
   （**别再往 `dependencies` 加一份**）。
-- **功能代码基线** = **`1f3ec96` = `origin/master`**（收尾线 `5ccb7c2` 角标 → `1f3ec96` CHANGELOG 转正；
-  tag 对象 `dcab296` → 提交 `1f3ec96`）；**最新 tag `v0.7.12`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。
+- **功能代码基线** = **`1f3ec96`**（= `v0.7.12` tag 指向；收尾线 `5ccb7c2` 角标 → `1f3ec96` CHANGELOG 转正，
+  tag 对象 `dcab296`，文档收尾提交在其后）；**最新 tag `v0.7.12`**（F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。
 - ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（`CreateFile failed 231` / `process_win.cc:744`）
   → `flutter analyze / test / pub / build_runner` / **构建** 在本机直连全废。**别怀疑代码、别换 Dart 版本、别开 `dangerouslyDisableSandbox`**。
   九个工具 / 替代链路（已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
@@ -764,4 +764,4 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
 - 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.11`。
 - **下一步**：**无遗留项 —— 等用户排新需求**。（analyze ✅ / test **372** ✅ / 走查 ✅ 三项门禁全部闭合；
-  F7.9 + 启动图标 代码已落地在 `1f3ec96` = `origin/master`，**别重写**；发布收尾四步亦已执行完毕。）
+  F7.9 + 启动图标 代码已落地在 `1f3ec96`（= `v0.7.12` tag 指向），**别重写**；发布收尾四步亦已执行完毕。）
