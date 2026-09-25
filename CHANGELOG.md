@@ -23,6 +23,62 @@
 | `v0.7.10` | F7.7 D 批 搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批 日历增强（长按记账 / 左右滑翻月） | 本段所在提交 |
 | `v0.7.11` | F7.8 流水左滑删除（长按 → 左滑露出按钮；首页 / 日历日账单 / 搜索结果 3 处） | 本段所在提交 |
 | `v0.7.12` | F7.9 记一笔双保存入口收敛（删顶部 + 底部吸底常驻）+ 启动图标 adaptive icon + `signingConfigs` 构建阻塞修复 | 本段所在提交 |
+| `v0.7.13` | 统计页图表绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱） | 本段所在提交 |
+
+## [v0.7.13] — 2026-09-25 · 统计页图表两处绘制修复
+
+> **门禁**：`flutter test` **383 passed / 0 skipped**（2026-09-25 用户终端全量；
+> = `test()` **302** + `testWidgets` **81**，本轮 **+11** —— `test()` +10 / `testWidgets` +1）；
+> `flutter analyze` 等效 **0 issue** ✅；真机走查（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
+> **通过、0 崩溃** → `docs/acceptance-F7.13-stats-charts-fix.md`。**回滚**：`git checkout v0.7.12`。
+> **纯修复版**（无新功能）：**零新依赖、不动 schema（仍 v3）**。
+> 触发：用户报「统计页面中的统计图样式有问题」。
+
+### A · 分类占比圆环画成「风车楔形」
+
+> **现象**：`/stats` 的 148px 分类圆环，每一瓣都从**圆心**射出一条实心楔形，多瓣叠成风车状；
+> 圆心文字 `286.88` 与「合计（元）」被楔形压住；首尾接缝明显比其他缝隙宽。
+
+#### 修复
+
+- **根因**：`drawArc` 的 `useCenter` 误传 `true`。该参数**与描边样式无关** —— 为 true 时路径会
+  `moveTo(圆心)` 再连回圆心，`strokeWidth = outer * 0.34`（约 25px）的粗描边于是把两条半径线
+  画成实心带。（同项目 `core/theme/toon.dart` 的 `_RingPainter` 传的就是 `false`，对照即知是笔误。）
+- 两处 `useCenter` → `false`：五瓣圆环、空态底槽（后者原会多画一条辐条）。
+- 接缝改为**两端各让一半**（`start + gap / 2`、`sweep - gap`）：原先整段缝从瓣尾扣，
+  首尾收口处会宽成 `gap · n`（5 瓣时 5.7° vs 其余 1.1°，肉眼可见）。
+- 缝隙提为常量 `kDonutGap`；`_DonutPainter` → **公开 `DonutPainter`**（单测需要）。
+
+### B · 趋势图零值月也画柱
+
+> **现象**：4 / 5 / 6 / 7 月整月无流水，却各画出一对 2px 内高的基座胶囊 → 像「每月都有小额收支」。
+> **裁定（2026-09-25，用户）**：该月该方向没有流水就**不画柱**。
+
+#### 变更
+
+- 抽纯函数 `double? trendBarHeight(int cents, int max)` —— 返回 `null` 即**不画**；
+  `cents <= 0 || max <= 0` 都走 null（`max <= 0` 一并挡住除零）。
+- `_Bar` 早退 `return SizedBox(width: kTrendBarWidth)`：留**同宽占位**，
+  否则有数据的柱子会左右漂移、月份标签错位。
+- 删掉原 `cents == 0 → height = 2.0` 的基座胶囊；宽度硬编码 `13` → 常量 `kTrendBarWidth`。
+
+#### 新增
+
+- `test/features/stats/category_pie_test.dart`（5 例纯 `test()`）：用
+  `implements Canvas` + `noSuchMethod` 的**记录型 Canvas** 直接喂 `DonutPainter.paint`，
+  断言 `useCenter == false` / `PaintingStyle.stroke` / 5 处接缝 `closeTo(kDonutGap, 1e-9)` /
+  单瓣整圆 / 0 占比瓣不画 / 空态底槽不连圆心。**本项目首个能验证 `CustomPainter` 的测试手法**
+  （不用 golden、不依赖真 Canvas）。
+- `test/features/stats/trend_bars_test.dart`（5 例纯 `test()`）：0 分 → null、`max = 0` 全不画、
+  等比缩放、极小金额仍为正高度、负数按无数据处理。
+- `stats_page_test.dart` 追加 1 例 `testWidgets`：独立 pump `TrendBars`，
+  断言 `Tooltip` 恰好 1 个 + 无数据月份的标签仍在。
+- `docs/acceptance-F7.13-stats-charts-fix.md`（走查报告）。
+
+#### 已知（未处理，影响 ≤ 4%）
+
+- `_Bar` 的 `height + 4`（描边补偿）在柱高触顶时会被父级 `SizedBox(height: 96)` 约束削掉 4px
+  → 最大柱实际显示 96 而非 100。本轮不动，留观察。
 
 ## [v0.7.12] — 2026-09-25 · F7.9 记一笔保存入口吸底常驻 + 启动图标 adaptive icon
 
