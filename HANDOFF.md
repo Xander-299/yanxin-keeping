@@ -180,7 +180,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
 | **门禁（2026-09-25 · F7.8 左滑删除 · 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s）；`flutter test` **371 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过**，本批 **+10** = `test()` 292 + `testWidgets` 79）；真机走查 ✅ **已完成**（F7.8，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 292 例实测全绿，`testWidgets` 跑不了**）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**），后两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
 | git | **功能代码基线** = **`0d5cf16`**（F7.8 实现 + 白底修复 + 走查记录）；交接文档提交在其后（**本文件自身也在提交，别记哈希**）；查最新用 `git log --oneline -5`，别死记哈希；工作区干净；**最新 tag = `v0.7.11`**（已推远端；F7 阶段一版一 tag，表在 `CHANGELOG.md` 顶部） |
-| 源码规模 | `lib/` **84** 个 `.dart`（+`swipe_action_row.dart`），`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **8** 个脚本（4 个等效 / 验证工具 + `verify_apk_kernel.py` + 3 个 `.dart` 辅助）；用例 **371 passed** = `test()` 292 + `testWidgets` 79（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
+| 源码规模 | `lib/` **84** 个 `.dart`（+`swipe_action_row.dart`），`test/` **44** 个 `.dart`（其中 **13** 个文件含 `testWidgets`），`tool/` **12** 个脚本 = **9 个 Python + 3 个 `.dart`**（Python：4 个门禁等效 —— `dart_analyze_fallback` / `dart_test_fallback` / `build_kernel_fallback` / `data_layer_probe`；`verify_apk_kernel.py` 装机核验；4 个图标与 pubspec 工具 —— `png_util` / `gen_launcher_icons` / `inspect_icons` / `check_pubspec`）；用例 **371 passed** = `test()` 292 + `testWidgets` 79（用户终端实跑）；`lib/core/db/database.g.dart` 已入库 |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
@@ -318,6 +318,28 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
+- **F7.9 记一笔「保存」入口改吸底常驻 已实现 + 走查通过 ✅（⏳ 待用户终端 `flutter test` → 打 `v0.7.12`）**：
+  删掉 AppBar 右上角常驻「保存」，底部主按钮改**吸底常驻**（脱离 `SingleChildScrollView`，与滚动区并列在
+  body 的 `Column` 里 —— **不能用 `Scaffold.bottomNavigationBar`**：它按 `screen height - h` 贴**屏幕**底、
+  键盘弹起会被盖住）。接口提交 `d0ab794`；SPEC `docs/SPEC-F7.9-record-sticky-save.md`（§3/§6 含上述前提修正）、
+  走查 `docs/acceptance-F7.9-record-sticky-save.md`（D1–D3 / D5 / D6 / D8 通过；**D4 键盘项未取证** ——
+  MuMu 有硬件键盘映射不弹软键盘，改矮视口做等价验证）。**零新依赖、不动 schema**。
+  ⚠️ 测试口径：吸底按钮是滚动区的**兄弟节点、不在 `Scrollable` 内** → `tester.ensureVisible` 会
+  `Scrollable.of` 返回 null 直接抛错（已删 3 处）。
+- **启动图标补齐 adaptive icon 已交付 ✅（`ec55229`）**：`flutter_launcher_icons` 只产 legacy
+  `mipmap-*/ic_launcher.png`、**默认不产 adaptive** → Android 8.0+ 走 legacy 降级，系统给图标
+  套白底 + 圆形遮罩（真机一圈白边）。补 `mipmap-anydpi-v26/ic_launcher.xml` +
+  `values/ic_launcher_background.xml`（`#FFD81B`，源图主色）+ 5 个 density 前景层 +
+  前景源图 `assets/icon/app_icon_foreground.png`（1024²，透明底，图形缩进 66% 安全区）；
+  该包从 `dependencies` 移回 `dev_dependencies`（重复声明会让 lock 标 `direct main`）。
+  新增工具（纯 Python 标准库 —— 本机 `dart run` 起不了管道子进程、沙箱无 Pillow）：
+  `tool/png_util.py` / `gen_launcher_icons.py` / `inspect_icons.py` / `check_pubspec.py`。
+  装机验证：MuMu 桌面 = 黄底圆角方 + 「记账」，**无白底白圈**。
+- **构建阻塞已修 ✅（`b795541`）**：`android/app/build.gradle.kts` 里 `signingConfigs` 原本写在
+  `buildTypes` **之后** → 配置阶段 `signingConfigs.getByName("release")` 求值失败 →
+  `SigningConfig with name 'release' not found.`，**连 `assembleDebug` 都挂**（与 debug/release 无关）。
+  已把 `signingConfigs` 上移到 `buildTypes` 之前；`key.properties` 不存在时回退 debug 签名
+  （保证 clone 仓库的机器也能出包）。`.gitignore` 补 `key.properties` 兜底规则。
 - **F7.8 流水左滑删除 已交付 ✅（`v0.7.11` 已打 tag 并推远端）**：删除入口由长按改为**左滑露出红色
   「删除」按钮 → 点按钮才删**（用户三项裁定，SPEC `docs/SPEC-F7.8-swipe-delete.md`）；范围 = 首页 + 日历日账单 +
   搜索结果（报表页仍只读）；**零新依赖**（`SwipeActionRow` 手写：行程 ≥45% 或向左甩 ≥350px/s 吸附；单开协调；

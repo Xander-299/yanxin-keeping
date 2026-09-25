@@ -84,3 +84,7 @@ test/fixtures/*-real.*
 # 本地回收站（safe-delete shim 拦 rm，删文件一律 mv 到这里）
 /.workbuddy/trash/
 
+# tool/ 下 Python 脚本的字节码缓存（此前无规则，`git add .` 会误入库）
+__pycache__/
+*.pyc
+
