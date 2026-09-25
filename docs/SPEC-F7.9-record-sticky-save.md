@@ -84,6 +84,45 @@
 
 即：底部主按钮**常驻视口**，顶部 AppBar 的「保存」入口**删除**。
 
-## 8. 实施记录
+## 8. 实施记录（2026-09-25）
 
-（实现 + 门禁 + 走查完成后回填）
+**实现**（提交 `d0ab794`）
+
+- `record_page.dart`：
+  - 删掉 AppBar 的 `actions`（原 `TextButton('保存')`）→ 现在只剩返回 + 居中标题。
+  - `body` 由「`SingleChildScrollView` + 末尾按钮」改为
+    **`Column(children: [Expanded(SingleChildScrollView(…字段…)), 吸底栏])`**；
+    滚动区 bottom padding `24 → 16`；提示文案留在滚动区末尾（不进吸底栏）。
+  - 吸底栏 = `Container(color: Tok.paper, border: top BorderSide(Tok.ink, Tok.bw))`
+    + `Padding(16, 12, 16, 12)` + `ToonButton(block: true)`。
+  - ⚠️ **SPEC 前提修正**：初稿写「用 `Scaffold.bottomNavigationBar`」**不成立** ——
+    `_ScaffoldLayout` 把它定位在 `size.height - h`（贴屏幕底），只有 body 会被
+    `viewInsets.bottom` 压缩 → **键盘弹起时会被键盘盖住**。改为 body 内 `Column`（见上）。
+    已在 §3 与 §6 回写。
+
+**门禁**
+
+- `flutter analyze` 等效（`python tool/dart_analyze_fallback.py`）：**No issues found** ✅（改了两轮都 0 issue）。
+- 测试改动（4 个文件）：
+  - `record_save_entry_test.dart` **重写**：矮视口（逻辑 800×400）下断言
+    ① AppBar 与全页无「保存」；② 吸底按钮唯一且在视口内；③ 滚动 400px 后按钮 y 不变；
+    ④ 吸底按钮走同一套校验（金额空 → 「请输入金额」）。
+  - `record_account_test.dart`：`_tapSave()` 由「点 AppBar 的 `find.text('保存')`」改为
+    「点 `find.widgetWithText(ToonButton, '记一笔')`」（历史坑注释保留）。
+  - `widget_test.dart` ×2、`calendar_page_test.dart` ×1：**删除 `ensureVisible`** ——
+    吸底按钮是滚动区的兄弟节点、**不在 `Scrollable` 内**，`Scrollable.of` 返回 null 会直接抛错。
+- 测试计数预计 **+1**（`record_save_entry_test` 由 1 例 → 2 例）：**372**（= `test()` 297 + `testWidgets` 75）。
+
+**真机走查** —— `docs/acceptance-F7.9-record-sticky-save.md`（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
+
+- **D1 ✅** AppBar 无「保存」（语义树全页无「保存」节点）；**D2 ✅** 按钮 `@(450,1528)` 在视口内；
+  **D3 ✅** 改矮视口（900×1000）后按钮 `@(450,928)` 仍在视口内、内容被挤出（22→16 节点）；
+  **D5 ✅** 输 `12.34` + 餐饮 → 点吸底按钮 → 首页 286.88 → **299.22**、日均 11.48 → 11.97；
+  **D6 ✅** 编辑模式文案「保存修改」；**D8 ✅** 0 崩溃（`logcat -b crash` 无本 App 条目）。
+- ⚠️ **D4 未直接取证**：MuMu 12 有硬件键盘映射 → **不弹软键盘**，强制
+  `show_ime_with_hard_keyboard=1` 仍无效。已做**等价验证**（键盘弹起 = 压缩 body，与矮视口同源）
+  并在报告 §4 建议用户在真机上复验。属设备能力限制，非代码问题。
+- 走查造的 `12.34` 一笔随即用**左滑删除**清掉（顺带回归 F7.8 链路）→ 首页回到 286.88，数据无残留。
+
+**版本**：收尾后打 tag **`v0.7.12`**（沿用递增；F7.7 五批占 `v0.7.7`–`v0.7.10`，F7.8 占 `v0.7.11`）。
+
