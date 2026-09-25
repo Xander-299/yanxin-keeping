@@ -211,6 +211,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   背景色 + 前景源图（66% 安全区）→ **Android 8+ 不再套白底白圈**；`flutter_launcher_icons` 移回
   `dev_dependencies`。生成 / 体检脚本纯 Python 标准库（`tool/png_util.py` / `gen_launcher_icons.py` /
   `inspect_icons.py` / `check_pubspec.py`）。**顺带修掉 `signingConfigs` 顺序导致的构建阻塞（`b795541`）**。
+- **统计页图表两处绘制修复** ✅（2026-09-25，`v0.7.13` 已打 tag）：① 分类圆环 `drawArc` 的 `useCenter` 误传
+  `true` → 每瓣从圆心辐射实心楔形（风车）并盖住圆心文字，两处改 `false`（含空态底槽）+ 接缝两端各让一半；
+  ② 趋势图零值月仍画 2px 基座胶囊 → 用户裁定**不画**，抽纯函数 `trendBarHeight(cents, max) → double?`
+  （null = 不画），`_Bar` 早退留同宽占位防漂移。测试 **+11**；走查报告 `docs/acceptance-F7.13-stats-charts-fix.md`。
 - **真机走查抓到的老 bug 并修复** ✅（`04c2bfd`）：`searchProvider` 快照过期（未接 `dataEpochProvider`，
   **F7.4 起就存在**）→ 加 `ref.watch(dataEpochProvider)`；回归测试 `test/features/search/search_freshness_test.dart`
   （**实测注释掉那行 watch 必失败**）。走查记录：`docs/acceptance-F7.7-DE.md`。
@@ -524,8 +528,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   ⚠️ `signingConfigs` 必须声明在 `buildTypes` **之前**（否则连 debug 构建都在配置阶段挂 —— `b795541` 已修）。
   ⚠️ **release 出包未在本机验证**：release 走 AOT（`gen_snapshot` → `libapp.so`），本机那套 kernel 兜底只覆盖
   debug 的 `kernel_blob.bin` → 需在**用户终端**跑 `flutter build apk --release` 确认。
-- 【待确认】**桌面应用名**：`AndroidManifest.xml` 是 `android:label="yanxin"`（脚手架默认值）→ 桌面显示
-  「yanxin」而不是「颜芯记账」。改名属产品命名决定，**未擅动**（改一行）。
+- 【**用户已自行改好，只差「要不要提交」**】**桌面应用名**：`AndroidManifest.xml` 原为脚手架默认
+  `android:label="yanxin"` → 桌面显示「yanxin」。**用户 2026-09-25 已在工作区改成 `android:label="颜芯记账"`**
+  （改一行，**未提交**，`git diff` 可见）。属产品命名决定 → **AI 不擅自提交**；用户说一声即可 commit。
+  ⚠️ 该改动会让工作区**长期处于「有未提交修改」状态** —— 后续收尾提交时**别顺手 `git add -A` 带进来**。
 
 # 关键资料
 
