@@ -1,3 +1,13 @@
+import java.util.Properties
+import java.io.FileInputStream
+
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -29,11 +39,30 @@ android {
         versionName = flutter.versionName
     }
 
+    // ⚠️ `signingConfigs` 必须声明在 `buildTypes` **之前**：
+    //    `buildTypes.release { }` 的 lambda 在**配置阶段立即执行**，里面
+    //    `signingConfigs.getByName("release")` 会在 signingConfig 注册前求值 →
+    //    "SigningConfig with name 'release' not found."（连 debug 构建都在配置阶段挂掉）。
+    signingConfigs {
+        create("release") {
+            if (keystorePropertiesFile.exists()) {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = keystoreProperties.getProperty("storeFile")?.let { file(it) }
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // 有 `android/key.properties` 时用正式签名；没有（如 clone 仓库的机器）回退
+            // debug 签名，保证 `flutter build apk --release` 仍能跑通。
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

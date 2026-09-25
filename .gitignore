@@ -56,6 +56,8 @@ app.*.map.json
 *.jks
 *.keystore
 /android/key.properties
+# 兜底：签名配置若被挪到别处（如 android/app/key.properties）同样禁止入库
+key.properties
 
 # Gradle 缓存（沙箱不允许删 <USER_HOME>\.gradle，故挪到工作区内）
 /.gradle-home/
