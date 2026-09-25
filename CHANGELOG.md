@@ -22,8 +22,18 @@
 | `v0.7.9` | F7.7 C 批 账户图标 / 颜色选择（schema v3）+ widget 测试视口修复 | 本段所在提交 |
 | `v0.7.10` | F7.7 D 批 搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批 日历增强（长按记账 / 左右滑翻月） | 本段所在提交 |
 | `v0.7.11` | F7.8 流水左滑删除（长按 → 左滑露出按钮；首页 / 日历日账单 / 搜索结果 3 处） | 本段所在提交 |
+| `v0.7.12` | F7.9 记一笔双保存入口收敛（删顶部 + 底部吸底常驻）+ 启动图标 adaptive icon + `signingConfigs` 构建阻塞修复 | 本段所在提交 |
 
-## [Unreleased] · F7.9 记一笔保存入口吸底常驻
+## [v0.7.12] — 2026-09-25 · F7.9 记一笔保存入口吸底常驻 + 启动图标 adaptive icon
+
+> **门禁**：`flutter test` **372 passed / 0 skipped**（2026-09-25 用户终端全量；
+> = `test()` **292** + `testWidgets` **80**，本批 **+1**）；`flutter analyze` 等效 **0 issue** ✅；
+> 真机走查（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）**通过、0 崩溃** →
+> `docs/acceptance-F7.9-record-sticky-save.md`。**回滚**：`git checkout v0.7.11`。
+> **本版含两个独立需求** —— A = F7.9 记一笔双保存入口收敛；B = 启动图标补 adaptive icon；
+> 另有 1 处**构建阻塞修复**（`signingConfigs` 声明顺序，连 `./gradlew assembleDebug` 都挂）。
+
+### A · F7.9 记一笔保存入口吸底常驻
 
 > **诉求**：记一笔页**顶部 AppBar 有「保存」、底部又有主按钮「记一笔」** —— 两个保存入口。
 > 造型来源是原型 1:1 复刻（`screens.js` 两处挂同一动作 `data-act="save-record"`），
@@ -32,13 +42,11 @@
 > **口径**：吸底栏放 body 内 `Column(Expanded(滚动区) + 吸底栏)` —— ⚠️ **不能用 `Scaffold.bottomNavigationBar`**：
 > 它按 `size.height - h` 贴**屏幕**底、**不随键盘上移**，键盘弹起会被盖住；body 才会被 `viewInsets.bottom` 压缩。
 > 顶部墨色描边（`Tok.ink` / `Tok.bw`）与 AppBar 底边对称。
-> 门禁：analyze 等效 **0 issue** ✅；**真机走查**（MuMu 12，AI 经 adb 全包）通过 ✅
-> （D1 无顶部入口 / D2 未滚动即在视口内 / D3 滚动后位置不变 / D5 保存链路写入成功 / D6 编辑态文案「保存修改」/
-> D8 0 崩溃；**D4 键盘项**受 MuMu 无软键盘限制，改矮视口做等价验证）→ `docs/acceptance-F7.9-record-sticky-save.md`；
-> ⏳ `flutter test` 预期 **372**（= 371 + 1 新增 `testWidgets`；首轮回归抓到 1 例漏改已修）。
+> **走查覆盖**：D1 无顶部入口 / D2 未滚动即在视口内 / D3 滚动后位置不变 / D5 保存链路写入成功 /
+> D6 编辑态文案「保存修改」/ D8 0 崩溃；**D4 键盘项**受 MuMu 无软键盘限制，改矮视口做等价验证。
 > **零新依赖、不动 schema（仍 v3）**。
 
-### 变更
+#### 变更
 
 - `lib/features/record/presentation/record_page.dart`：删除 AppBar `actions` 的「保存」；
   `body` 改为 `Column(Expanded(滚动区) + 吸底栏)`，滚动区 bottom padding `24 → 16`，
@@ -47,7 +55,7 @@
   会因 `Scrollable.of` 返回 null 直接抛错）：删 3 处 `ensureVisible`（`widget_test` ×2、
   `calendar_page_test` ×1）；`record_account_test` 的 `_tapSave` 改点吸底按钮。
 
-### 新增
+#### 新增
 
 - `docs/SPEC-F7.9-record-sticky-save.md`（含 **SPEC 前提修正**记录：初稿的 `bottomNavigationBar`
   方案不成立）+ `docs/acceptance-F7.9-record-sticky-save.md`（走查报告）。
@@ -55,7 +63,7 @@
   ① AppBar 与全页无「保存」；② 吸底按钮唯一且在视口内；③ 滚动 400px 后按钮 y 不变；
   ④ 吸底按钮走同一套校验（金额空 → 「请输入金额」）。
 
-### 修复
+#### 修复
 
 - `test/features/ledger/home_empty_state_test.dart`（**首轮回归失败**）：仍断言
   `find.widgetWithText(AppBar, '保存')`，而该入口已删 → 改判据为「AppBar 标题 `记一笔`」+
@@ -63,6 +71,7 @@
   Tooltip，与下层路由是否仍在树上无关）。
 - `pubspec.yaml`：`dev_dependencies` 按字母序重排（`sort_pub_dependencies` 1 条 info）。
 
+### B · 启动图标（adaptive icon）
 
 > **背景**：`flutter_launcher_icons` 只产 legacy 的 `mipmap-*/ic_launcher.png`，
 > **默认不产 adaptive icon**（`mipmap-anydpi-v26/ic_launcher.xml`）→ Android 8.0+（API 26+）
@@ -72,9 +81,9 @@
 > **不动 schema、零新依赖**（生成脚本纯 Python 标准库 —— 本机 `dart run` 起不了管道子进程，见 `HANDOFF.md`）。
 > **验证**：`python tool/inspect_icons.py` 全绿 + `python tool/check_pubspec.py` 全绿 +
 > 构建 debug APK 成功（资源过 aapt2）+ 装机后 MuMu 桌面图标 = 黄底圆角方 + 「记账」，**无白底白圈**。
-> 此段与 `v0.7.12` 一并转正（F7.9 记一笔吸底保存）。
+> 构建 debug APK 成功（资源过 aapt2）+ 装机后 MuMu 桌面图标 = 黄底圆角方 + 「记账」，**无白底白圈**。
 
-### 新增
+#### 新增
 
 - **adaptive icon 三层资源**：`mipmap-anydpi-v26/ic_launcher.xml`（声明）+
   `values/ic_launcher_background.xml`（背景色 `#FFD81B`，取自源图主色）+
@@ -83,15 +92,26 @@
   连同 `pubspec.yaml` 的 `adaptive_icon_background` / `adaptive_icon_foreground` 一起入库 ——
   以后重跑 `dart run flutter_launcher_icons` 能原样复现。
 
-### 新增（工具 · `tool/`）
+#### 新增（工具 · `tool/`）
 
 - `png_util.py` —— 纯标准库 PNG 编解码 + 面积平均缩放（沙箱无 Pillow）。
 - `gen_launcher_icons.py` —— 生成上述 adaptive 资源；`--probe` 看源图特征，
-  默认还会出**圆形遮罩合成预览**（`.workbuddy/qa-icons/`）供肉眼核验安全区。
+  默认还会出**圆形遮罩合成预览**（`.workbuddy/qa-icons/`）供肉眼核验安全区；
+  路径已参数化（`--root` / `--source` / `--fg-source` / `--res` / `--preview`）→ 可项目外调用，
+  已固化为用户级技能 `~/.workbuddy/skills/flutter-adaptive-icon-offline`。
 - `inspect_icons.py` —— 图标资源体检（源图 / legacy / 前景层的像素尺寸 + adaptive 资源齐备度）。
 - `check_pubspec.py` —— `pubspec.yaml` / `pubspec.lock` 一致性体检（YAML 卫生 +
   构建期工具不得待在 `dependencies` + lock 的 `dependency` 字段与声明位置一致 + 配置引用的图片存在）。
   本机跑不了 `flutter pub get`，用它补这个缺口。
+
+#### 修复（构建阻塞）
+
+- `android/app/build.gradle.kts`：`signingConfigs { }` 必须声明在 `buildTypes { }` **之前** ——
+  `buildTypes.release { }` 的 lambda 在**配置阶段立即执行**，其中 `signingConfigs.getByName("release")`
+  会在注册前求值 → 报 `SigningConfig with name 'release' not found.`。
+  **它连 `./gradlew assembleDebug` 都挂**（与 debug/release 无关）。同时：无 `key.properties` 时
+  回退 debug 签名（保证 clone 仓库、未配签名的机器也能出包）+ 修 `create("release")` 缩进。
+- `.gitignore`：补 `key.properties` 兜底规则 + `__pycache__/` / `*.pyc`。
 
 ## [v0.7.11] — 2026-09-25 · F7.8 流水左滑删除
 
