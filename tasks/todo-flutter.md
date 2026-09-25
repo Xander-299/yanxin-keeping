@@ -281,18 +281,45 @@
       schema 2→3」两处都不成立（`schema_meta` KV 早就存在、版本号也已到 v3）→ **复用既有 KV，本批零迁移**。
       实现：关键词高亮（分类/备注/**账户名**/金额，`core/utils/highlight.dart` 纯函数）、账户名命中、
       搜索历史（KV `search_history`，最近 10 条 / 去重 / 清空）、时间区间（全部/本月/近3月，独立一行 chips）；
-      ⏳ **实现 + 走查完成（2026-09-24）**：analyze 0 issue + 测试计数 **361**（本批 +32；改动的
-      search 纯测试 54 例本机实测全绿）+ 真机走查（MuMu 12，AI 经 adb 全包）通过，
-      记录见 `docs/acceptance-F7.7-DE.md`；**全量待用户终端 `flutter test` 回归 → 通过后打 `v0.7.10`**。
+      ✅ **全部收尾（2026-09-25）**：analyze 0 issue + 用户终端 `flutter test` **361 passed / 0 skipped**
+      （本批 +32；改动的 search 纯测试 54 例本机实测全绿）+ 真机走查（MuMu 12，AI 经 adb 全包）通过，
+      记录见 `docs/acceptance-F7.7-DE.md` → **`v0.7.10` 已打 tag 推远端**（`16b6a00`）。
       走查抓到并修 **1 个老 bug**：搜索结果是过期快照（`searchProvider` 未接 `dataEpochProvider`）
       → 「刚记一笔 / 刚加账户后搜不到」，已加回归测试 `search_freshness_test`
 - [x] E 日历增强（2026-09-24 签字）：长按日历格子 → `/record?date=<**毫秒**>`（⚠️ SPEC §E.1 写的
       `YYYY-MM-DD` 与既有约定不符，改为毫秒）+ 顺带选中那天；左右滑动翻月（阈值 1/3 格宽，
       只注册横向 drag → 竖向仍归外层滚动）；
-      ⏳ **实现 + 走查完成（2026-09-24）**：与 D 批**合并打 `v0.7.10`**（待用户终端回归后打）；
+      ✅ **实现 + 走查完成（2026-09-24）**：与 D 批**合并打 `v0.7.10`**（✅ 2026-09-25 已打 tag 推远端）；
       走查通过（长按带对日期 / 左右滑翻月 / 右滑回退且日列表同步 / 竖向未误翻月 / 0 崩溃）；
       「竖向仍能滚动页面」由 widget 测试兜底（内容刚好一屏时真机测不出位移）
 - [x] **F7.7 backlog 五批（A→E）全部落地** → 无待签字批次；下一轮等用户排新需求
+
+### F7.8 流水左滑删除（用户新需求，2026-09-25 · **已交付 / 已打 `v0.7.11`**）
+
+- [x] 小 SPEC 起草并签字（`docs/SPEC-F7.8-swipe-delete.md`，含 §7 三项用户裁定）：
+      ① 长按取消、只留左滑；② 滑出红色「删除」按钮 → 点按钮才删（否掉「滑走即删」）；
+      ③ 范围 = 首页 + 日历日账单 + 搜索结果 3 处（报表页流水行仍只读）
+- [x] 通用件 `SwipeActionRow` + 纯函数 `resolveSwipeOpen`
+      （`lib/features/ledger/presentation/widgets/swipe_action_row.dart`）：只注册横向 drag
+      （竖向滚动 / 月历翻月不受影响）、84 px 动作区、行程 ≥45% 或向左甩 ≥350 px/s 吸附、
+      160 ms easeOut、单开靠外层 `ValueNotifier<String?>`
+- [x] 3 处接入：`TxGroupList`（首页 + 搜索浮层）、`calendar_page.dart` 的 `_SelectedDaySection`；
+      `onDelete` 类型 `ValueChanged<TxRow>` → `Future<void> Function(TxRow)`；
+      `TxTile` 摘掉 `onLongPress`（长按仍归日历格子「记这一天的账」）；
+      **报表页未改**（不传回调 → 不包滑动件，保持只读）
+- [x] 零新依赖（不引 `flutter_slidable`）、**不动 schema**（仍 v3）
+- [x] 测试：改 2 例（`widget_test.dart` / `search_overlay_test.dart` 的长按用例 → 左滑口径）
+      + 新增 10 例（`test/features/ledger/swipe_action_test.dart`：`resolveSwipeOpen` 5 + 行行为 5）
+- [x] **`flutter analyze` 0 issue** —— 等效达成（`python tool/dart_analyze_fallback.py`）；顺带修掉 1 个
+      `directives_ordering`（`calendar_page.dart` 新增 import 位置不合字母序）
+- [x] **`flutter test` 371 passed / 0 skipped** —— ✅ **2026-09-25 用户终端全量通过**（本批 +10）
+- [x] **真机走查（MuMu 12，AI 经 adb 全包）通过、0 崩溃** —— `docs/acceptance-F7.8-swipe-delete.md`：
+      D1–D7 全过（左滑后金额节点 x `450 → 363` / 点动作区弹「删除这笔」/ 取消回弹且数据不动 /
+      多行单开 / 点已展开行只收起不跳编辑 / 竖向滚动与月历翻月正常 / 报表页零位移无「删除」节点）
+- [x] 走查抓到 **1 个只有真机能发现的视觉 bug**（未滑开时红色动作区透过行露出 —— `TxTile` 无自身底色）
+      → 行包 `ColoredBox(color: Tok.paper)` 修复并复验
+- [x] 新增 `tool/verify_apk_kernel.py`（装机前核 APK 内 `kernel_blob.bin` sha256 + grep 新文案，防「装到旧包」）
+- [x] **tag `v0.7.11`**：✅ 已打并推远端（tag 对象 `6357de1` → 提交 `e984023`；CHANGELOG 已转正）
 
 ### F7.7-a 首次使用验收（2026-09-23，报告 `docs/acceptance-first-run.md`）
 
