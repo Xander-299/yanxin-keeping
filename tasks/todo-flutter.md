@@ -421,3 +421,34 @@
 > **F7.3 坑**：① drift 的数据库迁移必须在**真机覆盖安装**路径上验，内存库单测只能证明
 > `onUpgrade` 逻辑本身；② Riverpod 3.4.3 的 `AsyncNotifierProvider.family` 没有稳定的取参入口
 > （`FamilyAsyncNotifier` 已移除），需要「按月份取数」的 provider 时，改成 watch 首页状态更稳。
+
+### F7.14 新手引导（7 页全屏导览）—— 用户新需求，**已交付 ✅ `v0.7.14`**（2026-09-25）
+
+> 需求：让第一次使用的用户知道「没有明显标识的按钮 / 隐藏手势」是做什么的。
+> SPEC：`docs/SPEC-F7.14-onboarding.md`（用户裁定四项：全屏分页导览 / 四项内容全覆盖 /
+> 「我的」新增重看入口 / **老用户不弹**）。**零新依赖、不动 schema（KV 复用 `schema_meta`，DB 仍 v3）**。
+
+- [x] 调研：全站 **17 处**「无文字 / 只有手势」入口（底栏中央歪 4° 方块、首页三图标、日历三图标、
+      hero `‹ ›`、预算铅笔、资产页 `+` 与账户行、报表三档；**3 处连 tooltip 都没有**的隐藏手势：
+      日历长按记账 / 月历左右滑翻月 / 流水左滑删除）
+- [x] SPEC 起草 + 用户签字（四项裁定）
+- [x] 新增 `lib/features/onboarding/`（keys / prompt provider / page / slides / art 共 5 个文件）
+- [x] 7 页内容：欢迎 → 中央「记一笔」→ 右上三图标 → 翻月 + 预算铅笔 → 三个隐藏手势 → 资产页与报表页 → 完成
+- [x] 迷你示意图**全矢量手绘**（`MiniScreen` / `HighlightBox` / `Callout`；复刻真实比例与 IconData；零图片资源）
+- [x] 判定逻辑：「无 `onboarding_done`」**且**「本次启动前无主账本记录」（`isFreshInstall`）才弹
+      —— ⚠️ 不能用「走了 `ensureDefaultBook` 分支」当判据（当前账本被软删也会命中）
+- [x] 「看过」标记收口在 `dispose()`（跳过 / 完成 / 系统返回三条 pop 路径一处写入；失败静默）
+- [x] 接线：`/onboarding` 路由 + `AppShell` 首帧后触发 + 「我的」条目卡首位入口
+- [x] 测试基建：`pumpApp` 默认预写标记（否则内存库=全新安装，首启弹窗会打断既有 9 个测试文件）
+- [x] 新增 `onboarding_slides_test.dart`（10 例纯 `test()`）—— 本机实测 **10 passed** ✅
+- [x] 新增 `onboarding_flow_test.dart`（7 例 `testWidgets`）
+- [x] analyze 等效：**新增文件单独跑 `No issues found!`** ✅
+- [x] analyze 等效：全项目残留 5 个 error 均为 `D://`/`d://` 双身份**既有环境假阳性**（未改动的
+      `lib/features/ledger` 单独跑即复现 3 个）；**本批新增文件 0 issue** ✅
+- [x] **用户终端 `flutter test`：400 passed / 0 skipped** ✅ = `test()` 312 + `testWidgets` 88（本批 +17）
+- [x] 真机走查 **D1–D10 全部通过、0 崩溃** ✅（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
+      → `docs/acceptance-F7.14-onboarding.md`（首启弹 / 已看过不弹 / **老用户不弹且不被误写标记** /
+      **系统返回也写标记** /「我的」入口可重看 / 矮视口不溢出 / 引导前后业务数据零改动）
+- [x] 收尾四步已执行：CHANGELOG 转正 `## [v0.7.14]` + tag 表补行 → 我的页角标 `v0.7.14`（随代码批 `02f9041`）
+      → `git tag -a v0.7.14`（tag 对象 `b3c08c2` → 提交 `c5ea1b5`）→ 直推 + `ls-remote` 核对
+      → 文档收尾（HANDOFF / SPEC §8 / 本文件 / memory）

@@ -179,7 +179,7 @@
 
 ## 8. 实施记录（2026-09-25）
 
-**实现**（未提交，工作区）
+**实现**（提交 `02f9041`）
 
 - 新增 `lib/features/onboarding/`：`onboarding_keys.dart`（`kOnboardingDoneKey` / `kOnboardingDoneValue`）、
   `application/onboarding_prompt.dart`（`onboardingPromptProvider`）、
@@ -201,8 +201,17 @@
     详见 `CHANGELOG.md` §门禁备注；**待用户终端 `flutter analyze` 复核**。
 - `python tool/dart_test_fallback.py test/features/onboarding/onboarding_slides_test.dart`
   → **passed=10 failed=0 skipped=0** ✅（纯 `test()` 部分本机可验）。
-- `testWidgets` 部分（`onboarding_flow_test.dart` 7 例）**本机跑不了** → 待用户终端全量 `flutter test`
-  （预期 **400** = `test()` 312 + `testWidgets` 88）。
-- **真机走查：未做**（待用户终端出包后按 §2 D1–D10 走，重点验 D4 系统返回也写标记、矮视口不溢出）。
+- **用户终端全量 `flutter test` → 400 passed / 0 skipped** ✅
+  = `test()` **312** + `testWidgets` **88**（本批 **+17**：`test()` +10 / `testWidgets` +7）。
+- **真机走查：D1–D10 全部通过、0 崩溃** ✅（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）
+  → 报告 `docs/acceptance-F7.14-onboarding.md`。
+  重点项实测：① 全新安装首启自动弹；② 已看过冷启动不弹；
+  ③ **老用户（有 `active_book_id`、无标记）不弹且不被误写标记**；④ **系统返回也写标记**；
+  ⑤「我的 → 新手引导」可重看；⑥ 矮视口（逻辑 450×500）不溢出；
+  ⑦ 引导前后业务数据完全一致（`0 tx / 1 acct / 15 cat`）。
+  ⚠️ 走查踩坑：`uiautomator dump` 写到固定 `/sdcard/_ui.xml`，在 App 切换的瞬间会 `cat` 到**陈旧内容**
+  —— 一度看着像「首启没弹」，曾误判为功能 bug。处置 = 换独立文件名落盘 + 截图交叉验证（已回写 skill）。
 
-**版本**：交付后打 **`v0.7.14`**。**回滚**：`git checkout v0.7.13`。
+**版本**：已交付 —— 代码提交 `02f9041`、CHANGELOG 转正 `c5ea1b5`，
+tag **`v0.7.14`**（tag 对象 `b3c08c2` / 提交 `c5ea1b5`）已推远端。
+**回滚**：`git checkout v0.7.13`。

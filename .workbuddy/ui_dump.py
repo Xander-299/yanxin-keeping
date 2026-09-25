@@ -24,6 +24,11 @@ def sh(args, **kw):
 
 def main():
     sh(["connect", SERIAL])
+    # ⚠️ 必须先删旧文件：`uiautomator dump` 失败时（App 切换 / 首帧未稳等）不会覆盖，
+    #    紧跟着的 `cat` 就会读到**上一次**的 XML —— 表现是「界面没变 / 功能没生效」，
+    #    极具误导性（2026-09-25 F7.14 首启弹层被误判成「没弹」）。删掉后 dump 失败
+    #    会退化成「文件不存在」→ 下面的 `<?xml` 校验必然报 DUMP FAILED。
+    sh(["shell", "rm", "-f", "/sdcard/_ui.xml"])
     sh(["shell", "uiautomator", "dump", "--compressed", "/sdcard/_ui.xml"])
     out = sh(["shell", "cat", "/sdcard/_ui.xml"]).stdout
     xml = out.decode("utf-8", "ignore")
