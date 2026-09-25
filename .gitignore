@@ -71,6 +71,8 @@ test/fixtures/*-real.*
 
 # 走查截图（二进制，只留本机）
 /.workbuddy/shots/
+# 按批次命名的走查中间产物目录（如 qa-f79 → F7.9）
+/.workbuddy/qa-*/
 # 兜底：.workbuddy 根下散落的截图同样不入库
 /.workbuddy/*.png
 

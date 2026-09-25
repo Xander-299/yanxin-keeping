@@ -170,6 +170,26 @@ sleep 7
 19. **装机前的 kernel 新鲜度核验已脚本化**：`python tool/verify_apk_kernel.py [关键词 ...]`
     —— 打印 APK 时间 + APK 内 `kernel_blob.bin` 与盘上的 sha256 比对 + grep 指定文案
     （用**新代码独有的字符串**，如新类名）。三条全绿再 install，避免走到「装的是上一版」的坑。
+20. **本机 adb daemon 会被沙箱杀掉 → 每次新 shell 的首条 adb 命令会撞 `device offline`**
+    （2026-09-25 F7.9 实测，极易误判成「模拟器挂了 / 设备掉线」）：
+    每条 Bash 调用开头都会打印 `* daemon not running; starting now at tcp:5037`，
+    而**紧跟着的那条 adb 命令失败**（`adb.exe: device offline` / `not found'`），之后的命令才正常。
+    后果：`input tap` 会**静默不执行** → 语义树一切照旧，白跑一轮走查还以为是功能坏了。
+    对策：命令序列统一加前缀
+    ```bash
+    adb start-server >/dev/null 2>&1; sleep 2
+    ```
+    ⚠️ 别用 `adb wait-for-device` 代替（daemon 刚起时它可能长时间挂住）。
+21. **MuMu 不弹软键盘 → 「键盘弹起」类布局改动要用「改矮视口」等价验证**（2026-09-25 F7.9 实测）：
+    模拟器接了硬件键盘映射，Flutter 判定「有物理键盘」→ **点输入框不弹软键盘**；
+    `settings put secure show_ime_with_hard_keyboard 1` 在本机 MuMu 上**无效**（改完重新聚焦仍不弹）。
+    ⚠️ 但**输入框确实聚焦了**（光标可见、`input text` 能输入）→ 别把「没弹键盘」误判成「点击没生效」。
+    等价做法：键盘弹起对布局的唯一作用 = `viewInsets.bottom > 0` → 压缩 **body**；
+    `adb shell wm size 900x1000`（逻辑 450×500）同样压缩 body 可用高度 → 用它验证
+    「贴底常驻的元素有没有跟着落到 body 底部、会不会被内容挤走」，**验完必须 `wm size reset` 复原**。
+    推论（写布局时的硬约束）：凡「贴底常驻」的条必须放 **body 内**（`Column` + `Expanded`），
+    别用 `Scaffold.bottomNavigationBar` —— 后者按 `size.height - h` 贴**屏幕**底、**不随键盘上移**，必被键盘盖住。
+    ⚠️ 真机软键盘场景本机测不了 → 走查报告里要**显式标注「未取证」**并建议用户在真机复验。
 
 ## 视觉对拍：原型定点截图（F7.6 起必做）
 
