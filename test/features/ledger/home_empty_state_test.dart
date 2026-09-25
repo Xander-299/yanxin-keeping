@@ -6,6 +6,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/theme/toon.dart';
+
 import '../../helpers/pump_app.dart';
 
 void main() {
@@ -31,8 +33,15 @@ void main() {
     await tester.tap(cta);
     await tester.pumpAndSettle();
 
-    // 真的进了记一笔页（AppBar 标题 + 常驻保存入口）
-    expect(find.widgetWithText(AppBar, '保存'), findsOneWidget);
+    // 真的进了记一笔页。
+    // 判据口径改于 F7.9 —— 顶部 AppBar 的「保存」已删除，保存入口只留底部吸底按钮
+    // （见 `docs/SPEC-F7.9-record-sticky-save.md`）。故不再断言 AppBar 里的「保存」，
+    // 改为「AppBar 只有标题」+「吸底按钮在位」。
+    expect(find.widgetWithText(AppBar, '记一笔'), findsOneWidget);
+    expect(find.widgetWithText(AppBar, '保存'), findsNothing);
+    // 吸底按钮用 ToonButton 定位：首页空态的 cta 是 TextButton.icon、底栏中央是 Tooltip
+    // → 无论下层路由是否还在树上，这个 finder 都只会命中吸底那一处。
+    expect(find.widgetWithText(ToonButton, '记一笔'), findsOneWidget);
     expect(find.text('请选择分类'), findsOneWidget);
   });
 }
