@@ -326,6 +326,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   MuMu 有硬件键盘映射不弹软键盘，改矮视口做等价验证）。**零新依赖、不动 schema**。
   ⚠️ 测试口径：吸底按钮是滚动区的**兄弟节点、不在 `Scrollable` 内** → `tester.ensureVisible` 会
   `Scrollable.of` 返回 null 直接抛错（已删 3 处）。
+  ⚠️ **回归首轮（用户终端）抓到 1 个漏改用例已修（`661ec6b`）**：`home_empty_state_test.dart` 里
+  `expect(find.widgetWithText(AppBar, '保存'), findsOneWidget)` —— 顶部入口已删，断言必然失败。改判据为
+  「AppBar 只有标题 `记一笔`」+「AppBar 无 `保存`」+「吸底 `ToonButton` 在位」。**教训**：改 UI 入口的
+  测试口径时不要用 `head_limit` 截断 grep（当时 40 条上限吃掉了这个文件），关键词也别只搜 `AppBar`。
 - **启动图标补齐 adaptive icon 已交付 ✅（`ec55229`）**：`flutter_launcher_icons` 只产 legacy
   `mipmap-*/ic_launcher.png`、**默认不产 adaptive** → Android 8.0+ 走 legacy 降级，系统给图标
   套白底 + 圆形遮罩（真机一圈白边）。补 `mipmap-anydpi-v26/ic_launcher.xml` +
@@ -395,7 +399,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 > 说明：**F7.7 五批（A→E）+ F7.8 左滑删除 全部实现并交付**（`v0.7.7`–`v0.7.11` 已打 tag），**无待签字批次**；
 > 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 5 个等效 / 核验工具绕开
 > （analyze / test / 数据层 / **APK 构建** / **装机前 kernel 核验**，见第 1 条末尾的「构建路径」）；
-> 第 **2** 条**已闭合**（F7.8 交付完毕）；F2 / F5 已裁定保持现状（2026-09-23）。
+> 第 **2** 条是**本轮唯一剩项**（F7.9 吸底保存 + 启动图标 的最终回归 → 打 `v0.7.12`）；
+> F2 / F5 已裁定保持现状（2026-09-23）。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
    - **现象**：`ProcessException: 所有的管道范例都在使用中 (CreateFile failed 231)`（`runtime/bin/process_win.cc:744`）。
@@ -465,9 +470,27 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      参数逐字照抄构建日志里 `kernel_snapshot_program` 的命令行；**上线前必须核验** APK 内
      `assets/flutter_assets/kernel_blob.bin` 的 sha256 与盘上一致 + grep 本次新增文案（防「装到旧包」）。
      细节见 `docs/acceptance-F7.7-DE.md` 文末。**2026-09-24 D/E 批走查即用这条路完成装机。**
-2. 【**已闭合** · F7.8 流水左滑删除已交付】功能代码基线 `0d5cf16`，收尾提交 `e984023`，工作区干净：
-   - ✅ `flutter analyze`：**0 issue**（`python tool/dart_analyze_fallback.py` → `No issues found!`）；
-     顺带修掉 1 个 `directives_ordering`（`calendar_page.dart` 新增 import 位置）。
+2. 【**本轮唯一剩项** · F7.9 记一笔吸底保存 + 启动图标 adaptive —— 等用户终端回归 → 打 `v0.7.12`】
+  功能代码已落地（`d0ab794` 实现 → `ec55229` 图标 → `661ec6b` 回归修复 → `004f10a` pubspec 重排），工作区干净：
+   - ✅ `flutter analyze`：**0 issue**（`python tool/dart_analyze_fallback.py` → `No issues found!`；
+     顺带修掉 `sort_pub_dependencies` 1 条 info）。
+   - ✅ **真机走查**（F7.9，MuMu 12）：D1 / D2 / D3 / D5 / D6 / D8 通过、**0 崩溃**；**D4（键盘）未直接取证** ——
+     MuMu 有硬件键盘映射不弹软键盘，改矮视口做等价验证。报告 `docs/acceptance-F7.9-record-sticky-save.md`。
+     走查造的 `12.34` 一笔已用左滑删除清掉，首页回到 286.88。
+   - ✅ **启动图标**：装机后桌面 = 黄底圆角方 + 「记账」，**无白底白圈**（`ec55229`）。
+   - ⏳ `flutter test`：**首轮（2026-09-25 用户终端）1 例失败已修** ——
+     `test/features/ledger/home_empty_state_test.dart` 仍断言 `find.widgetWithText(AppBar, '保存')`，
+     而 F7.9 已删该入口。改判据为「AppBar 标题 `记一笔`」+「AppBar 无 `保存`」+「吸底 `ToonButton` 在位」
+     （`661ec6b`）→ **请复跑全量，预期 372 passed / 0 skipped**（= `test()` 292 + `testWidgets` **80**）。
+   - **回归通过后收尾四步**：① `CHANGELOG.md` 把 `## [Unreleased]`（F7.9 段 + 启动图标段）转成
+     `## [v0.7.12] — <日期> · <标题>` + tag 表补行（段首写门禁数字 + 走查结论 + 回滚 `git checkout v0.7.11`）；
+     ② 我的页 `_BrandTip` 角标 `v0.7.11` → `v0.7.12`（**等宽替换、无布局变化**，单独提交）；
+     ③ `git tag -a v0.7.12 -m '…'` → `git push && git push --tags`（**直推、不加管道**）→
+     `git ls-remote --tags origin | grep v0.7.12` 核对 tag 对象 → 记录提交哈希；
+     ④ 文档收尾：本文件 + `docs/SPEC-F7.9-record-sticky-save.md` §8 + `tasks/todo-flutter.md` 勾选。
+
+   **以下为 F7.8（`v0.7.11`，已闭合）细节留档** ——
+
    - ✅ `flutter test`：**371 passed / 0 skipped**（**2026-09-25 用户终端全量通过**，本批 +10,
      = `test()` **292** + `testWidgets` **79**）；本机纯 `test()` 新增 5 例亦实测全绿。
    - ✅ **真机走查**（2026-09-25，MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）——
@@ -534,7 +557,16 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 【待确认】`android/gradle.properties` 里 `org.gradle.jvmargs=-Xmx8G` 是 B 机调大的；**A 机内存未知**，若构建 OOM 可改回 `-Xmx4G`
 - 【待确认】`lib/core/result.dart`（SPEC §4 的 `Result<T>`）**暂未建**：校验全走异常，无调用方，等有需要再引入
 - 【待确认】日历页是否要加农历 / 节假日（原型参考图上有，当前无农历依赖）→ **已并入 F7.7 SPEC 的 E.5**，默认不做
-- 【待定】A 机 release APK 仍用 **debug 签名**（`build.gradle.kts` 的 `signingConfig = debug`）→ 可装可测、**不能上架**；正式发布需配 keystore + `key.properties` + 改 `signingConfig`
+- 【**发布签名已就绪**（2026-09-25 用户配置，AI 只修了阻塞）】`android/key.properties`
+  四键齐全（`storePassword` / `keyPassword` / `keyAlias` / `storeFile`），keystore 在仓库**外**
+  （`<USER_HOME>\upload-keystore.jks`，10:27）；`android/.gitignore` 已有 `key.properties` +
+  `**/*.jks` + `**/*.keystore` → `git check-ignore` 通过、**未被追踪** ✅（`.gitignore` 根目录另加了兜底规则）。
+  `build.gradle.kts`：有 `key.properties` 时用正式签名，**缺失时回退 debug 签名**（保证 clone 的机器也能出包）；
+  ⚠️ `signingConfigs` 必须声明在 `buildTypes` **之前**（否则连 debug 构建都在配置阶段挂 —— `b795541` 已修）。
+  ⚠️ **release 出包未在本机验证**：release 走 AOT（`gen_snapshot` → `libapp.so`），本机那套 kernel 兜底只覆盖
+  debug 的 `kernel_blob.bin` → 需在**用户终端**跑 `flutter build apk --release` 确认。
+- 【待确认】**桌面应用名**：`AndroidManifest.xml` 是 `android:label="yanxin"`（脚手架默认值）→ 桌面显示
+  「yanxin」而不是「颜芯记账」。改名属产品命名决定，**未擅动**（改一行）。
 
 # 关键资料
 
@@ -635,7 +667,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
     本机自查用替代（**均已入库**）：① `python tool/dart_analyze_fallback.py` —— ≡ `flutter analyze`
     （Python 起同一个 `analysis_server_aot.dart.snapshot` + Dart **原生协议**，含全部 lint，全项目 19s）；
     ② `python tool/dart_test_fallback.py` —— ≡ `flutter test`（Python 起 `frontend_server` 编译 + `flutter_tester.exe`
-    执行；**纯 `test()` 287/287 实测全绿**，⚠️ `testWidgets` 跑不了）；③ `python tool/data_layer_probe.py`（数据层脱离 Flutter 真跑）；
+    执行；**纯 `test()` 292/292 实测全绿**（`v0.7.11` 基线），⚠️ `testWidgets` 跑不了）；③ `python tool/data_layer_probe.py`（数据层脱离 Flutter 真跑）；
     ④ **构建 APK**：`python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+
     `./gradlew assembleDebug -x compileFlutterBuildDebug` —— ⚠️ **`gradlew assembleDebug` 不加 `-x` 也会撞 231**
     （`:app:compileFlutterBuildDebug` 内部是 `flutter.bat → dart → frontend_server`；2026-09-23 那次能通是偶发）；
@@ -668,6 +700,17 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
     D 批说「要新建 `app_meta` 表 + schema v2→v3」（实际复用既有 `schema_meta` KV → 零迁移）、
     E 批说 `/record?date=YYYY-MM-DD`（实际是**毫秒**）。**照 SPEC 干活前先读代码核一遍**，
     有出入就写回 SPEC §G 并在 CHANGELOG 标明，别默默照抄。
+    （F7.9 又踩一次：SPEC 写「吸底栏用 `Scaffold.bottomNavigationBar`」→ 实际它按 `size.height - h`
+    贴**屏幕**底、**不随键盘上移**，会被键盘盖住 → 实现前改成 body 内 `Column` 并回写 §3/§6。）
+43. **改 UI 入口后，测试断言口径要「无上限」全仓扫**（2026-09-25 F7.9 血案）：删掉 AppBar 的「保存」后，
+    `test/features/ledger/home_empty_state_test.dart` 里 `expect(find.widgetWithText(AppBar, '保存'), findsOneWidget)`
+    仍留着 → 用户终端回归**直接失败**。两个坑：① 找同类断言时 grep 带了 `head_limit`（当时 40）→ **静默截断**，
+    文件根本没出现在结果里；② 关键词太窄（只搜 `AppBar`）。**做法**：搜 `保存` / `ensureVisible` /
+    `widgetWithText(AppBar`，**不设上限**，逐条判断「是不是被本批改动影响的页面」（预算卡 / 资产页也有
+    「保存」，属各自独立页面，别误改）。
+44. **吸底 / 常驻元素的 widget 用例不能再 `ensureVisible`**（F7.9）：`tester.ensureVisible` 内部调
+    `Scrollable.of` → 目标**不在任何 `Scrollable` 内时直接抛错**（不是静默跳过）。把按钮从滚动区末尾移到
+    `Column` 的兄弟节点后，指向它的 `ensureVisible` 必须一起删（本批删了 3 处）。
 
 # 新 Agent 接手指南
 
@@ -745,7 +788,16 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - **F7.8 流水左滑删除 已交付 ✅（`v0.7.11` 已打 tag 并推远端：371 全绿 + 走查 0 崩溃）**：
   长按删除 → **左滑露出红色「删除」按钮，点按钮才删**
   （首页 / 日历日账单 / 搜索 3 处；报表页仍只读；零新依赖；**不动 schema**）。
-- **功能代码基线 = `0d5cf16`**（收尾提交 `e984023`）；**最新 tag `v0.7.11`**。
+- **F7.9 记一笔「保存」入口改吸底常驻 已实现 + 走查通过 ✅（⏳ 待用户终端回归 → 打 `v0.7.12`）**：
+  删掉 AppBar 右上角「保存」，底部主按钮**吸底常驻**（body 内 `Column`，**不能用
+  `Scaffold.bottomNavigationBar`** —— 它不随键盘上移、会被键盘盖住）；零新依赖、不动 schema。
+  SPEC `docs/SPEC-F7.9-record-sticky-save.md`、走查 `docs/acceptance-F7.9-record-sticky-save.md`
+  （D4 键盘项受 MuMu 无软键盘限制，改矮视口做等价验证）。回归首轮抓到 1 例漏改
+  （`home_empty_state_test` 仍断言 AppBar 有「保存」）**已修 `661ec6b`**。
+- **启动图标补齐 adaptive icon 已交付 ✅（`ec55229`）**：Android 8+ 不再套白底白圈；
+  `flutter_launcher_icons` 只留在 `dev_dependencies`（**别再往 `dependencies` 加一份**）。
+- **功能代码基线** = `ec55229`（图标）+ `661ec6b` / `004f10a`（本批回归修复与 pubspec 重排）；
+  **最新 tag `v0.7.11`**（`v0.7.12` = F7.9 + 图标，⏳ 待回归通过后打）。
 - ⚠️ **本机环境阻塞（仅限本机）**：Dart 起不了「需要管道 stdio」的子进程（`CreateFile failed 231` / `process_win.cc:744`）
   → `flutter analyze / test / pub / build_runner` / **构建** 在本机直连全废。**别怀疑代码、别换 Dart 版本、别开 `dangerouslyDisableSandbox`**。
   四个等效工具（已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，**已跑 → `No issues found!`**）、
@@ -753,9 +805,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `python tool/data_layer_probe.py`（数据层实跑）、
   `python tool/build_kernel_fallback.py` + `./gradlew assembleDebug -x compileFlutterBuildDebug`（出 APK）。
   **用户自己的 Git Bash 终端不受影响**。协议三坑见 SPEC §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
-- **门禁状态**：**全部闭合 ✅** —— analyze 0 issue；`flutter test` **371 passed / 0 skipped**
-  （2026-09-25 用户终端全量）；真机走查 ✅（F7.8，0 崩溃，`docs/acceptance-F7.8-swipe-delete.md`）。
-  `v0.7.11` 已打 tag 并推远端（tag 对象 `6357de1` → 提交 `e984023`），**无遗留项**。
+- **门禁状态**：analyze ✅ **0 issue**（`004f10a` 后复跑 `No issues found!`）；`flutter test` 最近一次全绿
+  = **371**（`v0.7.11`，2026-09-25 用户终端全量）；**F7.9 待用户终端复跑 → 预期 372**
+  （首轮 1 例漏改已修 `661ec6b`）；真机走查 ✅（F7.8 / F7.9 均已闭合，0 崩溃）。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`。版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。
@@ -766,5 +818,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，
   通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
 - 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.10`。
-- **下一步**：**F7.7 五批 + F7.8 全部交付清零（`v0.7.11` 已打 tag）→ 等用户排新需求**
+- **下一步**：**等用户在自己的 Git Bash 终端复跑全量 `flutter test`（预期 **372** = 371 + 1 新增 `testWidgets`）
+  → 通过后打 `v0.7.12` 并收尾**（F7.9 吸底保存 + 启动图标 adaptive；analyze ✅ / 走查 ✅ 已闭合；
+  代码已落地在 `661ec6b`，**别重写**）。
   （analyze ✅、test **371** ✅、走查 ✅ 三项门禁均已闭合；F7.8 代码已落地在 `0d5cf16`，**别重写**）。

@@ -125,5 +125,18 @@
   并在报告 §4 建议用户在真机上复验。属设备能力限制，非代码问题。
 - 走查造的 `12.34` 一笔随即用**左滑删除**清掉（顺带回归 F7.8 链路）→ 首页回到 286.88，数据无残留。
 
+**回归记录**
+
+- **首轮（用户终端）**：1 例失败 —— `test/features/ledger/home_empty_state_test.dart` 的
+  `零配置首页空态：给出说明 + 可点的「记一笔」入口`，断言 `find.widgetWithText(AppBar, '保存')` → 必然失败。
+  修于 **`661ec6b`**：判据改为「AppBar 标题 `记一笔`」+「AppBar 无 `保存`」+「吸底 `ToonButton` 在位」。
+  吸底按钮刻意用 `ToonButton` 定位（首页空态 cta 是 `TextButton.icon`、底栏中央是 `Tooltip` 文案，
+  都不会误命中）→ 与「下层路由是否仍在树上」无关，判定稳定。
+- **教训（已回写交接文档）**：本次漏改的直接原因是找同类断言时 grep 带了 `head_limit: 40` 被截断，
+  且关键词偏窄（只搜 `AppBar`）。同类改动应**无上限**全仓搜断言口径（`保存` / `ensureVisible` /
+  `widgetWithText(AppBar`）。
+- 顺带修 `pubspec.yaml` 的 `sort_pub_dependencies`（图标批次把 `flutter_launcher_icons` 挪进
+  `dev_dependencies` 后落错位置）→ analyze 复跑 `No issues found!`（`004f10a`）。
+
 **版本**：收尾后打 tag **`v0.7.12`**（沿用递增；F7.7 五批占 `v0.7.7`–`v0.7.10`，F7.8 占 `v0.7.11`）。
 

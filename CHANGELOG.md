@@ -23,7 +23,46 @@
 | `v0.7.10` | F7.7 D 批 搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批 日历增强（长按记账 / 左右滑翻月） | 本段所在提交 |
 | `v0.7.11` | F7.8 流水左滑删除（长按 → 左滑露出按钮；首页 / 日历日账单 / 搜索结果 3 处） | 本段所在提交 |
 
-## [Unreleased] · 启动图标（adaptive icon）
+## [Unreleased] · F7.9 记一笔保存入口吸底常驻
+
+> **诉求**：记一笔页**顶部 AppBar 有「保存」、底部又有主按钮「记一笔」** —— 两个保存入口。
+> 造型来源是原型 1:1 复刻（`screens.js` 两处挂同一动作 `data-act="save-record"`），
+> F7.7 P5 又为「大屏 / 横屏下底部按钮被折叠到视口外」加了顶部兜底 → 用户要求收敛成一处。
+> **裁定（2026-09-25）**：**底部主按钮改吸底常驻 + 删掉顶部入口**（否掉「去底部、只留顶部」）。
+> **口径**：吸底栏放 body 内 `Column(Expanded(滚动区) + 吸底栏)` —— ⚠️ **不能用 `Scaffold.bottomNavigationBar`**：
+> 它按 `size.height - h` 贴**屏幕**底、**不随键盘上移**，键盘弹起会被盖住；body 才会被 `viewInsets.bottom` 压缩。
+> 顶部墨色描边（`Tok.ink` / `Tok.bw`）与 AppBar 底边对称。
+> 门禁：analyze 等效 **0 issue** ✅；**真机走查**（MuMu 12，AI 经 adb 全包）通过 ✅
+> （D1 无顶部入口 / D2 未滚动即在视口内 / D3 滚动后位置不变 / D5 保存链路写入成功 / D6 编辑态文案「保存修改」/
+> D8 0 崩溃；**D4 键盘项**受 MuMu 无软键盘限制，改矮视口做等价验证）→ `docs/acceptance-F7.9-record-sticky-save.md`；
+> ⏳ `flutter test` 预期 **372**（= 371 + 1 新增 `testWidgets`；首轮回归抓到 1 例漏改已修）。
+> **零新依赖、不动 schema（仍 v3）**。
+
+### 变更
+
+- `lib/features/record/presentation/record_page.dart`：删除 AppBar `actions` 的「保存」；
+  `body` 改为 `Column(Expanded(滚动区) + 吸底栏)`，滚动区 bottom padding `24 → 16`，
+  提示文案留在滚动区末尾（不进吸底栏）。
+- 测试口径同步（**吸底按钮是滚动区的兄弟节点、不在 `Scrollable` 内** → `tester.ensureVisible`
+  会因 `Scrollable.of` 返回 null 直接抛错）：删 3 处 `ensureVisible`（`widget_test` ×2、
+  `calendar_page_test` ×1）；`record_account_test` 的 `_tapSave` 改点吸底按钮。
+
+### 新增
+
+- `docs/SPEC-F7.9-record-sticky-save.md`（含 **SPEC 前提修正**记录：初稿的 `bottomNavigationBar`
+  方案不成立）+ `docs/acceptance-F7.9-record-sticky-save.md`（走查报告）。
+- `test/features/record/record_save_entry_test.dart` **重写**为矮视口（逻辑 800×400）口径：
+  ① AppBar 与全页无「保存」；② 吸底按钮唯一且在视口内；③ 滚动 400px 后按钮 y 不变；
+  ④ 吸底按钮走同一套校验（金额空 → 「请输入金额」）。
+
+### 修复
+
+- `test/features/ledger/home_empty_state_test.dart`（**首轮回归失败**）：仍断言
+  `find.widgetWithText(AppBar, '保存')`，而该入口已删 → 改判据为「AppBar 标题 `记一笔`」+
+  「AppBar 无 `保存`」+「吸底 `ToonButton` 在位」（用 `ToonButton` 定位可避开首页空态 cta 与底栏中央
+  Tooltip，与下层路由是否仍在树上无关）。
+- `pubspec.yaml`：`dev_dependencies` 按字母序重排（`sort_pub_dependencies` 1 条 info）。
+
 
 > **背景**：`flutter_launcher_icons` 只产 legacy 的 `mipmap-*/ic_launcher.png`，
 > **默认不产 adaptive icon**（`mipmap-anydpi-v26/ic_launcher.xml`）→ Android 8.0+（API 26+）
