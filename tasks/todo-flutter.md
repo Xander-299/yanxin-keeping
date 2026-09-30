@@ -478,7 +478,12 @@
 - [x] 本机回归：core 39 / data 25 / import 74 / assets 19 全绿 ✅
 - [x] 构建 debug APK（`build_kernel_fallback.py` + `gradlew assembleDebug -x compileFlutterBuildDebug`）
       → 验证 **Kotlin 首编译通过**（这是首条平台通道，必须真编一次）
-- [ ] **用户终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件；
+- [x] **门禁期修复**（2026-09-30）：终端全量 `flutter test` 报 `budget_card_test` 两条用例失败
+      → 根因 = **月末 flake**（「剩余额度」与「剩余每日可消费」在当月最后一天必然同值，
+      裸 `find.text(数值)` 命中 2 个），非 F7.15 引入 → 改按容器定位 + 日期相关值不写字面量，
+      并加纯函数守卫（提交 `a545687`；详见 CHANGELOG `[Unreleased] · G · 修复`）
+- [ ] **用户终端重跑**：先单跑 `flutter test test/features/ledger/budget_card_test.dart` 复核这 2 条，
+      再跑全量 `flutter test`（本机跑不了 14 个 `testWidgets` 文件；
       `test/data/repositories/transaction_repository_test.dart` 在本机 runner 里编译阶段挂住）
 - [ ] **真机走查**：`adb shell cmd notification post` 造合成通知 → 验「解析 → 去重 → 入账 → 撤销 → 回执通知」；
       权限引导页（去开启 / 返回自检 / 通知权限被拒态）；分享记账；首页提示条与 `/autobook` 页
