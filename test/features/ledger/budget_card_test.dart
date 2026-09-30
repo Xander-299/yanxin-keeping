@@ -2,6 +2,16 @@
 ///
 /// 回归：首次使用验收 P2 —— 卡上曾是写死的示例数字（101.52 / 10.2%），
 /// 与同屏 hero 的真实月支出矛盾。这里盯着「不许再出现假数字」。
+///
+/// ⚠️ **两条踩过的坑（2026-09-30 血案）**：
+/// 1. **数值断言别用裸 `find.text(x)`** —— 「剩余额度」（指标）与「剩余每日可消费」
+///    （说明行）在**当月最后一天**会正常地显示同一个值（只剩 1 天 → 两处相等），
+///    裸断言 `findsOneWidget` 命中 2 个而挂。该用例此前**只在每月最后一天必挂**
+///    （复现日 2026-09-30：1000 预算 → 两处都是「898.48」；2000 预算 → 都是「1898.48」）。
+///    → 用 [metricValue] / [dayRowValue] 按容器定位。
+/// 2. **日期相关的值（剩余每日可消费、日均）不要写字面量** —— 换个日子就对不上，
+///    把「只在月末挂」换成「天天挂」。→ 用 [expectedView] 按真实今天推导
+///    （算式本身由 `budget_metrics_test.dart` 覆盖，这里只验渲染接线）。
 library;
 
 import 'package:flutter/material.dart';
@@ -10,11 +20,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/budget_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
+import 'package:yanxin/features/ledger/application/budget_metrics.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/budget_card.dart';
 
 import '../../helpers/test_database.dart';
@@ -38,6 +50,54 @@ Future<void> pumpCard(WidgetTester tester, AppDatabase db) async {
   );
   // 注意不能等「本月预算」：加载骨架里也有这行字，会在数据到位前就返回
   await pumpUntil(tester, find.text('本月日均消费'));
+}
+
+/// 按**真实今天**算出预算卡的期望视图。
+///
+/// 「剩余每日可消费」随当前日期变（只剩 1 天时等于剩余额度），**不能写死字面量** ——
+/// 算式本身由 `budget_metrics_test.dart` 覆盖，这里只借它给出「今天应该是多少」。
+BudgetView expectedView({required int budgetCents, required int spentCents}) {
+  final DateTime now = DateTime.now();
+  return buildBudgetView(
+    budgetCents: budgetCents,
+    spentCents: spentCents,
+    year: now.year,
+    month: now.month,
+    nowMs: now.millisecondsSinceEpoch,
+  );
+}
+
+/// 取「指标块」的数值：`_Metric` 的排版是「上数值 / 下标签」，两者同在一个 Column。
+String metricValue(WidgetTester tester, String label) =>
+    _siblingText(tester, label, find.byType(Column));
+
+/// 取「说明行」的数值：`_DayRow` 的排版是「左标签 / 右数值」，两者同在一个 Row。
+String dayRowValue(WidgetTester tester, String label) =>
+    _siblingText(tester, label, find.byType(Row));
+
+/// 在 [label] 的**最近同类容器**里，取它之外的那个文本（即同行/同列的数值）。
+///
+/// 存在的意义：全局 `find.text(v)` 分不清「剩余额度」与「剩余每日可消费」——
+/// 月末最后一天两者同值，`findsOneWidget` 会命中 2 个而失败（见文件头注释）。
+String _siblingText(WidgetTester tester, String label, Finder containerType) {
+  final Finder container = find.ancestor(
+    of: find.text(label),
+    matching: containerType,
+  );
+  expect(container, findsWidgets, reason: '没找到「$label」所在的容器');
+  final List<String> siblings = tester
+      .widgetList<Text>(
+        find.descendant(of: container.first, matching: find.byType(Text)),
+      )
+      .map((Text t) => t.data ?? '')
+      .where((String s) => s.isNotEmpty && s != label)
+      .toList();
+  expect(
+    siblings,
+    hasLength(1),
+    reason: '「$label」所在容器里的数值不唯一：$siblings',
+  );
+  return siblings.single;
 }
 
 /// 造一笔当月支出（默认 101.52，与旧占位卡的假数字一致，便于对拍）。
@@ -103,12 +163,19 @@ void main() {
     await pumpCard(tester, db);
 
     expect(find.text('本月预算'), findsOneWidget);
-    expect(find.text('1,000.00'), findsOneWidget);
-    expect(find.text('10.2%'), findsOneWidget);
-    expect(find.text('101.52'), findsOneWidget);
-    expect(find.text('898.48'), findsOneWidget);
+    expect(find.text('1,000.00'), findsOneWidget); // 标题行预算额（千分位）
+    expect(find.text('10.2%'), findsOneWidget); // 环形占比
+    expect(metricValue(tester, '已消费'), '101.52');
+    expect(metricValue(tester, '剩余额度'), '898.48');
     expect(find.text('剩余额度'), findsOneWidget);
     expect(find.text('剩余每日可消费'), findsOneWidget);
+    // 日期相关：仅校验「渲染的是算出来的那个值」；月末两处同值属正确行为，
+    // 所以必须按容器定位（裸 find.text 会命中 2 个）
+    expect(
+      dayRowValue(tester, '剩余每日可消费'),
+      centsToYuan(expectedView(budgetCents: 100000, spentCents: 10152)
+          .dailyRemainingCents!),
+    );
     expect(find.text('已超支'), findsNothing);
     expect(find.text('未设置'), findsNothing);
   });
@@ -127,10 +194,10 @@ void main() {
     await pumpCard(tester, db);
 
     expect(find.text('120.0%'), findsOneWidget);
-    expect(find.text('-200.00'), findsOneWidget);
+    expect(metricValue(tester, '剩余额度'), '-200.00');
     expect(find.text('已超支'), findsOneWidget);
     // 超支后「剩余每日可消费」归 0，不能显示负数
-    expect(find.text('0.00'), findsOneWidget);
+    expect(dayRowValue(tester, '剩余每日可消费'), '0.00');
   });
 
   testWidgets('点标题行 → 弹出设置弹窗（带当前月份与快捷键）', (WidgetTester tester) async {
@@ -168,7 +235,13 @@ void main() {
     expect(find.text('2,000.00'), findsOneWidget);
     // 101.52 / 2000 = 5.1%
     expect(find.text('5.1%'), findsOneWidget);
-    expect(find.text('1898.48'), findsOneWidget);
+    expect(metricValue(tester, '剩余额度'), '1898.48');
+    // 同上：日期相关 + 月末会与「剩余额度」同值，按容器定位
+    expect(
+      dayRowValue(tester, '剩余每日可消费'),
+      centsToYuan(expectedView(budgetCents: 200000, spentCents: 10152)
+          .dailyRemainingCents!),
+    );
 
     // 落库了（不是只改内存）
     final now = DateTime.now();

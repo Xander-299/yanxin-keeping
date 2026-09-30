@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/budget_metrics.dart';
 
 void main() {
@@ -155,6 +156,28 @@ void main() {
     );
     expect(v.daysLeft, 1);
     expect(v.dailyRemainingCents, 100000);
+  });
+
+  test('月末同值守卫：只剩 1 天时「剩余每日可消费」== 「剩余额度」', () {
+    // 这条不是为了改行为，而是把「同一屏会出现两个相同数字」这个**正确事实**钉住 ——
+    // 它是 `budget_card_test` 必须按容器（而非裸 find.text）断言数字的原因。
+    // 2026-09-30 血案：预算卡两处都渲染同一个数 → findsOneWidget 命中 2 个 → 用例挂。
+    final int lastDay = DateTime(2026, 9, 30, 12).millisecondsSinceEpoch;
+    for (final int budget in <int>[100000, 200000]) {
+      final v = buildBudgetView(
+        budgetCents: budget,
+        spentCents: 10152,
+        year: 2026,
+        month: 9,
+        nowMs: lastDay,
+      );
+      expect(v.daysLeft, 1, reason: '预算 $budget 的用例前提是月末最后一天');
+      expect(
+        centsToYuan(v.dailyRemainingCents!),
+        centsToYuan(v.remainingCents),
+        reason: '只剩 1 天时两处必然同值 —— 预算卡测试必须用 metricValue/dayRowValue 定位',
+      );
+    }
   });
 
   test('负的已消费被钳为 0（防御性：不该出现）', () {
