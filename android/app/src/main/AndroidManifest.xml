@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- F7.15 自动记账：回执通知（Android 13+ 运行时权限，用户主动开启时才申请）。
+         通知监听不需要在这里声明权限 —— 它是 <service> 的 android:permission 属性。 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
-        android:label="yanxin"
+        android:label="颜芯记账"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -24,7 +27,29 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- F7.15 零权限兜底：从微信/支付宝「分享」一条账单文本到本 App -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
+        <!-- F7.15 自动记账：通知监听服务。
+             ⚠️ 三条硬要求，缺一条就「不生效」或「装不上」：
+             1. android:permission 必须是 BIND_NOTIFICATION_LISTENER_SERVICE（写在 service 上，
+                不是 uses-permission）；
+             2. Android 12+ 带 intent-filter 的组件必须显式声明 android:exported；
+                本服务由系统绑定，故为 false；
+             3. intent-filter 的 action 必须是 android.service.notification.NotificationListenerService -->
+        <service
+            android:name=".autobook.AutoBookListenerService"
+            android:label="颜芯记账 · 自动记账"
+            android:exported="false"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/features/autobook/application/auto_book_controller.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/book_drawer.dart';
 import 'package:yanxin/features/onboarding/application/onboarding_prompt.dart';
 
@@ -16,6 +17,10 @@ import 'package:yanxin/features/onboarding/application/onboarding_prompt.dart';
 ///
 /// F7.14 起兼任**新手引导的首启触发点**：首帧后查一次 [onboardingPromptProvider]，
 /// 判定该弹就 push `/onboarding`。**不阻塞首帧** —— 首页照常构建，引导盖在其上。
+///
+/// F7.15 起兼任**自动记账队列的消费触发点**：首帧后 + 每次 `resumed` 各 drain 一次
+/// （Kotlin 侧只落盘，入账必须回到 Dart —— drift 是唯一 DB writer）。
+/// drain **失败静默**：它是锦上添花，绝不能阻断冷启动或前台切换。
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key, required this.navigationShell});
 
@@ -25,16 +30,46 @@ class AppShell extends ConsumerStatefulWidget {
   ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends ConsumerState<AppShell> {
+class _AppShellState extends ConsumerState<AppShell> with WidgetsBindingObserver {
   /// 只查一次（State 跨 tab 切换存活，不会因为切分支重复弹）。
   bool _checkedOnboarding = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback(
-      (Duration _) => unawaited(_maybeShowOnboarding()),
+      (Duration _) => unawaited(_onFirstFrame()),
     );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  /// 从后台回到前台：把 App 外出期间捕获的支付通知补记上。
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_drainAutoBook());
+    }
+  }
+
+  Future<void> _onFirstFrame() async {
+    await _maybeShowOnboarding();
+    await _drainAutoBook();
+  }
+
+  /// 消费自动记账队列（幂等 + 静默失败）。
+  Future<void> _drainAutoBook() async {
+    if (!mounted) return;
+    try {
+      await ref.read(autoBookControllerProvider).drain();
+    } catch (_) {
+      // 原生链路 / 解析异常都不得冒泡到 UI
+    }
   }
 
   Future<void> _maybeShowOnboarding() async {

@@ -16,6 +16,7 @@ import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/features/autobook/presentation/widgets/auto_book_banner.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
@@ -51,6 +52,8 @@ class HomePage extends ConsumerWidget {
                   Center(child: Text('加载失败：$e')),
               data: (LedgerState state) => CustomScrollView(
                 slivers: <Widget>[
+                  // 自动记账提示条（F7.15）：无待提示批次时零高度，不占位
+                  const SliverToBoxAdapter(child: AutoBookBanner()),
                   SliverToBoxAdapter(
                     child: MonthHero(
                       year: state.year,

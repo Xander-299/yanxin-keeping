@@ -46,6 +46,15 @@ class ProfilePage extends ConsumerWidget {
                       onTap: () => context.push('/categories'),
                     ),
                     _Entry(
+                      icon: Icons.bolt_rounded,
+                      title: '自动记账',
+                      sub: '微信 / 支付宝支付通知自动入账，可一键撤销',
+                      iconBg: Tok.greenTint,
+                      iconFg: Tok.green,
+                      dashedTop: true,
+                      onTap: () => context.push('/autobook'),
+                    ),
+                    _Entry(
                       icon: Icons.description_outlined,
                       title: '导入账单',
                       sub: '微信 xlsx / 支付宝 CSV，重复导入不重复记账',
@@ -250,7 +259,7 @@ class _BrandTip extends StatelessWidget {
               ),
               Spacer(),
               Text(
-                'v0.7.14',
+                'v0.7.15',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -261,7 +270,7 @@ class _BrandTip extends StatelessWidget {
           ),
           SizedBox(height: 6),
           Text(
-            '已覆盖：记一笔 → 按月看账 → 导入账单 → 统计 / 预算 / 资产 → 数据导出',
+            '已覆盖：记一笔 → 按月看账 → 导入账单 → 自动记账 → 统计 / 预算 / 资产 → 数据导出',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

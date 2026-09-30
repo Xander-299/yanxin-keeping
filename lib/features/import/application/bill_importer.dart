@@ -40,12 +40,21 @@ class ImportReport {
     required this.uncategorized,
     required this.unknownStatus,
     required this.cancelled,
+    this.importedIds = const <String>[],
+    this.importedAmountCents = 0,
   });
 
   final int total;
   final int imported;
   final int duplicates;
   final int fileDuplicates;
+
+  /// 真正入库的流水 id（按入库顺序）。自动记账（F7.15）用它支撑「整批撤销」；
+  /// 导入页不关心，默认空列表 —— **既有调用方零改动**。
+  final List<String> importedIds;
+
+  /// 真正入库的金额合计（分，**带方向前的绝对值之和**）。只服务于自动记账回执文案。
+  final int importedAmountCents;
 
   /// 真正入库的行中，分类规则未命中（暂归「其他」）的条数。
   /// 只统计已入库行 —— 重复跳过的行与分类匹配无关，计入会让人误以为有新增。
@@ -199,6 +208,8 @@ Future<ImportReport> importRows(
       var imported = 0;
       var uncategorized = 0; // 只统计真正入库的未匹配行（重复跳过的与分类无关）
       var duplicates = existing.length; // 预查命中的直接计为重复
+      final importedIds = <String>[];
+      var importedAmountCents = 0;
       for (final p in prepared) {
         if (existing.contains(p.fingerprint)) continue;
         final res = await txRepo.importTransaction(
@@ -215,8 +226,10 @@ Future<ImportReport> importRows(
           externalId: p.row.externalId,
         );
         switch (res) {
-          case ImportOk():
+          case ImportOk(tx: final tx):
             imported++;
+            importedIds.add(tx.id);
+            importedAmountCents += p.row.amountCents;
             if (!p.matched) uncategorized++;
           case ImportDuplicate():
             duplicates++; // 并发/边界下唯一索引兜底，同样不算错误
@@ -231,6 +244,8 @@ Future<ImportReport> importRows(
         uncategorized: uncategorized,
         unknownStatus: unknownStatusCount,
         cancelled: cancelled,
+        importedIds: importedIds,
+        importedAmountCents: importedAmountCents,
       );
       if (dryRun) throw _dryRunRollback;
     });

@@ -4,7 +4,7 @@
 /// - 壳路由（底部导航 4 tab）：`/` `/calendar` `/assets` `/profile`
 /// - 全屏路由：`/record`（extra = 流水 id，`?date=` = 默认日期毫秒）、`/books`、
 ///   `/categories`、`/import`、`/month-picker`（日历的月份选择子页）、`/stats`（统计）、
-///   `/reports`（报表，extra = [ReportsArgs]）
+///   `/reports`（报表，extra = [ReportsArgs]）、`/autobook`（自动记账）
 ///
 /// 搜索不是路由：F7.5 起改为覆盖在首页之上的浮层（`showSearchOverlay`）。
 ///
@@ -16,6 +16,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/features/assets/presentation/assets_page.dart';
+import 'package:yanxin/features/autobook/presentation/auto_book_page.dart';
 import 'package:yanxin/features/book/presentation/book_manage_page.dart';
 import 'package:yanxin/features/calendar/presentation/calendar_page.dart';
 import 'package:yanxin/features/calendar/presentation/month_picker_page.dart';
@@ -101,6 +102,8 @@ class _YanxinAppState extends State<YanxinApp> {
       ),
       // 新手引导（F7.14）：首启由 AppShell 判定后 push；也可从「我的」随时重看
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingPage()),
+      // 自动记账（F7.15）：权限状态 / 去开启 / 最近一批撤销，入口在「我的」
+      GoRoute(path: '/autobook', builder: (_, _) => const AutoBookPage()),
     ],
   );
 

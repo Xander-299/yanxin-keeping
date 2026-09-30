@@ -1,0 +1,303 @@
+/// 自动记账编排单测（F7.15 SPEC §3.1 / §3.6 / §3.7）。
+///
+/// 用内存 drift 库 + **假通道**（`FakeAutoBookBridge`）跑通：
+/// drain → 解析 → 入账 → 记批次 → 回执通知 / 指纹去重 / 整批撤销 / 冷启动撤销命令。
+library;
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:yanxin/core/db/database.dart';
+import 'package:yanxin/core/providers/book_providers.dart';
+import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/data/repositories/account_repository.dart';
+import 'package:yanxin/data/repositories/transaction_repository.dart';
+import 'package:yanxin/features/autobook/application/auto_book_controller.dart';
+import 'package:yanxin/features/autobook/application/auto_book_notice.dart';
+import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
+import 'package:yanxin/features/autobook/data/auto_book_bridge.dart';
+
+import '../../helpers/test_database.dart';
+
+const int _t = 1759200000000;
+
+/// Kotlin 侧落盘的 JSONL 行（与 `AutoBookQueue.enqueueNotification` 的字段一致）。
+String _notify(String text, {int at = _t, String pkg = 'com.tencent.mm'}) =>
+    '{"kind":"notification","pkg":"$pkg","title":"微信支付",'
+    '"text":"$text","bigText":"","subText":"","postTimeMs":$at}';
+
+String _share(String text, {int at = _t}) =>
+    '{"kind":"share","text":"$text","postTimeMs":$at}';
+
+/// 假通道：把「落盘队列 + 命令 + 通知」三件事都换成内存，绕开原生链路。
+class FakeAutoBookBridge extends AutoBookBridge {
+  List<String> queue = <String>[];
+  String? command;
+  bool listener = true;
+  bool notifications = true;
+
+  /// 发过的回执（count / amountText / batchId / lines）。
+  final List<Map<String, Object?>> receipts = <Map<String, Object?>>[];
+  int cancelCount = 0;
+  int openSettingsCount = 0;
+
+  @override
+  bool get supported => true;
+
+  @override
+  Future<List<String>> drainQueue() async {
+    final List<String> out = queue;
+    queue = <String>[];
+    return out;
+  }
+
+  @override
+  Future<String?> takeCommand() async {
+    final String? out = command;
+    command = null;
+    return out;
+  }
+
+  @override
+  Future<bool> listenerEnabled() async => listener;
+
+  @override
+  Future<bool> notificationsAllowed() async => notifications;
+
+  @override
+  Future<int> pendingCount() async => queue.length;
+
+  @override
+  Future<void> showReceipt({
+    required int count,
+    required String amountText,
+    required String batchId,
+    List<String> lines = const <String>[],
+  }) async {
+    receipts.add(<String, Object?>{
+      'count': count,
+      'amountText': amountText,
+      'batchId': batchId,
+      'lines': lines,
+    });
+  }
+
+  @override
+  Future<void> cancelReceipt() async {
+    cancelCount++;
+  }
+
+  @override
+  Future<void> openListenerSettings() async {
+    openSettingsCount++;
+  }
+
+  @override
+  Future<void> requestNotificationPermission() async {}
+
+  @override
+  Future<void> openAppNotificationSettings() async {}
+}
+
+void main() {
+  late AppDatabase db;
+  late FakeAutoBookBridge bridge;
+  late ProviderContainer container;
+  late String bookId;
+
+  setUp(() async {
+    db = openTestDatabase();
+    bridge = FakeAutoBookBridge();
+    // Riverpod 3 未公开导出 Override 类型 → 不能写类型注解
+    container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        autoBookBridgeProvider.overrideWithValue(bridge),
+      ],
+    );
+    addTearDown(container.dispose);
+    bookId = (await container.read(activeBookIdProvider.future))!;
+  });
+
+  tearDown(() => db.close());
+
+  Future<List<TxRow>> visibleTxs() =>
+      TransactionRepository(db).listByBook(bookId);
+
+  AutoBookController controller() =>
+      container.read(autoBookControllerProvider);
+
+  test('首次 drain：2 笔入账 + 记批次 + 发回执通知', () async {
+    bridge.queue = <String>[
+      _notify('你已成功支付 12.00元', at: _t),
+      _notify('你已成功支付 8.00元', at: _t + 60000),
+    ];
+
+    final AutoBookDrainResult r = await controller().drain();
+
+    expect(r.imported, 2);
+    expect(r.dropped, 0);
+    expect(r.batch, isNotNull);
+    expect(r.batch!.count, 2);
+    expect(r.batch!.totalCents, 2000);
+    expect(r.batch!.txIds.length, 2);
+
+    // 提示条（会话内）已出现
+    expect(container.read(autoBookNoticeProvider)?.batchId, r.batch!.batchId);
+    // 批次已落到 schema_meta KV（冷启动撤销要靠它）
+    expect(
+      (await container.read(autoBookBatchStoreProvider).latest())?.batchId,
+      r.batch!.batchId,
+    );
+    // 回执通知：正文与批次 id
+    expect(bridge.receipts.length, 1);
+    expect(bridge.receipts.single['count'], 2);
+    expect(bridge.receipts.single['amountText'], '20.00');
+    expect(bridge.receipts.single['batchId'], r.batch!.batchId);
+
+    // 真的落库了：2 笔，来源是 notify_wechat，备注退化为主通道名
+    final List<TxRow> txs = await visibleTxs();
+    expect(txs.length, 2);
+    expect(txs.every((TxRow t) => t.source == 'notify_wechat'), isTrue);
+    expect(txs.every((TxRow t) => t.type == 'expense'), isTrue);
+    expect(txs.map((TxRow t) => t.note).toSet(), <String>{'微信支付'});
+  });
+
+  test('同一批再 drain 一次：指纹去重 → 零新增、不发新回执', () async {
+    final List<String> lines = <String>[
+      _notify('你已成功支付 12.00元', at: _t),
+      _notify('你已成功支付 8.00元', at: _t + 60000),
+    ];
+    bridge.queue = List<String>.of(lines);
+    await controller().drain();
+    expect((await visibleTxs()).length, 2);
+
+    // 队列残留 / 通知被监听两次：同样的行再来一遍
+    bridge.queue = List<String>.of(lines);
+    final AutoBookDrainResult again = await controller().drain();
+
+    expect(again.imported, 0);
+    expect(again.duplicates, 2);
+    expect((await visibleTxs()).length, 2); // 零重复入账
+    expect(bridge.receipts.length, 1); // 仍是第一次那条回执
+    expect(bridge.cancelCount, 1); // 没有新增 → 收起旧提示
+  });
+
+  test('非消费通知 / 坏行：只丢弃，不入账、不发回执', () async {
+    bridge.queue = <String>[
+      _notify('微信转账给张三 50.00元'),
+      _notify('你收到一个红包 6.66元'),
+      'not-json-at-all',
+    ];
+
+    final AutoBookDrainResult r = await controller().drain();
+
+    expect(r.imported, 0);
+    expect(r.dropped, 3);
+    expect(await visibleTxs(), isEmpty);
+    expect(bridge.receipts, isEmpty);
+    expect(bridge.cancelCount, 1);
+  });
+
+  test('健康度检查：微信 + 支付宝两条通知分别进各自账户', () async {
+    bridge.queue = <String>[
+      _notify('你已成功支付 12.00元', at: _t),
+      _notify(
+        '付款成功 8.00元',
+        at: _t + 1000,
+        pkg: 'com.eg.android.AlipayGphone',
+      ),
+    ];
+
+    final AutoBookDrainResult r = await controller().drain();
+    expect(r.imported, 2);
+
+    final List<TxRow> txs = await visibleTxs();
+    final Set<String> sources =
+        txs.map((TxRow t) => t.source).toSet();
+    expect(sources, <String>{'notify_wechat', 'notify_alipay'});
+
+    // 两个账户各自独立存在且名称为平台名
+    final List<Account> accounts =
+        await AccountRepository(db).listByBook(bookId);
+    final Set<String> names = accounts.map((Account a) => a.name).toSet();
+    expect(names.contains('微信'), isTrue);
+    expect(names.contains('支付宝'), isTrue);
+  });
+
+  test('撤销本批：软删整批 + 摘除批次记录（同一批撤不了第二次）', () async {
+    bridge.queue = <String>[
+      _notify('你已成功支付 12.00元', at: _t),
+      _notify('你已成功支付 8.00元', at: _t + 1000),
+    ];
+    final AutoBookDrainResult r = await controller().drain();
+    final String batchId = r.batch!.batchId;
+
+    final int deleted =
+        await container.read(autoBookNoticeProvider.notifier).undo(batchId);
+
+    expect(deleted, 2);
+    expect(await visibleTxs(), isEmpty); // 软删（deleted_at 非空 → 列表里消失）
+    expect(container.read(autoBookNoticeProvider), isNull); // 提示条收起
+    expect(await container.read(autoBookBatchStoreProvider).latest(), isNull);
+
+    // 再撤一次：0 笔，且不能假装成功
+    expect(
+      await container.read(autoBookNoticeProvider.notifier).undo(batchId),
+      0,
+    );
+  });
+
+  test('冷启动撤销：命令文件里的 batchId 在下次 drain 时执行', () async {
+    bridge.queue = <String>[_notify('你已成功支付 12.00元', at: _t)];
+    final AutoBookDrainResult r = await controller().drain();
+    expect((await visibleTxs()).length, 1);
+
+    // 用户杀掉 App → 点通知栏「撤销」→ 命令落盘，App 冷启动
+    bridge.command = '{"action":"undo","batchId":"${r.batch!.batchId}"}';
+    final AutoBookDrainResult after = await controller().drain();
+
+    expect(after.undone, 1);
+    expect(await visibleTxs(), isEmpty);
+    expect(bridge.cancelCount, greaterThanOrEqualTo(1));
+  });
+
+  test('批次记录最多留 3 批，最旧的被裁撤', () async {
+    final AutoBookBatchStore store =
+        container.read(autoBookBatchStoreProvider);
+    for (var i = 0; i < 4; i++) {
+      await store.remember(
+        AutoBookBatch(
+          batchId: 'b$i',
+          txIds: <String>['t$i'],
+          count: 1,
+          totalCents: 100 * (i + 1),
+          atMs: _t + i,
+        ),
+      );
+    }
+    final List<AutoBookBatch> all = await store.readAll();
+    expect(all.length, kAutoBookBatchKeep);
+    expect(all.first.batchId, 'b3'); // 最近在前
+    expect(all.any((AutoBookBatch b) => b.batchId == 'b0'), isFalse);
+    expect(await store.byId('b0'), isNull);
+  });
+
+  test('分享文本走同一条链路，source = share', () async {
+    bridge.queue = <String>[_share('微信支付 你已成功支付 12.00元')];
+
+    final AutoBookDrainResult r = await controller().drain();
+    expect(r.imported, 1);
+
+    final List<TxRow> txs = await visibleTxs();
+    expect(txs.single.source, 'share');
+    expect(txs.single.amountCents, 1200);
+  });
+
+  test('空队列 + 无命令：drain 是彻底的 no-op', () async {
+    final AutoBookDrainResult r = await controller().drain();
+    expect(r.touched, isFalse);
+    expect(bridge.cancelCount, 0);
+    expect(bridge.receipts, isEmpty);
+  });
+}
