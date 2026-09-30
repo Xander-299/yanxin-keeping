@@ -1,9 +1,13 @@
 # HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13`）· **F7.14 新手引导** ✅（`v0.7.14`））
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-25 14:45 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-30 18:58 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **🔴 本轮（F7.14 新手引导 · **已交付 ✅ `v0.7.14`** · 收尾四步已执行完毕 · 无遗留项）**：
+> **🟢 交接时刻状态（2026-09-30 复核，无新改动）**：`origin/master` = **`fa024db`**；
+> `v0.7.14` → `c5ea1b5`；工作区**唯一**未提交 = `android/app/src/main/AndroidManifest.xml`（桌面名，用户改）。
+> **2026-09-25 → 09-30 无任何新提交、无新需求** → **当前无遗留项，等用户排新需求**。
+>
+> **🔴 上一轮（F7.14 新手引导 · **已交付 ✅ `v0.7.14`** · 收尾四步已执行完毕 · 无遗留项）**：
 > - **需求**（用户）：让第一次使用的用户知道「没有明显标识的按钮 / 隐藏手势」是做什么的。
 > - **用户裁定四项**（SPEC `docs/SPEC-F7.14-onboarding.md` §7）：① 形式 = **全屏分页导览**；
 >   ② 内容 = 四项全覆盖 → **7 页**；③ 重看入口 = 「我的」页新增可点条目「新手引导」；
@@ -238,6 +242,15 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `true` → 每瓣从圆心辐射实心楔形（风车）并盖住圆心文字，两处改 `false`（含空态底槽）+ 接缝两端各让一半；
   ② 趋势图零值月仍画 2px 基座胶囊 → 用户裁定**不画**，抽纯函数 `trendBarHeight(cents, max) → double?`
   （null = 不画），`_Bar` 早退留同宽占位防漂移。测试 **+11**；走查报告 `docs/acceptance-F7.13-stats-charts-fix.md`。
+- **F7.14 新手引导** ✅（2026-09-25，`v0.7.14` 已打 tag）：**7 页全屏分页导览**（欢迎 → 底栏中央歪 4° 方块 →
+  首页右上三图标 → 翻月 + 预算铅笔 → **三个隐藏手势**（日历长按记账 / 月历左右滑翻月 / 流水左滑删除）→
+  资产页 `+` 与账户行 + 报表三档 → 完成），顶部 7 点进度（可点跳页）+ 右上「跳过」+ 末页「开始记账」。
+  新增 `lib/features/onboarding/`（`onboarding_keys.dart` / `application/onboarding_prompt.dart` /
+  `presentation/onboarding_page.dart` / `presentation/widgets/onboarding_slides.dart` + `onboarding_art.dart`）
+  + `/onboarding` 路由（shell 之外 → 盖住底栏）+「我的」条目卡**首位**「新手引导」。
+  **零新依赖、不动 schema**（标记写既有 `schema_meta` 键 `onboarding_done`，DB 仍 **v3**）；
+  示意图全矢量手绘（`MiniScreen` / `HighlightBox` / `Callout`，零图片资源、零裸色值）。
+  门禁 **400** 全绿（+17）+ 走查 D1–D10 全过 0 崩溃（`docs/acceptance-F7.14-onboarding.md`）。
 - **真机走查抓到的老 bug 并修复** ✅（`04c2bfd`）：`searchProvider` 快照过期（未接 `dataEpochProvider`，
   **F7.4 起就存在**）→ 加 `ref.watch(dataEpochProvider)`；回归测试 `test/features/search/search_freshness_test.dart`
   （**实测注释掉那行 watch 必失败**）。走查记录：`docs/acceptance-F7.7-DE.md`。
@@ -339,45 +352,51 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   （ALTER TABLE ADD COLUMN DEFAULT ''，onUpgrade 带 PRAGMA table_info 防御）。
 - **F7.7 B 批「数据导出」已交付：`v0.7.8` 已打 tag 推远端**（315 全绿 + 走查无阻断，2026-09-23）。
 - **F7.7 A 批已收尾：真机走查通过 → `v0.7.7` 已打 tag 并推远端**（F2 / F5 用户裁定**保持现状**）。
-- ✅ **F7.7 backlog 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive + 统计页图表绘制修复 全部落地**
-  （`v0.7.7`–`v0.7.13` 已打 tag）→ **无待签字批次、无遗留项**；下一轮等用户排新需求。
-- **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` → `No issues found!`）；
-  `flutter test` ✅ **383 passed / 0 skipped**（**2026-09-25 用户终端全量**，本轮 +11
-  = `test()` **302** + `testWidgets` **81**）。
-- **本机（A 机）代码基线 = `0773333`**（`v0.7.13` tag 指向；文档收尾提交在其后）（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
+- ✅ **F7.7 backlog 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive + 统计页图表绘制修复
+  + F7.14 新手引导 全部落地**（`v0.7.7`–`v0.7.14` 已打 tag）→ **无待签字批次、无遗留项**；下一轮等用户排新需求。
+- **门禁**：`flutter analyze` ✅ **0 issue**（等效手段 `python tool/dart_analyze_fallback.py` —— 本批新增文件
+  `No issues found!`；⚠️ 全项目残留 5 条 `D:\`/`d:\` 双身份**既有环境假阳性**，见「盲区防护」第 48 条）；
+  `flutter test` ✅ **400 passed / 0 skipped**（**2026-09-25 用户终端全量**，本批 +17
+  = `test()` **312** + `testWidgets` **88**）。
+- **本机（A 机）代码基线 = `c5ea1b5`**（`v0.7.14` tag 指向；文档收尾提交 `fa024db` 在其后）（F7.6 P1/P2/P3 + 走查修复 + 版本记录 + F7.7 SPEC
   + **F7.7 A/B/C/D/E 五批** + **F7.8 左滑删除** + **F7.9 吸底保存** + **启动图标 adaptive**
-  + **统计页图表绘制修复** + **F1 修复**
-  + 构建阻塞修复 + 九个等效 / 核验 / 生成工具 已入库；**tag = `v0.7.13`**）。
+  + **统计页图表绘制修复** + **F7.14 新手引导** + **F1 修复**
+  + 构建阻塞修复 + 九个等效 / 核验 / 生成工具 已入库；**tag = `v0.7.14`**）。
 - 已含 **F1–F7.6 P3**：日历 / 统计 / 预算（schema v2）/ 搜索 / 搜索浮层 / 资产页 / **全站卡通浅色视觉**；
-  工作区干净；**F7.7 A 批**（报表明细 + A.0 记一笔选账户）已入库。
+  **F7.7 A 批**（报表明细 + A.0 记一笔选账户）已入库。基线提交内工作区干净；
+  ⚠️ **但当前工作区有 1 处未提交** —— 用户改的 `android/app/src/main/AndroidManifest.xml`
+  （`android:label="yanxin"` → `"颜芯记账"`），见「待确认事项」。
 - **本机门禁历史**：F7.6 P3 后曾复跑 `flutter analyze` No issues found + `flutter test` **269 passed / 0 skipped**；
   ⚠️ 2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程 → 这两条命令在本机**直连跑不了**（见「未解决问题」第 1 条），
   已由三个等效工具接管（analyze / test / 数据层实跑）；**用户自己的终端不受影响**。
 - `lib/core/db/database.g.dart` 已入库；**改表结构必须重跑 `dart run build_runner build`**。
 - ⚠️ **深色主题已被 F7.6 彻底移除**（用户确认）：全站只有一套卡通浅色主题，`app_template/*.jpg` 旧参考图作废。
-- APK：A 机 debug APK 已用 F7.6 P3（含账户弹层补做）代码构建过（`build/app/outputs/flutter-apk/app-debug.apk`）；release 仍是 F7.1 时期产物。
-  ⚠️ **现有 APK 不含 F7.7 A 批** —— 本机构建链路同样断（见「未解决问题」第 1 条），**必须在正常环境重新构建后再走查**。
+- APK：本地 `build/app/outputs/flutter-apk/app-debug.apk` = **F7.14 代码**（2026-09-25 用「kernel 兜底」路径构建，
+  已核验 APK 内 `kernel_blob.bin` sha256 与盘上一致 + 新文案可 grep）；release 仍是 F7.1 时期产物。
+  ⚠️ **本机直连 `flutter build` / `gradlew assembleDebug` 会撞 231** → 走「未解决问题」第 1 条的 kernel 兜底路径。
 - 模拟器：MuMu 12 在本机可用（`D:\Downloads\MuMu\MuMuPlayer`，adb 16384）；**走查前先确认 MuMu 已启动**（`adb devices` 空会导致 `adb wait-for-device` 永久挂住）。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 = 远端（代码线同步）** —— 已用 `git ls-remote origin refs/heads/master` 核对：
-  **代码基线 = `0773333`**（含 F7.7 A/B/C/D/E 五批 + F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive
-  + 统计页图表绘制修复 + 构建阻塞修复 + 全部门禁 / 构建 / 核验 / 生成等效工具），其后只有交接文档提交；
+- **本机 = 远端（代码线同步）** —— **2026-09-30 复核** `git ls-remote origin refs/heads/master` = **`fa024db`**：
+  **代码基线 = `c5ea1b5`**（= `v0.7.14` tag 指向；含 F7.7 A/B/C/D/E 五批 + F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive
+  + 统计页图表绘制修复 + F7.14 新手引导 + 构建阻塞修复 + 全部门禁 / 构建 / 核验 / 生成等效工具），
+  `fa024db` = 文档收尾提交；**2026-09-25 → 09-30 无新提交**（工作区仅上条那 1 处 manifest 改动）；
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区已有九个**已入库**的工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）+
   **`tool/build_kernel_fallback.py`（等效 `flutter assemble` 的 kernel 步骤，配合
   `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）** + `tool/verify_apk_kernel.py`（装机前核验）
   + 图标链 `tool/png_util.py` / `gen_launcher_icons.py` / `inspect_icons.py` + `tool/check_pubspec.py`。
-  tag `v0.7.1`…`v0.7.13` 已推远端（**`v0.7.13` = 当前最新**）。
+  tag `v0.7.1`…`v0.7.14` 已推远端（**`v0.7.14` = 当前最新**，`refs/tags/v0.7.14^{}` = `c5ea1b5`）。
 
 # 未解决问题
 
 > 说明：**F7.7 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive + 统计页图表绘制修复
-> 全部实现并交付**（`v0.7.7`–`v0.7.13` 已打 tag），**无待签字批次、无遗留项**；
+> 全部实现并交付**（`v0.7.7`–`v0.7.14` 已打 tag），**无待签字批次、无遗留项**；
 > 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 9 个等效 / 核验 / 生成工具绕开
 > （analyze / test / 数据层 / **APK 构建** / **装机前 kernel 核验** / 图标链 / pubspec 体检，见第 1 条末尾的「构建路径」）；
 > 第 **2** 条**已闭合**（F7.13 统计页图表绘制修复收尾完毕；其下含 F7.9 / F7.8 留档）；
+> 第 **6** 条**已闭合**（F7.14 新手引导，`v0.7.14` 已交付并推远端，2026-09-25）；
 > F2 / F5 已裁定保持现状（2026-09-23）。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
@@ -521,6 +540,8 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    - 【待办】F3：8 处 `加载失败：$e` 直出异常字符串、无重试（核心路径 2 处：`home_page.dart:51`、`reports_page.dart:63`）
      → 抽 `LoadFailure`（人话 + 重试按钮）。
    - 【待办】F4：「我的 → 设置」副标题承诺「主题、默认账户、货币单位」但整行不可点（纯文案 1 行）。
+     ⚠️ 2026-09-25 F7.14 用户**明确裁定不点亮该行**（避免改变已登记待办的语义）→ 新手引导的「重看」入口
+     改放「我的 → 新手引导」（条目卡首位）。**别顺手把「设置」行改成真入口**。
    - 【**已裁定 · 保持现状**】F5：入口「全部账单 ›」vs 落地页 AppBar 标题「报表」（SPEC 要求入口文案保持）—— 用户 2026-09-23 裁定不改。
    - 【待办】F6：记一笔页返回即丢已输金额 / 备注（可加 `PopScope` 二次确认）。
    - 数据层实跑入口（`flutter test` 不可用时的替代）：`python tool/data_layer_probe.py`。
@@ -556,6 +577,11 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   当前 DB **schemaVersion = 3**（v3 是 **C 批**加的 `accounts.icon` / `accounts.color` 两列，不是 D 批）。
   搜索历史落 `schema_meta` 键 `search_history`（JSON 容错解析，最近 10 条）。
   ⚠️ 通用规矩：**动 schema 必须走「真机覆盖安装验迁移」**，内存库单测只能证明 `onUpgrade` 逻辑本身。
+- 【**F7.14 已知取舍 · 非缺陷，用户尚未要求改**】① 引导页内容整体**偏上、下方留白较大** —— 这是为换取
+  「矮视口（逻辑 450×500）不溢出」而做的取舍（内容可滚 + 底部按钮固定）；② **页面原型
+  `D:
+ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引导页**，只按 SPEC §3.2 文案与
+  `Tok.*` 令牌约束实现；③ 真机走查跑在 **MuMu 12 模拟器**上，**物理真机未验**。
 - 【待确认】`android/gradle.properties` 里 `org.gradle.jvmargs=-Xmx8G` 是 B 机调大的；**A 机内存未知**，若构建 OOM 可改回 `-Xmx4G`
 - 【待确认】`lib/core/result.dart`（SPEC §4 的 `Result<T>`）**暂未建**：校验全走异常，无调用方，等有需要再引入
 - 【待确认】日历页是否要加农历 / 节假日（原型参考图上有，当前无农历依赖）→ **已并入 F7.7 SPEC 的 E.5**，默认不做
@@ -589,7 +615,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `docs/acceptance-first-run.md`（首次使用验收 F7.7-a，2026-09-23）、
   **`docs/acceptance-F7.7-DE.md`（F7.7 D/E 批走查，2026-09-24 —— 含抓到的搜索快照 bug 与「构建路径变通」）**
 - **本机等效工具**（Dart 起不了子进程时用，均已入库）：`tool/dart_analyze_fallback.py`（≡ analyze）、
-  `tool/dart_test_fallback.py`（≡ test，纯 `test()` **287** 例）、`tool/data_layer_probe.py` + `.dart`（数据层实跑）、
+  `tool/dart_test_fallback.py`（≡ test，纯 `test()` **312** 例）、`tool/data_layer_probe.py` + `.dart`（数据层实跑）、
   **`tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤，配合
   `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）**
 - **常用命令**：
@@ -763,7 +789,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      底部主按钮改**吸底常驻**（⚠️ 必须放 body 的 `Column`，**不能用 `Scaffold.bottomNavigationBar`**
      —— 它按屏幕高贴底、**不随键盘上移**）；启动图标补三层 adaptive 资源。细节在
      `docs/SPEC-F7.9-record-sticky-save.md`（§3/§6 含前提修正）+ `docs/acceptance-F7.9-record-sticky-save.md`。
-   - **F7.7 五批（A–E）+ F7.8 + F7.9 + 图标 + F7.13 全部交付** → **无待签字批次**；**等用户排新需求**。
+   - **F7.7 五批（A–E）+ F7.8 + F7.9 + 图标 + F7.13 + F7.14 全部交付** → **无待签字批次**；**等用户排新需求**。
    - **已关闭的测试反馈**：`real_bills_test.dart` 曾报 `loading ...`（全仓唯一在 `main()` 里做 IO 的文件）
      → 已加固为懒读 + 降级 `markTestSkipped`，**复跑未再出现**。**若再复现，要那行 `loading` 的完整 `[E]` 块**。
 2. **要真机走查**：两条构建路径 —— ① **正常环境（用户终端）**：`source env.sh && flutter build apk --debug`；
@@ -783,7 +809,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    ToonPress / ToonSeg / ToonField …` 通用件，别自己拼描边阴影。
 3c. **版本规则（2026-09-23 起）**：迁移期拿 F 阶段号当版本号 —— `tag = v0.7.<N>` ↔ `F7.<N>`，
    同阶段内的多批交付合并成一个版本。每次功能更新：CHANGELOG 加段落 → `git tag -a v0.7.N` → `git push --tags`。
-   **回滚**：`git checkout v0.7.5` 看/跑旧版，`git revert <commit>` 在 master 上撤单次改动。tag 表在 `CHANGELOG.md` 顶部。
+   **回滚**：`git checkout v0.7.13` 看/跑旧版，`git revert <commit>` 在 master 上撤单次改动。tag 表在 `CHANGELOG.md` 顶部。
 4. **代码结构**（都已落库）：
    - `tool/dart_analyze_fallback.py` — **`flutter analyze` 的等效替代**（本机 Dart 起不了子进程时用；原理与协议三坑见 SPEC §G）
    - `tool/dart_test_fallback.py` — **`flutter test` 的等效替代**（Python 起 `frontend_server` 编译 + `flutter_tester.exe` 执行；
@@ -803,8 +829,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    - `lib/core/utils/highlight.dart` — **D 批新增**：`highlightRanges(text, query)` 纯函数（算命中区间供 UI 打底色，`MatchRange` = `({int start, int end})`；`test/` 有独立单测）
    - `lib/features/import/` — 解析五层 + `bill_importer.dart` + `import_page.dart`
    - `lib/features/reports/` — **A 批新增**：`application/{report_aggregate,reports_controller}.dart` + `presentation/reports_page.dart` + `presentation/widgets/report_group_list.dart`（三档明细 / 分类 / 账户）
+   - `lib/features/onboarding/` — **F7.14 新增**：`onboarding_keys.dart`（`kOnboardingDoneKey`）+ `application/onboarding_prompt.dart`（`onboardingPromptProvider` = 无标记 **且** `ActiveBookIdController.isFreshInstall`）+ `presentation/onboarding_page.dart`（`PageView` 7 页 + 进度点 + 跳过 / 下一步 / 开始记账；**「看过」标记收口在 `dispose()`**，故无需 `PopScope`）+ `presentation/widgets/onboarding_slides.dart` + `onboarding_art.dart`（全矢量 `MiniScreen` / `HighlightBox` / `Callout`）
    - `lib/data/repositories/` — book / account / category / transaction / **budget** / **app_meta**（D 批：`schema_meta` KV 薄封装，`get` / `set` / `remove`）
-   - 路由：壳 `/` `/calendar` `/assets` `/profile`；全屏 `/record`（extra=流水 id，**`?date=<毫秒>`** 默认日期 —— E 批长按日历即用它）`/books` `/categories` `/import` `/month-picker` `/stats` **`/reports`（extra=`ReportsArgs{tab,year,month}`）**（**搜索无路由**）
+   - 路由：壳 `/` `/calendar` `/assets` `/profile`；全屏 `/record`（extra=流水 id，**`?date=<毫秒>`** 默认日期 —— E 批长按日历即用它）`/books` `/categories` `/import` `/month-picker` `/stats` **`/reports`（extra=`ReportsArgs{tab,year,month}`）** **`/onboarding`（F7.14；在 shell 之外 → 盖住底栏；首启由 `AppShell` 首帧后 push，另可由「我的 → 新手引导」push）**（**搜索无路由**）
 5. **不要重复**：不要重装 Flutter/JDK/SDK；不要升 drift/sqlite3/build_runner；不要用 `pub add`；不要复制 gradle 缓存；不要回头做旧栈 T2.8；不要把 `env.sh` 改回 `env -u` 写法；**不要删 B 机的 `C:\src\sqlite3`**
 6. **信息不足先问用户**：真机冒烟需要用户给设备或装模拟器（推送已配 SSH，不必再要 token）；以及「继续在 A 机开发，还是回 B 机」
 
@@ -846,9 +873,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `python tool/verify_apk_kernel.py`（装机前核验 kernel 新鲜度）、
   `python tool/inspect_icons.py` / `tool/check_pubspec.py`（图标与 pubspec 体检；生成用 `tool/gen_launcher_icons.py`）。
   **用户自己的 Git Bash 终端不受影响**。协议三坑见 SPEC §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
-- **门禁状态**：**全部闭合 ✅** —— analyze **0 issue**（`004f10a` 后复跑 `No issues found!`）；
-  `flutter test` **372 passed / 0 skipped**（**2026-09-25 用户终端全量**，= `test()` 292 + `testWidgets` 80，
-  本批 +1；首轮 1 例漏改已修 `661ec6b`）；真机走查 ✅（F7.8 / F7.9 均已闭合，0 崩溃）。
+- **门禁状态**：**全部闭合 ✅** —— analyze **0 issue**（等效手段本批新增文件 `No issues found!`；全项目残留 5 条
+  为 `D:\`/`d:\` 双身份既有假阳性）；`flutter test` **400 passed / 0 skipped**（**2026-09-25 用户终端全量**，
+  = `test()` **312** + `testWidgets` **88**，本批 +17）；真机走查 ✅（F7.14 D1–D10 全过，0 崩溃）。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`。版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。
@@ -858,7 +885,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   ⚠️ `searchProvider` **必须 watch `dataEpochProvider`**，否则「刚记一笔 / 刚加账户后再搜搜不到」（老 bug，已修）。
 - 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，
   通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
-- 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.11`。
+- 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.13`。
 - **F7.14 新手引导 已交付 ✅（`v0.7.14`）**：7 页全屏导览（底栏中央方块 / 首页三图标 / 翻月 +
   预算铅笔 / 三个隐藏手势 / 资产页与报表页）；「我的 → 新手引导」可随时重看；**老用户不弹**
   （判定 = 无标记 **且** `ActiveBookIdController.isFreshInstall`）。新增 `lib/features/onboarding/` 5 文件。
