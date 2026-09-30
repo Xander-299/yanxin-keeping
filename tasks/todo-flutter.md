@@ -452,3 +452,35 @@
 - [x] 收尾四步已执行：CHANGELOG 转正 `## [v0.7.14]` + tag 表补行 → 我的页角标 `v0.7.14`（随代码批 `02f9041`）
       → `git tag -a v0.7.14`（tag 对象 `b3c08c2` → 提交 `c5ea1b5`）→ 直推 + `ls-remote` 核对
       → 文档收尾（HANDOFF / SPEC §8 / 本文件 / memory）
+
+### F7.15 自动记账（通知使用权为主 + 零权限兜底）—— 用户新需求，**已实现、待验收 🔵**（2026-09-30）
+
+> 需求：用户要「自动记账」，并先问权限方案；选完组合后又追加「能不能在通知栏里确认入账」。
+> SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（**已签字**：方案 A + D3 + 强化导入 / 静默直入 /
+> 按来源建账户 / 仅微信+支付宝 / **设计乙 = 静默入账 + 通知栏回执（撤销·查看）**）。
+> **零新 pub 依赖、零 Gradle 新依赖、不动 schema**（批次记录复用 `schema_meta` KV，DB 仍 v3）。
+
+- [x] 现状盘点：`transactions.source` 注释早已预留 `notification|shortcut`；`fingerprint.dart` 与
+      `transaction_repository.dart:5` 的文档都写着「供自动记账调用」→ 数据层**无需改动**
+- [x] SPEC 起草 + 用户签字（四项裁定 + 设计乙改选 + §3.5 忽略规则默认值）
+- [x] Android 侧（**本项目首次**平台通道）：`AutoBookListenerService`（包名白名单 + 5 秒粗筛 + 入队）/
+      `AutoBookQueue`（JSONL 队列 + 命令文件 + 500 条 / 7 天纪律）/ `AutoBookNotifier`（两态通知 +
+      `撤销`·`查看` + `IMPORTANCE_LOW` + `FLAG_IMMUTABLE`）/ `AutoBookChannel`（8 个方法）
+- [x] `MainActivity` 接线（注册通道 + `ACTION_SEND` 文本入队 + 通知按钮落命令）+ `AndroidManifest`
+      （`POST_NOTIFICATIONS` / `<service>` `exported=false` + `BIND_NOTIFICATION_LISTENER_SERVICE` /
+      `ACTION_SEND` filter）+ 矢量通知小图标 `ic_stat_autobook.xml`
+- [x] Dart 侧：`lib/features/autobook/`（rules / bridge / batches / accounts / controller / notice /
+      page / banner 共 8 个文件）+ `/autobook` 路由 + 「我的」条目 + 首页提示条 + `AppShell` drain 触发点
+- [x] `ImportReport` 追加 `importedIds` / `importedAmountCents`（有默认值 → 既有调用方零改动）
+- [x] 新增 `auto_book_rules_test.dart`（**38 例纯 `test()`**）+ `auto_book_flow_test.dart`（**9 例纯 `test()`**）
+      —— 本机实测 **47 passed** ✅
+- [x] analyze 等效：**全项目 `No issues found!`** ✅
+- [x] 本机回归：core 39 / data 25 / import 74 / assets 19 全绿 ✅
+- [x] 构建 debug APK（`build_kernel_fallback.py` + `gradlew assembleDebug -x compileFlutterBuildDebug`）
+      → 验证 **Kotlin 首编译通过**（这是首条平台通道，必须真编一次）
+- [ ] **用户终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件；
+      `test/data/repositories/transaction_repository_test.dart` 在本机 runner 里编译阶段挂住）
+- [ ] **真机走查**：`adb shell cmd notification post` 造合成通知 → 验「解析 → 去重 → 入账 → 撤销 → 回执通知」；
+      权限引导页（去开启 / 返回自检 / 通知权限被拒态）；分享记账；首页提示条与 `/autobook` 页
+- [ ] **用户在自己手机上抓真实通知文案回填规则表**（模拟器验不了真实格式）→ 视情况调整 §3.5 忽略规则
+- [ ] 收尾四步：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]` + 我的页角标 → tag → 直推核对 → 文档收尾

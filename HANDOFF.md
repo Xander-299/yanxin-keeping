@@ -1,11 +1,39 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13`）· **F7.14 新手引导** ✅（`v0.7.14`））
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13`）· **F7.14 新手引导** ✅（`v0.7.14`）· **F7.15 自动记账** 🔵 已实现、待验收）
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-09-30 18:58 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-09-30 21:20 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **🟢 交接时刻状态（2026-09-30 复核，无新改动）**：`origin/master` = **`fa024db`**；
-> `v0.7.14` → `c5ea1b5`；工作区**唯一**未提交 = `android/app/src/main/AndroidManifest.xml`（桌面名，用户改）。
-> **2026-09-25 → 09-30 无任何新提交、无新需求** → **当前无遗留项，等用户排新需求**。
+> **🔵 交接时刻状态（2026-09-30 夜）**：`origin/master` = **`fa024db`**（未变）；`v0.7.14` → `c5ea1b5`。
+> 工作区 = **F7.15 自动记账整套改动（未提交、未打 tag）** + 用户先前的 `AndroidManifest.xml` 桌面名（`android:label="yanxin"` → `"颜芯记账"`）。
+> **下一步 = 用户终端跑全量 `flutter test` + 真机走查**（本机跑不了 `testWidgets`）；通过后按「发布收尾四步」把
+> CHANGELOG 的 `## [Unreleased]` 转正成 `## [v0.7.15]` 并打 tag。**当前无其它遗留项。**
+>
+> **🔵 本轮（F7.15 自动记账 · **已实现、待门禁 + 真机走查** · 尚未打 tag）**：
+> - **需求**（用户）：「做一个自动记账功能，可能涉及权限问题，给几个方案选择」→ 选完授权后追加
+>   「能不能在通知栏里确认入账（右侧两个按钮）」→ 技术核对后**裁定设计乙**：保留静默入账，
+>   通知是「**已记账**」回执 + `撤销` / `查看` 两个按钮（设计甲的「通知栏 `导入`/`取消` 待确认收件箱」否）。
+> - **SPEC**：`docs/SPEC-F7.15-auto-bookkeeping.md`（已签字；§3.7 三处硬约束 + §3.5 忽略规则默认值）。
+> - **架构（唯一重决策）**：Kotlin **只做「包名过滤 + 落盘 JSONL 队列」**，**不解析、不碰库**
+>   （drift 是唯一 DB writer）；Dart 在 `AppShell` **首帧后 + 每次 `resumed`** drain
+>   → 解析 → 按 source 分组 → **复用 `importRows()`** → 记批次 → 刷新 → 回执通知。
+>   **不启 headless FlutterEngine**（接受「入账延迟到下次打开 App」）。
+> - **平台侧**（本项目**首次**引入 manifest 权限 / 服务 / intent-filter）：新增
+>   `android/.../autobook/`（Listener / Queue / Notifier / Channel）+ `MainActivity` 接线 +
+>   manifest（`POST_NOTIFICATIONS`、`<service>` 带 `android:exported="false"` 与
+>   `BIND_NOTIFICATION_LISTENER_SERVICE`、`ACTION_SEND` filter）+ 矢量通知小图标。
+>   **零 Gradle 新依赖**（权限自检走 `Settings.Secure`，不用 androidx）。
+> - **Dart 侧**：新增 `lib/features/autobook/`（rules / bridge / batches / accounts / controller / notice / page / banner）
+>   + `/autobook` 路由 + 「我的」条目 + 首页 `MonthHero` 上方提示条；
+>   `ImportReport` **追加** `importedIds` / `importedAmountCents`（有默认值，既有调用方零改动）。
+>   `source` 取值域 `notification` → `notify_wechat` / `notify_alipay` / `share`（TEXT 无 CHECK → **零迁移，DB 仍 v3**）。
+> - **本机门禁**：analyze 等效 **全项目 `No issues found!`** ✅；纯 `test()` **204 例全绿**
+>   （本批新增 47）。⚠️ `testWidgets`（14 文件）+ `test/data/repositories/transaction_repository_test.dart`
+>   本机跑不了（后者在 fallback runner 里**编译阶段挂住**，环境问题）→ **必须用户在终端跑全量**。
+> - **走查要点（AI 经 adb）**：MuMu 上**没有真实微信/支付宝支付** → 用
+>   `adb shell cmd notification post` 造合成通知（包名被伪造不了 → 见 SPEC §6 说明，只能验链路），
+>   验「解析 → 去重 → 入账 → 撤销 → 回执通知」；**真实通知文案必须用户在自己手机上抓取后回填规则表**。
+> - ⚠️ **已知风险**：忽略规则里的 `优惠` / `立减` / `满减` 可能误杀真实支付回执（「付款成功，优惠 0.5 元」）
+>   —— 真机抓取后若发现，改成「仅在无『支付成功』类关键词时才忽略」。
 >
 > **🔴 上一轮（F7.14 新手引导 · **已交付 ✅ `v0.7.14`** · 收尾四步已执行完毕 · 无遗留项）**：
 > - **需求**（用户）：让第一次使用的用户知道「没有明显标识的按钮 / 隐藏手势」是做什么的。

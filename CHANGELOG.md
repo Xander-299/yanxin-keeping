@@ -26,6 +26,89 @@
 | `v0.7.13` | 统计页图表绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱） | 本段所在提交 |
 | `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
 
+## [Unreleased] — 自动记账（F7.15 · 通知使用权为主 + 零权限兜底）· 🔵 已实现、待验收
+
+> **状态**：代码已落地（`lib/features/autobook/` + `android/.../autobook/`），**待用户终端全量门禁 + 真机走查**，
+> 尚未打 tag；通过后本节原样转正为 `## [v0.7.15]`。
+> **本机已跑部分**：analyze 等效 → **全项目 `No issues found!`** ✅；
+> 纯 `test()` **204 例全绿**（本批新增 **47** = `auto_book_rules_test` 38 + `auto_book_flow_test` 9；
+> 回归 core 39 / data 25 / import 74 / assets 19）。
+> ⚠️ 本机**跑不了** `testWidgets`（14 个文件），且 `test/data/repositories/transaction_repository_test.dart`
+> 在本机 fallback runner 里**编译阶段挂住**（环境问题，不是用例失败）→ 全量 `flutter test` 必须由用户在终端跑。
+> **不动 schema**（DB 仍 **v3**：批次记录复用既有 `schema_meta` KV）· **零新 pub 依赖**（Kotlin 原生 + 平台侧 `org.json`）。
+> SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（2026-09-30 用户签字 → **设计乙**）。
+
+### A · 需求与裁定
+
+- **起因**（用户）：做一个「自动记账」功能，并询问权限方案。
+- **用户裁定四项**：① 方案 = **A 通知使用权（主）+ D3 分享接收（零权限兜底）+ 强化已有账单导入**（不做无障碍、不做短信）；
+  ② 入账方式 = **静默直入 + 可撤销**；③ 账户归属 = **按来源自动建「微信」/「支付宝」账户**；
+  ④ 范围 = **仅微信 + 支付宝**（银行 / 云闪付 / 美团 / 京东 / 抖音 进 backlog）。
+- **追加 + 改选**：用户随后提出「通知栏里就能确认入账」。技术核对后**裁定设计乙** ——
+  **保留静默入账**，通知是「**已记账**」回执，两个按钮 `撤销` / `查看`（设计甲「通知栏 `导入`/`取消` 待确认收件箱」**否**）。
+  ⚠️ 三处硬约束（已写进 SPEC §3.7）：按钮**只能在展开态底部**（系统模板决定，放不了「右侧」）；
+  Android 12+ 禁通知 trampoline → **`撤销`必然拉起 App**（写库只能回到 Dart）；采用通知即**必须新增 `POST_NOTIFICATIONS`**。
+
+### B · 架构（本批唯一的重决策）
+
+- **Kotlin 只做「过滤 + 落盘」**：`NotificationListenerService` 按包名白名单取 `title/text/bigText/subText/postTime`
+  → 5 秒窗口粗筛 → 追加到 `filesDir/autobook_queue.jsonl`。**不解析金额、不碰数据库**
+  —— drift 是唯一 DB writer，第二个写入方会破坏「单写者 + 迁移版本一致」假设。
+- **Dart 在「首帧后」与每次 `resumed` drain**（`AppShell`）：解析 → 按 source 分组 → `ensureSourceAccount`
+  → **复用 `importRows()`**（每组一次事务，指纹唯一索引兜底）→ 记批次 → 刷新视图 → 回执通知。
+- **不启 headless FlutterEngine**：接受「入账延迟到下次打开 App」—— 用户本来就要打开 App 才看得到提示条。
+- 队列纪律：上限 500 条 / 保留 7 天 / drain 后整文件清空 / 坏行丢弃不重试。
+
+### C · 平台侧（**本项目首次**在 manifest 引入权限 / 服务 / intent-filter）
+
+- `android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/`：`AutoBookListenerService`（监听）/ `AutoBookQueue`
+  （JSONL 队列 + 命令文件）/ `AutoBookNotifier`（两态通知）/ `AutoBookChannel`（`MethodChannel('yanxin/autobook')`）。
+- `MainActivity` 从 13 行脚手架改为：注册通道 + `onCreate`/`onNewIntent` 处理 `ACTION_SEND` 文本（入队）
+  与通知按钮 extra（落 `autobook_command.json`，等 Dart 取走）—— **只落盘，不碰库**。
+- `AndroidManifest.xml`：`POST_NOTIFICATIONS` + `<service>`（intent-filter + `android:exported="false"` +
+  `android:permission=BIND_NOTIFICATION_LISTENER_SERVICE`）+ `<activity>` 加 `ACTION_SEND`/`text/plain` filter。
+- 新增通知小图标 `res/drawable/ic_stat_autobook.xml`（矢量单色，无新图片资源）。
+- 权限自检**不用 androidx**（`Settings.Secure` 字符串 + `NotificationManager`），**零 Gradle 新依赖**。
+
+### D · Dart 侧
+
+- 新增 `lib/features/autobook/`：`data/auto_book_rules.dart`（三层规则：包名白名单 → 忽略规则 → 模板规则；
+  金额多级降级 + 千分位先清洗，全程 `yuanToCents` 不碰浮点）、`data/auto_book_bridge.dart`（通道封装，
+  **非 Android / 任何异常都静默降级**）、`data/auto_book_batches.dart`（最近 3 批，KV）、
+  `application/auto_book_accounts.dart`、`application/auto_book_controller.dart`（drain 编排）、
+  `application/auto_book_notice.dart`（会话内提示条 + 撤销）、`presentation/auto_book_page.dart`、
+  `presentation/widgets/auto_book_banner.dart`。
+- 接入：`/autobook` 路由、「我的」新增条目「自动记账」、首页 `MonthHero` 上方提示条、`AppShell` drain 触发点。
+- `importRows` 的 `ImportReport` **追加** `importedIds` / `importedAmountCents`（都有默认值，既有调用方零改动）
+  —— 用于「整批撤销」与回执金额。
+- `transactions.source` 取值域从预留的 `notification` 细化为 `notify_wechat` / `notify_alipay` / `share`
+  （TEXT 无 CHECK → **零迁移**）。
+
+### E · 测试
+
+- `test/features/autobook/auto_book_rules_test.dart`（**38 例**纯 `test()`）：包名白名单 / 忽略规则**逐词** /
+  金额多级降级（`¥` 无「元」、一位小数、千分位）/ 方向判定 / 商户提取与退化 / `externalId` 稳定性 /
+  坏行不抛异常 / 分享路径。
+- `test/features/autobook/auto_book_flow_test.dart`（**9 例**纯 `test()`，内存 drift + 假通道）：
+  首次 drain 入账 + 记批次 + 发回执 / 同批再 drain **零重复** / 非消费与坏行只丢弃 /
+  微信·支付宝各进各自账户 / **整批撤销**（且撤第二次返回 0 不假装成功）/ **冷启动命令撤销** /
+  批次上限 3 批裁撤 / 分享链路 / 空队列 no-op。
+
+### F · 已知边界（走查必须按此判定，别报「假通过」）
+
+- **模拟器里没有真实微信 / 支付宝支付** → 只能 `adb shell cmd notification post` 造合成通知，
+  **能验「解析 → 去重 → 入账 → 撤销 → 回执通知」链路，验不了真实通知文案格式**。
+  真实文案要在用户自己手机上抓取后回填规则表（→ 极可能需要调整 §3.5 忽略规则）。
+- **通知多数不含商户名** → 自动分类大概率落「其他」，备注退化为「微信支付 / 支付宝支付」；提示条与撤销是主要纠错入口。
+- 用户关掉微信/支付宝通知 → 完全收不到（兜底 = 分享记账 / 账单导入）。
+- ⚠️ **忽略规则里的 `优惠` / `立减` / `满减` 有误杀风险**：「付款成功，优惠 0.50 元」这类真实支付回执会被丢弃
+  （忽略优先于模板）。真机抓取后若发现，应改为「仅在无『支付成功』类关键词时才忽略」。
+- ⚠️ **debug 包里有 `android.permission.INTERNET`** —— Flutter 模板在 `src/debug` + `src/profile` 源集声明
+  （热重载需要），**release 包没有**。所以「本 App 没有网络权限」这句对交付版成立，走查别当成矛盾。
+- **`adb shell cmd notification post` 伪造不了 `packageName`**（发出来是 `android`/shell 的包名）→
+  第一层包名白名单就把它挡了 → 该方式**只能验通知能弹出**，验不了「被本 App 捕获」。
+  「Dart 侧链路」由 `auto_book_flow_test` 覆盖；「监听是否真的生效」只能用户在手机上验。
+
 ## [v0.7.14] — 2026-09-25 · 新手引导（7 页全屏导览）
 
 > **门禁**：`flutter test` **400 passed / 0 skipped**（2026-09-25 用户终端全量；
