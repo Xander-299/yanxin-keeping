@@ -453,7 +453,7 @@
       → `git tag -a v0.7.14`（tag 对象 `b3c08c2` → 提交 `c5ea1b5`）→ 直推 + `ls-remote` 核对
       → 文档收尾（HANDOFF / SPEC §8 / 本文件 / memory）
 
-### F7.15 自动记账（通知使用权为主 + 零权限兜底）—— 用户新需求，**已实现、待验收 🔵**（2026-09-30）
+### F7.15 自动记账（通知使用权为主 + 零权限兜底）—— 用户新需求，**已实现、真机走查已通过 🟡（仅缺终端全量）**（2026-09-30 起）
 
 > 需求：用户要「自动记账」，并先问权限方案；选完组合后又追加「能不能在通知栏里确认入账」。
 > SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（**已签字**：方案 A + D3 + 强化导入 / 静默直入 /
@@ -506,9 +506,39 @@
       analyze 等效 **全项目 `No issues found!`** ✅
 - [x] 构建 debug APK（Kotlin 新增 `AutoBookDiagnostics`，必须真编一次）
 - [x] 模拟器验证：装新包 + `ACTION_SEND` 分享路径（不受包名白名单限制）跑通完整链路
-- [ ] **🔴 最高优先：真机装带诊断的新包 → 做一笔支付 → 打开 App → 看 `/autobook` 页「诊断」区块**
+- [x] **🔴 最高优先：真机装带诊断的新包 → 做一笔支付 → 打开 App → 看 `/autobook` 页「诊断」区块**
       —— 「监听服务：未绑定」→ ROM 后台限制；「最近捕获：从未」→ 抓取层；
       「待入账 > 0」→ 触发层；「上次检查：N 条不符合记账条件」→ 解析规则层
-- [ ] 真机抓真实通知文案（`adb shell dumpsys notification --noredact`）→ 回填规则表：
+      → ✅ **已完成（2026-10-08，见下节「真机走查轮」）**
+- [x] 真机抓真实通知文案（`adb shell dumpsys notification --noredact`）→ 回填规则表：
       忽略表 / 金额优先级 / 商户提取**三处目前仍是对着推测文案写的**
-- [ ] 收尾四步：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]` + 我的页角标 → tag → 直推核对 → 文档收尾
+      → ✅ **已完成（2026-10-08）：文案已拿到并固化进 `auto_book_real_samples_test`**
+
+#### 真机走查轮（2026-10-08 · Redmi K50 · 用户报「能抓取但无法识别」）
+
+> 用户主诉：支付宝 / 微信**能抓到通知但入不了账**，怀疑关键词识别。本轮把根因钉死在真机文案上。
+
+- [x] 真机取证（`dumpsys notification --noredact` + `run-as` 读 App 私有队列）→ 拿到真实文案：
+      支付宝标题 **「交易提醒」**、正文「你有一笔0.01元的支出，领1元生活缴费红包。」
+- [x] **定位主因**：标题撞硬忽略 `提醒`、正文撞硬忽略 `红包` → 两处一票否决 → **静默丢弃**
+      （这正是「能抓取、识别不了」的原样现场）
+- [x] 修 **硬忽略表收窄**（只留「必然非消费」词，**新增 `还款`**）+ **软忽略扩容**
+      （`提醒/红包/优惠/立减/满减/活动/领取/积分/即将`）+ 强收支词补 `支出/收入/已收款/成功收款`
+- [x] 修 **组摘要重复入账**（P1）：Kotlin 按 `FLAG_GROUP_SUMMARY` 过滤 + Dart `^\[\d+条\]` 兜底
+- [x] 修 **金额取错**（P1）：新增「金额在动作词之前」优先级，压过营销语里的金额
+- [x] 修 **诊断层「瞒报」族**（P1）：`capturedTotal` 11→0 抹盘 / 空 drain 把 `drainedTotal` 8→0 /
+      `skipped*` 从不落盘 / `listenerConnected` 回填谎报「已绑定」→ 改「盘上基线 + 本进程增量」合成
+- [x] 修 **`last_run` 空 drain 覆盖**（P2）：空队列且无撤销时不写 `last_run`
+      （真机实测入账 7 秒后被抹成「没有新的支付通知」）→ 另加 2 条回归守卫
+- [x] 新增 `auto_book_real_samples_test.dart`（**16 例**，文案**逐字抄自真机**）；`rules` → 47、`flow` → 15
+- [x] **真机四断点逐层验证**：① 系统绑定 `allow_listener` + `dumpsys activity services` ✅ /
+      ② 服务收通知（非白名单探针 → `skippedNotWatched` 0→1）✅ / ③ Dart 取队列 ✅ /
+      ④ 解析入账（`imported:6 dropped:2` 逐条吻合）✅
+- [x] **真实支付端到端**：用户实付支付宝 **¥0.01** → 入账 `cents=1 / type=expense / src=notify_alipay` ✅
+- [x] 现场教训（已写进 CHANGELOG I 段）：MIUI/HyperOS 在 `force-stop` 后会**解绑**监听服务，
+      而设置与 `dumpsys` 都显示「已授权」；**重绑会把仍在通知栏的活跃通知重投** → 页面那条提示真能救数据
+- [x] 本机全量回归：纯 `test()` **386 例全绿 / 0 失败**（分 4 批并行）；analyze 等效 **`No issues found!`** ✅
+- [x] 工具新增：`parse_notif_dump.py`（抽真实文案）/ `watch_notifications.py`（轮询落 JSONL）；
+      `dart_test_fallback.py` 加 `FX_TEST_WORK_SUFFIX`（原固定产物路径，并行会互相覆盖）
+- [ ] **用户终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件；含复核 `budget_card_test` 2 条）
+- [ ] 收尾四步：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]` + 我的页角标 `v0.7.15` → tag → 直推核对 → 文档收尾

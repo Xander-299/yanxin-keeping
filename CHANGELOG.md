@@ -26,7 +26,7 @@
 | `v0.7.13` | 统计页图表绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱） | 本段所在提交 |
 | `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
 
-## [Unreleased] — 自动记账（F7.15 · 通知使用权为主 + 零权限兜底）· 🔵 已实现、待验收
+## [Unreleased] — 自动记账（F7.15 · 通知使用权为主 + 零权限兜底）· 🟡 真机走查已通过、待终端全量
 
 > **状态**：代码已落地（`lib/features/autobook/` + `android/.../autobook/`），**待用户终端全量门禁 + 真机走查**，
 > 尚未打 tag；通过后本节原样转正为 `## [v0.7.15]`。
@@ -35,6 +35,8 @@
 > 回归 core 39 / data 25 / import 74 / assets 19）。
 > ⚠️ 本机**跑不了** `testWidgets`（14 个文件），且 `test/data/repositories/transaction_repository_test.dart`
 > 在本机 fallback runner 里**编译阶段挂住**（环境问题，不是用例失败）→ 全量 `flutter test` 必须由用户在终端跑。
+> 📌 **最新数字以走查段为准（2026-10-08）**：本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批实测，见 I 段）；
+> 上面那条「`transaction_repository_test` 编译挂住」**本次未复现**（跑完 `+12`，只是并发下耗时到 610s）。
 > **不动 schema**（DB 仍 **v3**：批次记录复用既有 `schema_meta` KV）· **零新 pub 依赖**（Kotlin 原生 + 平台侧 `org.json`）。
 > SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（2026-09-30 用户签字 → **设计乙**）。
 
@@ -167,6 +169,85 @@ analyze 等效 **全项目 `No issues found!`**。
 `adb shell cmd notification post` 又伪造不了 `packageName` → **忽略表 / 金额优先级 / 商户提取
 三处规则仍是对着推测文案写的**。完整链路在模拟器上用 **`ACTION_SEND` 分享路径**验证
 （分享通道**不受包名白名单限制**）。
+
+### I · 真机走查与修复（2026-10-08 · Redmi K50 · 用户报「能抓取但无法识别」）
+
+**用户主诉**：支付宝 / 微信的自动记账**能抓到通知但入不了账**，怀疑关键词识别。
+
+**真机取证**（`dumpsys notification --noredact` + `run-as` 读 App 私有队列）—— 拿下真实文案：
+
+```json
+{"pkg":"com.eg.android.AlipayGphone","title":"交易提醒",
+ "text":"你有一笔0.01元的支出，领1元生活缴费红包。"}
+```
+
+标题撞硬忽略 `提醒`、正文撞硬忽略 `红包` → **两处一票否决、静默丢弃** → 支付宝付款**一笔都记不上**。
+这就是「能抓取、识别不了」的原样现场（H 段是对着推测文案写的，本段是**对着真机文案**收口）。
+
+**修复 4 项**
+
+1. **硬忽略收窄 + 软忽略扩容（P0 · 主因）**：`提醒 / 红包 / 优惠 / 立减 / 满减 / 活动 / 领取 / 积分 / 即将`
+   从硬忽略**降级为软忽略**（命中且**无强收支词**才丢）；硬忽略只留「必然非消费」
+   （`转账 / 退款 / 已退款 / 充值成功 / 验证码 / 月账单 / 账单汇总 / 还款`）；
+   强收支词补 `支出 / 收入 / 已收款 / 成功收款`。
+   ⚠️ `还款` 是**新增进硬忽略**的：`还款提醒 / 本期应还1,234.00元` 正文**没有**强收支词，靠软忽略拦不住。
+2. **组摘要去重（P1）**：MIUI 会为同一笔支付同时投 `[2条]微信支付: 已支付¥0.01` 摘要与子通知，
+   两者文案不同 → 指纹不同 → **同一笔记两遍**。→ Kotlin 侧按 `FLAG_GROUP_SUMMARY` /
+   `EXTRA_IS_GROUP_SUMMARY` 过滤（+计数 `skippedGroupSummary`）；Dart 侧 `^\[\d+条\]` 纯函数兜底
+   （**不能只靠 Kotlin** —— 组摘要标志不是每个 ROM 都给）。
+3. **金额取错风险（P1）**：同条里若营销语带金额（`领2元…红包`）且排在真实金额之前，原规则会取到营销额。
+   → 新增「**金额在动作词之前**」优先级（`(\d+(?:\.\d{1,2})?)\s*元\s*的?\s*(?:支出|消费|收入|付款|支付|收款)`），
+   排在裸 `N 元` 之前。**记错数比不记更糟**。
+4. **`last_run` 空 drain 覆盖（P2 · 走查新发现）**：冷启动 / 从后台回来的例行 drain 绝大多数为空，
+   原实现照写 `imported: 0` → 把刚发生的「新入账 N 笔」抹成「没有新的支付通知」
+   （真机实测：入账 **7 秒后**就被抹）。→ **空队列且无撤销时不写 `last_run`**；撤销是有效动作，仍记。
+
+**诊断层「瞒报」族（P1 · 可观测性；本轮排查的最大障碍，先修它才能定位上述问题）**
+
+- `capturedTotal` **11 → 0**：`persist()` 把内存零值直接写盘（冷启动 drain 早于 `Service.onCreate`）。
+- `drainedTotal` **8 → 0**：`noteDrained()` 对**空 drain** 也刷新 `lastDrainAtMs`（但刻意不落盘），
+  却与 `drainedTotal` **共用同一个 `== 0L` 守卫** → 守卫被毒化 → 下一次任意 persist 把累计值抹零。
+- `skipped*` 四个计数**从不落盘 / 恢复** → 每次进程重启归零后写盘。
+- `listenerConnected` 从盘上回填 → force-stop 后**谎报「已绑定」**，正好掐掉页面那条国产 ROM 提示。
+- → `AutoBookDiagnostics.kt` 重写：累计值改为 **「盘上基线 + 本进程增量」** 合成（`recomputeTotals()`，幂等）；
+  `listenerConnected` **故意不回填**（只回填 `lastConnectedAtMs`）；`snapshot()` 先 `load()` 保证基线就绪。
+
+**真机验证（Redmi K50）**
+
+| 断点 | 手段 | 结果 |
+|---|---|---|
+| ① 系统绑定服务 | `cmd notification allow_listener` + `dumpsys activity services` | ✅ 已绑定 |
+| ② 服务收通知 | 非白名单探针通知 → `skippedNotWatched` | ✅ 0 → 1 |
+| ③ Dart 取队列 | 注入队列行 → `lastDrainCount / drainedTotal` | ✅ 计数正确 |
+| ④ 解析 + 入账 | 真实文案注入 → `last_run` | ✅ `imported: 6, dropped: 2` 逐条吻合 |
+| ⑤ **真实支付端到端** | 用户实付支付宝 **¥0.01** | ✅ `cents=1 / type=expense / src=notify_alipay` —— 金额·方向·来源全对 |
+| 诊断修复 | 「空 drain → persist」（旧版必挂） | ✅ `drainedTotal` 稳在 1，不再被抹零 |
+
+**⚠️ 现场发现（影响真实使用，已写进页面提示口径）**：MIUI / HyperOS 在 `force-stop` 后会**解绑**
+`NotificationListenerService`，但 `settings get secure enabled_notification_listeners` **仍显示已授权**、
+`dumpsys notification` 里也像正常 —— 正是项目既有教训「**用户开关是开的 ≠ 功能在工作**」。
+用户此前那笔微信付款就是这么丢的。**好消息**：重新绑定（设置里「通知使用权」关→开）会让系统把
+**当前仍挂在通知栏的活跃通知重投**一遍（实测重投延迟 **1 分 37 秒**）——
+页面那条提示**是真能救回数据的**，不必重付一笔。**代价**：`force-stop` / 覆盖安装后**必须重绑一次**。
+
+**文件**：`data/auto_book_rules.dart`（硬/软忽略表 + 金额优先级 + 组摘要兜底）、
+`android/.../autobook/AutoBookListenerService.kt`（组摘要过滤 + 计数）、
+`android/.../autobook/AutoBookDiagnostics.kt`（基线合成重写）、
+`data/auto_book_diagnostics.dart`（+`skippedGroupSummary`）、
+`application/auto_book_controller.dart`（空 drain 不覆盖 last_run）、
+`presentation/auto_book_page.dart`（抓取统计加「组摘要」）。
+
+**测试**：`auto_book_rules_test` **47 passed**（+组摘要剔除、软忽略逐词 +强收支词）；
+`auto_book_flow_test` **15 passed**（+2：空 drain 不覆盖成功结果 / 空队列带撤销仍记）；
+**新增** `auto_book_real_samples_test` **16 passed** —— 文案**逐字抄自真机**（微信 `已支付¥0.10`、
+`个人收款码到账¥0.01`；支付宝 `交易提醒 / 你有一笔0.01元的支出，领2元小荷包支付红包。`、
+`你已成功收款0.01元（老顾客消费）`；组摘要 `[2条]微信支付: …`；以及聊天 / 新消息 / 转账 / 退款 / 还款提醒等非消费）。
+analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批）；
+**14 个 `testWidgets` 文件本机跑不了**，仍需用户终端 `flutter test` 覆盖。
+
+**工具**：新增 `tool/parse_notif_dump.py`（从 `dumpsys notification` 抽真实文案）、
+`tool/watch_notifications.py`（轮询抓取并落 JSONL，供回填规则表）；`tool/dart_test_fallback.py`
+加 `FX_TEST_WORK_SUFFIX` —— 原来引导文件/产物是**固定路径**、多实例并行会互相覆盖。
 
 ## [v0.7.14] — 2026-09-25 · 新手引导（7 页全屏导览）
 

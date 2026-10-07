@@ -398,14 +398,68 @@ Dart 侧只靠指纹（ADR-7 唯一索引）兜底，两层互不依赖。
   **完整链路（落盘 → drain → 解析 → 入账 → 撤销 → 回执）用 `ACTION_SEND` 分享路径验证**
   （分享路径**不受包名白名单限制**，是零权限兜底通道，可在模拟器上真跑）。
 
+### 真机走查与修复（2026-10-08 · Redmi K50 · 用户报「能抓取但无法识别」）
+
+#### 真根因（真机文案钉死）
+
+`adb shell dumpsys notification --noredact` + `run-as` 读 App 私有队列，拿到**真实**文案：
+
+```json
+{"pkg":"com.eg.android.AlipayGphone","title":"交易提醒",
+ "text":"你有一笔0.01元的支出，领1元生活缴费红包。"}
+```
+
+**标题撞硬忽略 `提醒`、正文撞硬忽略 `红包`** → 两处一票否决 → 静默丢弃 → **支付宝付款一笔都记不上**。
+（上一轮 §3.5 的忽略表是对着**推测**文案写的；本轮拿到真机文案例证 —— 这就是「能抓取、识别不了」的原文现场。）
+
+#### 本轮修复
+
+| # | 级别 | 缺陷 | 修法 |
+|---|---|---|---|
+| 1 | **P0** | 硬忽略表含营销词 / 回执常见词 → 真实付款被**静默**丢弃 | 硬忽略**收窄**为「必然非消费」（`转账 / 退款 / 已退款 / 充值成功 / 验证码 / 月账单 / 账单汇总 / **还款**`）；`提醒 / 红包 / 优惠 / 立减 / 满减 / 活动 / 领取 / 积分 / 即将` **降级为软忽略**（无强收支词才丢）；强收支词补 `支出 / 收入 / 已收款 / 成功收款` |
+| 2 | **P1** | MIUI 组摘要 `[2条]微信支付: 已支付¥0.01` 与子通知文案不同 → 指纹不同 → **同一笔记两遍** | Kotlin 按 `FLAG_GROUP_SUMMARY` / `EXTRA_IS_GROUP_SUMMARY` 过滤（+计数 `skippedGroupSummary`）；Dart `^\[\d+条\]` 兜底（**标志非所有 ROM 都给，不能只靠 Kotlin**） |
+| 3 | **P1** | 同条里营销语金额排在真实金额之前 → **取错数** | 新增「金额在动作词之前」优先级（`元 的? (支出\|消费\|收入\|付款\|支付\|收款)`），排在裸 `N 元` 之前 |
+| 4 | **P1** | 诊断层「瞒报」：`capturedTotal` 11→0（persist 抹盘）/ 空 drain 把 `drainedTotal` 8→0（`noteDrained` 与它**共用 `== 0L` 守卫**被毒化）/ `skipped*` 从不落盘 / `listenerConnected` 回填→force-stop 后**谎报「已绑定」** | `AutoBookDiagnostics.kt` 重写为 **「盘上基线 + 本进程增量」** 合成（`recomputeTotals()` 幂等）；`listenerConnected` **故意不回填**；`snapshot()` 先 `load()` |
+| 5 | **P2** | `last_run` 被空 drain 覆盖（真机实测入账 **7 秒后**变「没有新的支付通知」） | 空队列且无撤销时**不写** `last_run`；撤销是有效动作仍记 |
+
+#### 真机验证结果
+
+| 断点 | 手段 | 结果 |
+|---|---|---|
+| ① 系统绑定 | `cmd notification allow_listener` + `dumpsys activity services` | ✅ 已绑定 |
+| ② 服务收通知 | 发**非白名单**探针通知 → `skippedNotWatched` | ✅ **0 → 1** |
+| ③ Dart 取队列 | 注入队列行 → `lastDrainCount / drainedTotal` | ✅ 计数正确 |
+| ④ 解析入账 | 8 条真实文案注入 → `last_run` | ✅ `imported:6 dropped:2` **逐条吻合** |
+| ⑤ **真实支付端到端** | 用户实付支付宝 **¥0.01** | ✅ `cents=1 / type=expense / src=notify_alipay` |
+
+**诊断修复的决定性验证**：同一个「空 drain → persist」组合（旧版必挂）下，`drainedTotal` 稳在 `1`（旧版会变 0）。
+
+#### 现场发现（已写进页面提示口径）
+
+**MIUI/HyperOS 在 `force-stop` 后会解绑 `NotificationListenerService`**，而 `settings get secure
+enabled_notification_listeners` 与 `dumpsys` **都显示「已授权」** —— 即 §3.2 提过的「**系统开关 ≠ 服务活着**」。
+**好消息**：重新绑定（设置里「通知使用权」关→开）会让系统把**仍在通知栏的活跃通知重投**一遍
+（实测延迟 **1 分 37 秒**）→ `/autobook` 页那条「关掉再打开一次」的提示**真能救回数据**，不必重付一笔。
+**代价**：`force-stop` / 覆盖安装后**必须重绑一次**（`adb shell cmd notification allow_listener <pkg>/<component>`）。
+
+⚠️ **判读口径**：`lastCaptureAtMs` 是**捕获时刻**，通知自身 `postTimeMs` 才是**交易时刻**，重投场景两者可差几分钟
+—— 别拿它们互相校验。
+
+#### 门禁（2026-10-08）
+
+- analyze 等效 **全项目 `No issues found!`** ✅
+- 本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批并行跑完 49 文件）；
+  autobook 三文件 `rules` **47** + `flow` **15** + **新增** `real_samples` **16**（**文案逐字抄自真机**）
+- 真机断点①–④ + **真实支付端到端** ✅
+- ⚠️ 仍缺：**用户终端全量 `flutter test`**（14 个 `testWidgets` 文件本机跑不了）
+
 ### 待办（用户侧）
 
-- [ ] **🔴 最高优先：真机装带诊断的新包 → 做一笔支付 → 打开 App → 看 `/autobook` 页「诊断」区块**
-      （监听服务 / 最近捕获 / 待入账 / 上次检查 / 抓取统计 + 底部提示），据此确认断在哪一层。
-      若「监听服务：未绑定」→ ROM 后台限制；「最近捕获：从未」→ 抓取层；
-      「待入账 > 0」→ 触发层；「上次检查：N 条不符合记账条件」→ 解析规则层。
-- [ ] 终端全量 `flutter test`（本机跑不了 14 个 `testWidgets` 文件）
-- [ ] 真机走查：权限引导（去开启 / 返回自检 / 通知权限被拒态）、首页提示条、`/autobook` 页撤销
-- [ ] **真机抓真实通知文案**（`adb shell dumpsys notification --noredact`）→ 回填规则表：
-      忽略表 / 金额优先级 / 商户提取三处目前仍是对着推测文案写的
-- [ ] 模拟器可跑的部分：用 `ACTION_SEND` 分享路径验完整链路（不受包名白名单限制）
+- [x] **✅ 真机装带诊断的新包 → 支付一笔 → 看 `/autobook` 页「诊断」区块**（2026-10-08 完成；
+      诊断五行 + 断点定位表见 HANDOFF「未解决问题」第 7 条）
+- [x] **✅ 真机抓真实通知文案**（`dumpsys notification --noredact`）→ 已回填规则表，
+      并固化为 `test/features/autobook/auto_book_real_samples_test.dart`（16 例逐字抄自真机）
+- [x] **✅ 模拟器可跑的部分**：用 `ACTION_SEND` 分享路径验完整链路（不受包名白名单限制）
+- [ ] **终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件）→ 通过后可收尾打 `v0.7.15`
+- [ ] 真机走查（尚未覆盖）：权限引导（去开启 / 返回自检 / 通知权限被拒态）、首页提示条、`/autobook` 页撤销
+- [ ] 收尾四步：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]`（含 I 段）+ 我的页角标 → tag → 直推核对
