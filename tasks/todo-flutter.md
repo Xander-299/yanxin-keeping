@@ -485,7 +485,30 @@
 - [ ] **用户终端重跑**：先单跑 `flutter test test/features/ledger/budget_card_test.dart` 复核这 2 条，
       再跑全量 `flutter test`（本机跑不了 14 个 `testWidgets` 文件；
       `test/data/repositories/transaction_repository_test.dart` 在本机 runner 里编译阶段挂住）
-- [ ] **真机走查**：`adb shell cmd notification post` 造合成通知 → 验「解析 → 去重 → 入账 → 撤销 → 回执通知」；
-      权限引导页（去开启 / 返回自检 / 通知权限被拒态）；分享记账；首页提示条与 `/autobook` 页
-- [ ] **用户在自己手机上抓真实通知文案回填规则表**（模拟器验不了真实格式）→ 视情况调整 §3.5 忽略规则
+
+#### 补丁轮（2026-10-07 · 用户反馈「自动记账不生效，只成功过一次」）
+
+- [x] 归因：功能有四个断点（系统绑定服务 / 服务抓通知 / Dart 触发 / Dart 入账），**每层都静默**
+      → 本轮第一交付是**把链路变可诊断**，而不是先猜着改
+- [x] 修 **丢账路径**（P0）：`drain` 是「取走即清空」，而 Dart 侧有三条 early return（账本未就绪 /
+      写库异常 / 处理中断）会让这批通知**永久消失** → 新增 `AutoBookQueue.restore()` +
+      channel `restoreQueue`：**临时性失败回写重试，永久性失败（解析不出）仍丢弃**
+- [x] 修 **忽略规则误杀真实回执**（P0）：`优惠 / 立减 / 满减` 原在硬忽略表 →
+      「付款成功，优惠 0.50元」这类真实消费被静默丢弃（正是 SPEC §8 旧第 3 条的预警）
+      → 拆成 硬忽略 / 软忽略 / 强支付词 三张表，「软忽略命中且无强支付词」才丢
+- [x] 修 **多金额取错**（P1，修上一条后立刻暴露）：一条通知里有多个金额时原实现取**第一个数字**
+      = 优惠金额 → 金额优先级重排（实付 > 支付动作紧邻 > 货币符号 > 裸金额）
+- [x] 新增 **活性诊断**：`AutoBookDiagnostics.kt` + channel `diagnostics` + `/autobook`
+      「诊断」区块 + `autobook_last_run` KV（监听服务是否绑定 / 最近捕获 / 待入账 / 上次检查 /
+      抓取统计 + **按当前证据给一句可执行提示**）
+- [x] 测试：`auto_book_rules_test` **42 passed**（+软忽略 5 / 金额优先级 3）、
+      `auto_book_flow_test` **13 passed**（+回写不丢账 / 永久失败不回写 / lastRun 落 KV / 软忽略守卫）；
+      analyze 等效 **全项目 `No issues found!`** ✅
+- [x] 构建 debug APK（Kotlin 新增 `AutoBookDiagnostics`，必须真编一次）
+- [x] 模拟器验证：装新包 + `ACTION_SEND` 分享路径（不受包名白名单限制）跑通完整链路
+- [ ] **🔴 最高优先：真机装带诊断的新包 → 做一笔支付 → 打开 App → 看 `/autobook` 页「诊断」区块**
+      —— 「监听服务：未绑定」→ ROM 后台限制；「最近捕获：从未」→ 抓取层；
+      「待入账 > 0」→ 触发层；「上次检查：N 条不符合记账条件」→ 解析规则层
+- [ ] 真机抓真实通知文案（`adb shell dumpsys notification --noredact`）→ 回填规则表：
+      忽略表 / 金额优先级 / 商户提取**三处目前仍是对着推测文案写的**
 - [ ] 收尾四步：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]` + 我的页角标 → tag → 直推核对 → 文档收尾

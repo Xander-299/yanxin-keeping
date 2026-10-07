@@ -64,6 +64,61 @@ void main() {
     }
   });
 
+  group('②b 软忽略：营销词不误杀真实回执（2026-10-07 走查修复）', () {
+    test('「你已付款成功，优惠 0.50元」→ 保留（原实现硬忽略会静默丢弃）', () {
+      final row = parseNotification(_wechat('你已付款成功，优惠 0.50元'));
+      expect(row, isNotNull);
+      expect(row!.direction, 'expense');
+    });
+
+    test('「支付成功，立减 2 元」→ 保留', () {
+      expect(parseNotification(_wechat('支付成功，立减 2 元')), isNotNull);
+    });
+
+    test('「满减」同理不误杀', () {
+      expect(parseNotification(_wechat('付款成功，满减 3 元')), isNotNull);
+    });
+
+    test('纯营销（无支付回执词）仍丢弃：标题写「微信」避开标题里的「支付」二字', () {
+      expect(
+        parseNotification(_wechat('本周活动，最高立减 5 元', title: '微信')),
+        isNull,
+      );
+    });
+
+    test('硬忽略词不受软忽略改动影响（「即将」仍一票否决）', () {
+      expect(
+        parseNotification(_wechat('你有一张优惠券即将到期', title: '微信')),
+        isNull,
+      );
+    });
+  });
+
+  group('②c 金额优先级：实付 > 优惠（同一条通知里有多个金额时）', () {
+    test('「订单金额 13.00元，优惠 1.00元，实付 12.00元」→ 取实付 12.00', () {
+      final row = parseNotification(
+        _wechat('订单金额 13.00元，优惠 1.00元，实付 12.00元'),
+      );
+      expect(row, isNotNull);
+      expect(row!.amountCents, 1200);
+    });
+
+    test('「付款成功，优惠 0.50元，实付 12.00元」→ 取实付，不取优惠', () {
+      expect(
+        parseNotification(_wechat('付款成功，优惠 0.50元，实付 12.00元'))!
+            .amountCents,
+        1200,
+      );
+    });
+
+    test('只有优惠金额、没有实付时退化取它（总比不记好，用户可改）', () {
+      expect(
+        parseNotification(_wechat('付款成功，优惠 0.50元'))!.amountCents,
+        50,
+      );
+    });
+  });
+
   group('③ 金额 + 方向 + 商户', () {
     test('「¥12.30」无「元」字也能提', () {
       final row = parseNotification(_wechat('你已成功支付 ¥12.30'))!;

@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/providers/data_epoch.dart';
+import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
@@ -20,6 +21,7 @@ import 'package:yanxin/features/autobook/application/auto_book_controller.dart';
 import 'package:yanxin/features/autobook/application/auto_book_notice.dart';
 import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
 import 'package:yanxin/features/autobook/data/auto_book_bridge.dart';
+import 'package:yanxin/features/autobook/data/auto_book_diagnostics.dart';
 
 /// 「通知使用权」是否已开启（原生侧实时查系统设置）。
 final autoBookListenerEnabledProvider = FutureProvider<bool>(
@@ -35,6 +37,25 @@ final autoBookNotificationsAllowedProvider = FutureProvider<bool>(
 final autoBookLatestBatchProvider = FutureProvider<AutoBookBatch?>((Ref ref) {
   ref.watch(dataEpochProvider);
   return ref.watch(autoBookBatchStoreProvider).latest();
+});
+
+/// 原生侧活性诊断（服务是否被绑定 / 抓到过几条 / 上次 drain 情况）。
+final autoBookDiagnosticsProvider = FutureProvider<AutoBookDiagnostics?>(
+  (Ref ref) => ref.watch(autoBookBridgeProvider).diagnostics(),
+);
+
+/// 已捕获但还没入账的条数（原生落盘队列里剩余的）。
+final autoBookPendingCountProvider = FutureProvider<int>(
+  (Ref ref) => ref.watch(autoBookBridgeProvider).pendingCount(),
+);
+
+/// 最近一次检查结果（KV，跨启动可见）—— 让「上次到底干了什么」可查。
+final autoBookLastRunProvider = FutureProvider<AutoBookLastRun?>((Ref ref) async {
+  ref.watch(dataEpochProvider);
+  final String? raw = await ref
+      .watch(appMetaRepositoryProvider)
+      .get(kAutoBookLastRunKey);
+  return AutoBookLastRun.parse(raw);
 });
 
 class AutoBookPage extends ConsumerStatefulWidget {
@@ -72,6 +93,9 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
     ref.invalidate(autoBookListenerEnabledProvider);
     ref.invalidate(autoBookNotificationsAllowedProvider);
     ref.invalidate(autoBookLatestBatchProvider);
+    ref.invalidate(autoBookDiagnosticsProvider);
+    ref.invalidate(autoBookPendingCountProvider);
+    ref.invalidate(autoBookLastRunProvider);
   }
 
   Future<void> _openSettings() async {
@@ -93,17 +117,20 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
     _refreshStatus();
     if (!mounted) return;
     setState(() => _busy = false);
+    final String msg;
+    if (r.imported > 0) {
+      msg = '新入账 ${r.imported} 笔';
+    } else if (r.undone > 0) {
+      msg = '已撤销 ${r.undone} 笔';
+    } else if (r.restored) {
+      msg = '暂时无法入账，已保留待下次重试';
+    } else {
+      msg = '没有新的支付通知';
+    }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(
-          content: Text(
-            r.imported > 0
-                ? '新入账 ${r.imported} 笔'
-                : (r.undone > 0 ? '已撤销 ${r.undone} 笔' : '没有新的支付通知'),
-          ),
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
       );
   }
 
@@ -130,6 +157,13 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
     );
     final AsyncValue<AutoBookBatch?> latest = ref.watch(
       autoBookLatestBatchProvider,
+    );
+    final AsyncValue<AutoBookDiagnostics?> diag = ref.watch(
+      autoBookDiagnosticsProvider,
+    );
+    final AsyncValue<int> pending = ref.watch(autoBookPendingCountProvider);
+    final AsyncValue<AutoBookLastRun?> lastRun = ref.watch(
+      autoBookLastRunProvider,
     );
 
     final bool listenerOn = listener.value ?? false;
@@ -225,6 +259,21 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
                 batch: latest.value,
                 loading: latest.isLoading,
                 onUndo: _undoLatest,
+              ),
+            ),
+          ),
+          const ToonSectionTitle(title: '诊断'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+            child: ToonCard(
+              color: Tok.canvas2,
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+              child: _DiagnosticsBlock(
+                listenerOn: listenerOn,
+                diag: diag.value,
+                pending: pending.value,
+                lastRun: lastRun.value,
+                loading: diag.isLoading || pending.isLoading,
               ),
             ),
           ),
@@ -419,6 +468,123 @@ class _LatestBatchBlock extends StatelessWidget {
     String two(int v) => v.toString().padLeft(2, '0');
     return '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
   }
+}
+
+/// 「诊断」区块 —— 把四个断点各自的**最后一跳**摆出来。
+///
+/// 没有它时，「自动记账没生效」对用户和开发者都是黑盒：分不清是服务没被系统绑定、
+/// 没抓到通知、没触发消费队列，还是抓到后解析失败。这里逐层给可判断的证据。
+class _DiagnosticsBlock extends StatelessWidget {
+  const _DiagnosticsBlock({
+    required this.listenerOn,
+    required this.diag,
+    required this.pending,
+    required this.lastRun,
+    required this.loading,
+  });
+
+  final bool listenerOn;
+  final AutoBookDiagnostics? diag;
+  final int? pending;
+  final AutoBookLastRun? lastRun;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final AutoBookDiagnostics? d = diag;
+    if (loading && d == null) {
+      return const Text(
+        '读取中…',
+        style: TextStyle(fontSize: 12, color: Tok.ink2),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _InfoLine('监听服务', _listenerText(d)),
+        const ToonDashedLine(),
+        _InfoLine('最近捕获', _captureText(d)),
+        const ToonDashedLine(),
+        _InfoLine('待入账', pending == null ? '—' : '$pending 条'),
+        const ToonDashedLine(),
+        _InfoLine('上次检查', lastRun?.summary ?? '还没有检查过'),
+        const ToonDashedLine(),
+        _InfoLine('抓取统计', _statsText(d)),
+        const SizedBox(height: 10),
+        Text(
+          _hint(d),
+          style: const TextStyle(
+            fontSize: 11.5,
+            height: 1.6,
+            fontWeight: FontWeight.w600,
+            color: Tok.ink2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  static String _listenerText(AutoBookDiagnostics? d) {
+    if (d == null) return '不可用（非 Android 或通道异常）';
+    return d.listenerConnected ? '系统已绑定' : '未绑定';
+  }
+
+  static String _captureText(AutoBookDiagnostics? d) {
+    if (d == null) return '—';
+    if (d.neverCaptured) return '从未收到过支付通知';
+    final String ago = _ago(d.nowMs, d.lastCaptureAtMs);
+    final String who = _pkgName(d.lastCapturePkg);
+    return who.isEmpty ? ago : '$ago · $who';
+  }
+
+  static String _statsText(AutoBookDiagnostics? d) {
+    if (d == null) return '—';
+    return '抓到 ${d.capturedTotal} · 取走 ${d.drainedTotal} · '
+        '其他通知 ${d.skippedNotWatched} · 空文案 ${d.skippedEmpty} · 去重 ${d.skippedDedup}';
+  }
+
+  /// 按当前证据给**一句可执行的**提示（这是「失败可懂」的核心）。
+  String _hint(AutoBookDiagnostics? d) {
+    if (!listenerOn) {
+      return '通知使用权没开 —— 打开后才会开始识别微信 / 支付宝的支付通知。';
+    }
+    if (d == null) {
+      return '读不到系统状态（可能不在 Android 上运行）。';
+    }
+    if (!d.listenerConnected && d.lastConnectedAtMs > 0) {
+      return '设置里开着，但系统当前没有绑定监听服务 —— 常见于国产 ROM 的后台限制。'
+          '可在系统设置里把「通知使用权」关掉再打开一次，或重启手机。';
+    }
+    if (d.neverCaptured && d.skippedNotWatched > 0) {
+      return '监听是通的（已经看到过其他 App 的通知），但还没收到过微信 / 支付宝的支付通知。'
+          '确认这两个 App 的「允许通知」是开着的。';
+    }
+    if (d.neverCaptured) {
+      return '还没抓到过任何通知。做一笔支付后回到本页，这里会显示捕获时间。';
+    }
+    final int waiting = pending ?? 0;
+    if (waiting > 0) {
+      return '有 $waiting 条已捕获但还没入账 —— 切到桌面再打开本 App 会自动入账，'
+          '也可以点右上角立刻检查。';
+    }
+    return '链路正常：捕获与入账都在工作。支付后回到本 App 就能看到结果。';
+  }
+
+  /// 相对时间（以原生侧返回的 `nowMs` 为基准，避免两端时钟口径不一致）。
+  static String _ago(int nowMs, int atMs) {
+    if (atMs <= 0) return '从未';
+    final int diff = nowMs - atMs;
+    if (diff < 60 * 1000) return '刚刚';
+    if (diff < 60 * 60 * 1000) return '${diff ~/ 60000} 分钟前';
+    if (diff < 24 * 60 * 60 * 1000) return '${diff ~/ 3600000} 小时前';
+    return '${diff ~/ 86400000} 天前';
+  }
+
+  static String _pkgName(String pkg) => switch (pkg) {
+    'com.tencent.mm' => '微信',
+    'com.eg.android.AlipayGphone' => '支付宝',
+    _ => '',
+  };
 }
 
 /// 说明行：标题 + 内容。

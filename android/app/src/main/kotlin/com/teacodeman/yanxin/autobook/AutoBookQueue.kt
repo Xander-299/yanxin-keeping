@@ -102,7 +102,10 @@ object AutoBookQueue {
     @Synchronized
     fun drain(context: Context): List<String> {
         val f = queueFile(context)
-        if (!f.exists()) return emptyList()
+        if (!f.exists()) {
+            AutoBookDiagnostics.noteDrained(context, 0)
+            return emptyList()
+        }
         val lines: List<String> = try {
             f.readLines()
         } catch (_: Exception) {
@@ -115,7 +118,35 @@ object AutoBookQueue {
         }
         recent.clear()
         val cutoff = System.currentTimeMillis() - RETENTION_MS
-        return lines.filter { it.isNotBlank() && !isExpired(it, cutoff) }
+        val kept = lines.filter { it.isNotBlank() && !isExpired(it, cutoff) }
+        AutoBookDiagnostics.noteDrained(context, kept.size)
+        return kept
+    }
+
+    /**
+     * 把 Dart 侧**未能处理**的原始行放回队列头 —— 兜住「取走即清空」的丢账路径。
+     *
+     * 只用于**临时性失败**（账本未就绪 / 写库异常 / 进程被杀）；解析不出的行
+     * 由 Dart 侧判定后直接丢弃，不会走这里（否则会无限重试）。
+     * 回写的行更早，放在队首；超出上限时丢最旧的（与 [prune] 同语义）。
+     */
+    @Synchronized
+    fun restore(context: Context, lines: List<String>) {
+        val fresh = lines.filter { it.isNotBlank() }
+        if (fresh.isEmpty()) return
+        val f = queueFile(context)
+        try {
+            val existing = if (f.exists()) {
+                f.readLines().filter { it.isNotBlank() }
+            } else {
+                emptyList()
+            }
+            val merged = fresh + existing
+            val kept = if (merged.size > MAX_LINES) merged.takeLast(MAX_LINES) else merged
+            f.writeText(kept.joinToString("\n") + "\n")
+        } catch (_: Exception) {
+            // 回写失败只能接受丢失：指纹去重保证不会因此重复入账
+        }
     }
 
     private fun append(context: Context, line: String) {

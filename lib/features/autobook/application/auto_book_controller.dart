@@ -19,6 +19,7 @@ import 'package:yanxin/features/autobook/application/auto_book_accounts.dart';
 import 'package:yanxin/features/autobook/application/auto_book_notice.dart';
 import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
 import 'package:yanxin/features/autobook/data/auto_book_bridge.dart';
+import 'package:yanxin/features/autobook/data/auto_book_diagnostics.dart';
 import 'package:yanxin/features/autobook/data/auto_book_rules.dart';
 import 'package:yanxin/features/import/application/bill_importer.dart';
 import 'package:yanxin/features/import/data/bill_normalize.dart' show ParsedRow;
@@ -30,6 +31,7 @@ class AutoBookDrainResult {
     this.duplicates = 0,
     this.dropped = 0,
     this.undone = 0,
+    this.restored = false,
     this.batch,
   });
 
@@ -44,6 +46,9 @@ class AutoBookDrainResult {
 
   /// 本次 drain 顺带执行的通知栏「撤销」笔数。
   final int undone;
+
+  /// 本次因**临时性失败**（账本未就绪 / 写库异常）把队列回写了 —— 不是丢账，是等下次。
+  final bool restored;
 
   /// 本批（imported > 0 时非空）。
   final AutoBookBatch? batch;
@@ -78,7 +83,6 @@ class AutoBookController {
 
   Future<AutoBookDrainResult> _drain() async {
     final AutoBookBridge bridge = _ref.read(autoBookBridgeProvider);
-    final AutoBookBatchStore store = _ref.read(autoBookBatchStoreProvider);
 
     // A. 先处理通知栏「撤销」命令 —— 队列空也要处理（命令可能在冷启动前就落下）
     var undone = 0;
@@ -87,11 +91,38 @@ class AutoBookController {
       undone = await _handleCommand(command, bridge);
     }
 
-    // B. 取队列
+    // B. 取队列（原生侧是「取走即清空」，所以从这一行起原始数据只在内存里）
     final List<String> raw = await bridge.drainQueue();
     if (raw.isEmpty) {
+      await _rememberLastRun(AutoBookLastRun(atMs: _nowMs, undone: undone));
       return AutoBookDrainResult(undone: undone);
     }
+
+    try {
+      return await _process(raw, bridge: bridge, undone: undone);
+    } catch (e) {
+      // **临时性失败**（写库异常 / 处理中断）→ 把原始行放回队列，等下次重试。
+      // 不做这一步，这批通知会随「取走即清空」永久消失 —— 这正是「只成功过一次」的典型成因。
+      await _restoreQuietly(bridge, raw);
+      await _rememberLastRun(
+        AutoBookLastRun(
+          atMs: _nowMs,
+          undone: undone,
+          restored: true,
+          error: _shortError(e),
+        ),
+      );
+      rethrow; // 由 drain() 的 catch 吞掉，不冒泡到 UI
+    }
+  }
+
+  /// 解析 + 入账（队列内容已在内存；这里的失败分「永久」与「临时」两类）。
+  Future<AutoBookDrainResult> _process(
+    List<String> raw, {
+    required AutoBookBridge bridge,
+    required int undone,
+  }) async {
+    final AutoBookBatchStore store = _ref.read(autoBookBatchStoreProvider);
 
     final List<ParsedRow> rows = <ParsedRow>[];
     var dropped = 0;
@@ -105,14 +136,29 @@ class AutoBookController {
     }
 
     if (rows.isEmpty) {
-      // 全是坏数据 / 非消费通知：清掉「识别到 N 笔」，别让通知一直挂着
+      // 全部是坏数据 / 非消费通知 → **永久性失败**：丢弃是正确的（回写会无限重试）。
+      // 清掉「识别到 N 笔」，别让通知一直挂着。
       await bridge.cancelReceipt();
+      await _rememberLastRun(
+        AutoBookLastRun(atMs: _nowMs, dropped: dropped, undone: undone),
+      );
       return AutoBookDrainResult(dropped: dropped, undone: undone);
     }
 
     final String? bookId = await _ref.read(activeBookIdProvider.future);
     if (bookId == null) {
-      return AutoBookDrainResult(dropped: dropped, undone: undone);
+      // 账本还没就绪（冷启动首帧）→ **临时性失败**：回写等下次，不能丢。
+      await _restoreQuietly(bridge, raw);
+      await _rememberLastRun(
+        AutoBookLastRun(
+          atMs: _nowMs,
+          dropped: dropped,
+          undone: undone,
+          restored: true,
+          error: '账本未就绪',
+        ),
+      );
+      return AutoBookDrainResult(dropped: dropped, undone: undone, restored: true);
     }
 
     final BillCategoryMaps categoryMaps = await buildCategoryMaps(
@@ -161,6 +207,14 @@ class AutoBookController {
     if (imported == 0) {
       // 全是重复（同一通知被监听两次 / 队列残留）：不发回执，收起旧提示
       await bridge.cancelReceipt();
+      await _rememberLastRun(
+        AutoBookLastRun(
+          atMs: _nowMs,
+          duplicates: duplicates,
+          dropped: dropped,
+          undone: undone,
+        ),
+      );
       return AutoBookDrainResult(
         duplicates: duplicates,
         dropped: dropped,
@@ -178,6 +232,15 @@ class AutoBookController {
     await store.remember(batch);
     _ref.read(autoBookNoticeProvider.notifier).show(batch);
     refreshAfterAutoBookWrite(_ref);
+    await _rememberLastRun(
+      AutoBookLastRun(
+        atMs: _nowMs,
+        imported: imported,
+        duplicates: duplicates,
+        dropped: dropped,
+        undone: undone,
+      ),
+    );
     unawaited(
       bridge.showReceipt(
         count: imported,
@@ -194,6 +257,33 @@ class AutoBookController {
       undone: undone,
       batch: batch,
     );
+  }
+
+  /// 回写失败只能接受：指纹去重保证不会因此重复入账，而抛出去会盖掉原始异常。
+  Future<void> _restoreQuietly(AutoBookBridge bridge, List<String> raw) async {
+    try {
+      await bridge.restoreQueue(raw);
+    } catch (_) {
+      // 忽略：诊断记录里已写明「已保留待下次重试」的意图
+    }
+  }
+
+  /// 记下「最近一次检查」（跨启动可见），失败不影响记账。
+  Future<void> _rememberLastRun(AutoBookLastRun run) async {
+    try {
+      await _ref
+          .read(appMetaRepositoryProvider)
+          .set(kAutoBookLastRunKey, jsonEncode(run.toJson()));
+    } catch (_) {
+      // 诊断写不进去不影响主流程
+    }
+  }
+
+  int get _nowMs => DateTime.now().millisecondsSinceEpoch;
+
+  String _shortError(Object e) {
+    final String s = e.toString().replaceAll('\n', ' ');
+    return s.length > 80 ? '${s.substring(0, 80)}…' : s;
   }
 
   /// 通知按钮落下的命令（`{"action":"undo","batchId":"..."}`）。

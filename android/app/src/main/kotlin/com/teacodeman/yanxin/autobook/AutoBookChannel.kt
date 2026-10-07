@@ -89,6 +89,22 @@ class AutoBookChannel(private val activity: Activity) : MethodChannel.MethodCall
 
             "drainQueue" -> result.success(AutoBookQueue.drain(activity))
 
+            // 兜底回写：Dart 侧临时性失败（账本未就绪 / 写库异常）时把原始行放回队列，
+            // 否则「取走即清空」会让这批通知永久消失
+            "restoreQueue" -> {
+                val lines = (call.argument<List<*>>("lines") ?: emptyList<Any?>())
+                    .map { it?.toString().orEmpty() }
+                    .filter { it.isNotEmpty() }
+                AutoBookQueue.restore(activity, lines)
+                result.success(null)
+            }
+
+            // 活性诊断：让「没记上」可归因（服务没绑定 / 没抓到 / 抓到被过滤 / 没 drain）
+            "diagnostics" -> {
+                AutoBookDiagnostics.load(activity)
+                result.success(AutoBookDiagnostics.snapshot(activity))
+            }
+
             "pendingCount" -> result.success(AutoBookQueue.pendingCount(activity))
 
             "takeCommand" -> result.success(AutoBookQueue.takeCommand(activity))

@@ -43,23 +43,55 @@ const List<String> kAutoBookSources = <String>[
 /// 忽略关键词（包含匹配）：命中即丢，**优先于**模板规则（SPEC §3.5）。
 ///
 /// 都是「看着像支付、其实不是消费」的文案：转账 / 红包 / 退款 / 各类营销与提醒。
+/// ⚠️ 这张表里的词只要出现就判非消费 —— 所以**只放「必然不是消费」的词**；
+/// 可能出现在真实支付回执里的营销词（如「优惠」「立减」）走
+/// [kAutoBookSoftIgnoreKeywords]，见那里的说明。
 const List<String> kAutoBookIgnoreKeywords = <String>[
   '转账',
   '红包',
   '退款',
   '已退款',
-  '优惠',
-  '立减',
-  '满减',
   '充值成功',
   '验证码',
   '月账单',
   '账单汇总',
-  '活动',
   '领取',
   '积分',
   '即将',
   '提醒',
+];
+
+/// 条件性忽略词：**只有整条文案看不出是支付时**才丢。
+///
+/// 起因（2026-10-07 走查）：真实支付回执常常长这样 ——
+/// 「付款成功，优惠 0.50 元」「支付成功，立减 2 元」。这些都含营销词，
+/// 但**是真实消费**。原实现把「优惠 / 立减 / 满减」放进硬忽略表 → 这类回执被静默丢弃，
+/// 用户完全无从得知（表现为「自动记账不生效」）。
+///
+/// 现在的判定：软忽略词命中 **且** [kAutoBookStrongPaymentKeywords] 一个都不中 → 丢弃。
+/// 宁可多记一笔（用户可整批撤销），也不要静默漏记。
+const List<String> kAutoBookSoftIgnoreKeywords = <String>[
+  '优惠',
+  '立减',
+  '满减',
+  '活动',
+];
+
+/// 强支付词：出现即认定「这是一条支付回执」，压过软忽略词。
+///
+/// ⚠️ **不要往里加 `支付` / `付款` 这种宽词** —— 微信支付通知的标题就是「微信支付」，
+/// 加了之后任何微信营销通知（「周末活动，立减 5 元」）都会因为标题里的「支付」被放行并误记。
+const List<String> kAutoBookStrongPaymentKeywords = <String>[
+  '支付成功',
+  '成功支付',
+  '付款成功',
+  '成功付款',
+  '已支付',
+  '已付款',
+  '扣款',
+  '消费',
+  '到账',
+  '实付',
 ];
 
 /// 保留关键词：用于确认这是**消费/收入**通知（方向判定也靠它）。
@@ -163,9 +195,20 @@ int _asInt(Object? v) {
 }
 
 /// 金额提取（多级降级，先命中先赢）——SPEC §3.4。
+///
+/// ⚠️ **顺序即优先级，不能随便调**：真实回执常同时出现多个金额，例如
+/// 「订单金额 13.00元，优惠 1.00元，实付 12.00元」。若直接抓第一个数字，
+/// 记进去的就是**优惠金额** —— 比不记账更糟（用户看到的是错数）。
+/// 所以先用「实付 / 支付 / 付款」类词锚定，再退化为符号 / 裸金额。
 final List<RegExp> _amountPatterns = <RegExp>[
-  RegExp(r'(\d+(?:\.\d{1,2})?)\s*元'),
+  // ① 实付类（明确指向实际支出）
+  RegExp(r'(?:实付|实际支付|支付金额|付款金额|扣款金额)\D{0,4}?(\d+(?:\.\d{1,2})?)\s*元'),
+  // ② 支付动作紧邻的金额
+  RegExp(r'(?:支付|付款|扣款|消费|已付)\D{0,6}?(\d+(?:\.\d{1,2})?)\s*元'),
+  // ③ 货币符号
   RegExp(r'[¥￥]\s*(\d+(?:\.\d{1,2})?)'),
+  // ④ 裸「N 元」/「N.NN」
+  RegExp(r'(\d+(?:\.\d{1,2})?)\s*元'),
   RegExp(r'(\d+\.\d{2})'),
 ];
 
@@ -235,6 +278,22 @@ ParsedRow? parseSharedText(RawShare share) {
 
 bool _isIgnored(String text) {
   for (final String k in kAutoBookIgnoreKeywords) {
+    if (text.contains(k)) return true;
+  }
+  // 软忽略：营销词单独出现才丢；有强支付词（真实回执）则放行
+  var hasSoft = false;
+  for (final String k in kAutoBookSoftIgnoreKeywords) {
+    if (text.contains(k)) {
+      hasSoft = true;
+      break;
+    }
+  }
+  if (hasSoft && !_hasStrongPayment(text)) return true;
+  return false;
+}
+
+bool _hasStrongPayment(String text) {
+  for (final String k in kAutoBookStrongPaymentKeywords) {
     if (text.contains(k)) return true;
   }
   return false;

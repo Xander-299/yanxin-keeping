@@ -13,6 +13,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'auto_book_diagnostics.dart';
+
 /// 通道名（与 Kotlin 侧 `AutoBookChannel.NAME` 必须一致）。
 const String kAutoBookChannelName = 'yanxin/autobook';
 
@@ -62,6 +64,23 @@ class AutoBookBridge {
           .toList();
     }
     return const <String>[];
+  }
+
+  /// 临时性失败时把原始行**放回原生队列**（等下次重试）。
+  ///
+  /// 不这么做的话「取走即清空」会让这批通知永久消失 —— 冷启动首帧账本未就绪、
+  /// 写库抛异常等场景都会命中。
+  Future<void> restoreQueue(List<String> lines) async {
+    if (lines.isEmpty) return;
+    await _invoke<Object?>('restoreQueue', <String, Object?>{'lines': lines});
+  }
+
+  /// 原生侧活性快照（服务是否被绑定 / 抓到过几条 / 上次 drain 情况）。
+  /// 非 Android 或通道异常 → null（页面按「不可用」展示）。
+  Future<AutoBookDiagnostics?> diagnostics() async {
+    final Object? res = await _invoke<Object?>('diagnostics');
+    if (res is String) return AutoBookDiagnostics.tryParse(res);
+    return null;
   }
 
   /// 未处理条数（「识别到 N 笔」）。

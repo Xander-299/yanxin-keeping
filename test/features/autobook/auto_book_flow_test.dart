@@ -16,6 +16,7 @@ import 'package:yanxin/features/autobook/application/auto_book_controller.dart';
 import 'package:yanxin/features/autobook/application/auto_book_notice.dart';
 import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
 import 'package:yanxin/features/autobook/data/auto_book_bridge.dart';
+import 'package:yanxin/features/autobook/data/auto_book_diagnostics.dart';
 
 import '../../helpers/test_database.dart';
 
@@ -36,6 +37,9 @@ class FakeAutoBookBridge extends AutoBookBridge {
   bool listener = true;
   bool notifications = true;
 
+  /// 被回写的原始行（每次调用记一条）—— 用于断言「临时失败不丢账」。
+  final List<List<String>> restored = <List<String>>[];
+
   /// 发过的回执（count / amountText / batchId / lines）。
   final List<Map<String, Object?>> receipts = <Map<String, Object?>>[];
   int cancelCount = 0;
@@ -49,6 +53,12 @@ class FakeAutoBookBridge extends AutoBookBridge {
     final List<String> out = queue;
     queue = <String>[];
     return out;
+  }
+
+  @override
+  Future<void> restoreQueue(List<String> lines) async {
+    restored.add(List<String>.of(lines));
+    queue = <String>[...lines, ...queue];
   }
 
   @override
@@ -119,7 +129,12 @@ void main() {
     bookId = (await container.read(activeBookIdProvider.future))!;
   });
 
-  tearDown(() => db.close());
+  tearDown(() async {
+    // 「写库失败」用例会先 close 一次 → 这里再 close 需容错
+    try {
+      await db.close();
+    } catch (_) {}
+  });
 
   Future<List<TxRow>> visibleTxs() =>
       TransactionRepository(db).listByBook(bookId);
@@ -299,5 +314,56 @@ void main() {
     expect(r.touched, isFalse);
     expect(bridge.cancelCount, 0);
     expect(bridge.receipts, isEmpty);
+  });
+
+  test('写库失败 → 原始行回写队列，不丢账（等下次重试）', () async {
+    bridge.queue = <String>[_notify('你已成功支付 12.00元', at: _t)];
+    // 制造写库失败（账本/流水查询都会抛）
+    await db.close();
+
+    final AutoBookDrainResult r = await controller().drain();
+
+    expect(r.imported, 0);
+    expect(bridge.restored, hasLength(1)); // 回写过一次
+    expect(bridge.restored.single, hasLength(1)); // 内容就是原始行
+    expect(bridge.queue, hasLength(1)); // 队列里还有，没被清掉
+    expect(bridge.receipts, isEmpty); // 没入账就不发回执
+  });
+
+  test('全部解析不出（非消费通知）→ 丢弃而不回写（否则会无限重试）', () async {
+    bridge.queue = <String>[
+      _notify('微信转账给张三 50.00元'),
+      _notify('你收到一个红包 6.66元'),
+    ];
+
+    final AutoBookDrainResult r = await controller().drain();
+
+    expect(r.imported, 0);
+    expect(r.dropped, 2);
+    expect(bridge.restored, isEmpty); // 永久性失败 → 不回写
+    expect(bridge.queue, isEmpty);
+  });
+
+  test('最近一次检查结果落 KV（跨启动可查）', () async {
+    bridge.queue = <String>[_notify('你已成功支付 12.00元', at: _t)];
+    await controller().drain();
+
+    final String? raw = await container
+        .read(appMetaRepositoryProvider)
+        .get(kAutoBookLastRunKey);
+    final AutoBookLastRun? run = AutoBookLastRun.parse(raw);
+
+    expect(run, isNotNull);
+    expect(run!.imported, 1);
+    expect(run.summary, contains('新入账 1 笔'));
+  });
+
+  test('软忽略：真实回执含「优惠」仍入账（走查修复的回归守卫）', () async {
+    bridge.queue = <String>[_notify('你已付款成功，优惠 0.50元，实付 12.00元', at: _t)];
+
+    final AutoBookDrainResult r = await controller().drain();
+
+    expect(r.imported, 1);
+    expect((await visibleTxs()).single.amountCents, 1200);
   });
 }
