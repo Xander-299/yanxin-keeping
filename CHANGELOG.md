@@ -25,20 +25,19 @@
 | `v0.7.12` | F7.9 记一笔双保存入口收敛（删顶部 + 底部吸底常驻）+ 启动图标 adaptive icon + `signingConfigs` 构建阻塞修复 | 本段所在提交 |
 | `v0.7.13` | 统计页图表绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱） | 本段所在提交 |
 | `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
+| `v0.7.15` | F7.15 自动记账（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写） | 本段所在提交 |
 
-## [Unreleased] — 自动记账（F7.15 · 通知使用权为主 + 零权限兜底）· 🟡 真机走查已通过、待终端全量
+## [v0.7.15] — 2026-10-08 · 自动记账（通知使用权为主 + 零权限兜底；含真机走查收口）
 
-> **状态**：代码已落地（`lib/features/autobook/` + `android/.../autobook/`），**待用户终端全量门禁 + 真机走查**，
-> 尚未打 tag；通过后本节原样转正为 `## [v0.7.15]`。
-> **本机已跑部分**：analyze 等效 → **全项目 `No issues found!`** ✅；
-> 纯 `test()` **204 例全绿**（本批新增 **47** = `auto_book_rules_test` 38 + `auto_book_flow_test` 9；
-> 回归 core 39 / data 25 / import 74 / assets 19）。
-> ⚠️ 本机**跑不了** `testWidgets`（14 个文件），且 `test/data/repositories/transaction_repository_test.dart`
-> 在本机 fallback runner 里**编译阶段挂住**（环境问题，不是用例失败）→ 全量 `flutter test` 必须由用户在终端跑。
-> 📌 **最新数字以走查段为准（2026-10-08）**：本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批实测，见 I 段）；
-> 上面那条「`transaction_repository_test` 编译挂住」**本次未复现**（跑完 `+12`，只是并发下耗时到 610s）。
+> **门禁**：`flutter test` **479 passed / 0 skipped**（2026-10-08 用户终端全量；
+> = `test()` **391** + `testWidgets` **88**，本批 **+79** —— **全部落在 `test()`**，`testWidgets` 无新增）；
+> `flutter analyze` 等效 —— **全项目 `No issues found!`** ✅（残留 5 条为 `D:\` / `d:\` 同一文件
+> 双身份造成的**既有环境假阳性**，与本批无关，见 v0.7.14 段末 §门禁备注）。
+> 真机走查（**Redmi K50**，AI 经 adb 取证：`dumpsys notification --noredact` 抓真实文案 + `run-as` 读队列/DB）
+> **断点 ①–⑤ 逐层通过**，含**用户实付支付宝 ¥0.01 端到端入账** ✅（详见 **I 段**）。
+> **回滚**：`git checkout v0.7.14` 或 `git revert <commit>`。
 > **不动 schema**（DB 仍 **v3**：批次记录复用既有 `schema_meta` KV）· **零新 pub 依赖**（Kotlin 原生 + 平台侧 `org.json`）。
-> SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（2026-09-30 用户签字 → **设计乙**）。
+> SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（2026-09-30 用户签字 → **设计乙**；§8 含真机走查实施记录）。
 
 ### A · 需求与裁定
 
@@ -243,7 +242,10 @@ analyze 等效 **全项目 `No issues found!`**。
 `个人收款码到账¥0.01`；支付宝 `交易提醒 / 你有一笔0.01元的支出，领2元小荷包支付红包。`、
 `你已成功收款0.01元（老顾客消费）`；组摘要 `[2条]微信支付: …`；以及聊天 / 新消息 / 转账 / 退款 / 还款提醒等非消费）。
 analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批）；
-**14 个 `testWidgets` 文件本机跑不了**，仍需用户终端 `flutter test` 覆盖。
+**14 个 `testWidgets` 文件本机跑不了** → ✅ **2026-10-08 用户终端全量 `flutter test`
+`479 passed / 0 skipped`**，本版本门禁就此闭合。
+（另：本机 fallback runner 曾把 `test/data/repositories/transaction_repository_test.dart` 卡在编译阶段，
+**本轮未复现** —— 跑完 `+12`，只是并发下耗时到 610s，属环境抖动而非用例问题。）
 
 **工具**：新增 `tool/parse_notif_dump.py`（从 `dumpsys notification` 抽真实文案）、
 `tool/watch_notifications.py`（轮询抓取并落 JSONL，供回填规则表）；`tool/dart_test_fallback.py`

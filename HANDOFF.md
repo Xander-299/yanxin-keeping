@@ -1,17 +1,16 @@
-# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13`）· **F7.14 新手引导** ✅（`v0.7.14`）· **F7.15 自动记账** 🟡 已实现、**真机走查已通过**（2026-10-07 活性诊断补丁 + **2026-10-08 真机走查修复**：支付宝「交易提醒」误杀 / 组摘要去重 / 金额优先级 / 诊断层瞒报；**待用户终端全量 `flutter test` → 转正 `v0.7.15`**））
+# HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13`）· **F7.14 新手引导** ✅（`v0.7.14`）· **F7.15 自动记账** ✅（**`v0.7.15`** · 通知使用权为主 + 零权限兜底 · 2026-10-07 活性诊断补丁 + **2026-10-08 真机走查修复**：支付宝「交易提醒」误杀 / 组摘要去重 / 金额优先级 / 诊断层瞒报））
 
 > **新会话接手时，只读这一个文件就能继续干活。**
 > 最后更新：2026-10-08 01:20 · 更新人：AI 助手（**本机 = A 机**）
 >
-> **🟡 交接时刻状态（2026-10-08 凌晨）**：`origin/master` = **`e197731`**；最新 tag `v0.7.14` → `c5ea1b5`。
-> 本地领先远端 **7 个提交**：`3ec2381`（F7.15 实现）→ `d51ffe8`（文档同步）→ `a545687`（budget flake 修复）
+> **🟢 交接时刻状态（2026-10-08 凌晨 · F7.15 已收尾）**：`origin/master` = **本提交**（= **`v0.7.15`** tag 指向）；
+> 上一 tag `v0.7.14` → `c5ea1b5`。F7.15 线 7 个提交：`3ec2381`（实现）→ `d51ffe8`（文档同步）→ `a545687`（budget flake 修复）
 > → `76a5e31`（todo）→ `bdcbf76`（走查补丁）→ **`e4e53b4`（2026-10-08 真机走查修复 = 代码基线）**
-> → **文档同步（本提交，别记哈希）**，**均未推远端、未打 tag**。
+> → **本提交（CHANGELOG 转正 `v0.7.15` + HANDOFF/SPEC/todo 收尾）**，**均已推远端、已打 tag**。
 >
-> **⏭️ 下一步（只剩一件）**：**用户终端跑全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件；
-> 顺带复核 `budget_card_test` 2 条）。通过后按「发布收尾四步」把 CHANGELOG 的 `## [Unreleased]`
-> 转正成 `## [v0.7.15]`（含 I 段）+ 我的页 `_BrandTip` 角标 → `git tag -a v0.7.15` → **直推** → `ls-remote` 核对。
-> **真机侧已闭环**（断点①–④ + 真实支付端到端），**当前无其它遗留项。**
+> **⏭️ 下一步**：**F7.15 已全部闭合、无遗留项** —— 三项门禁（analyze 等效 `No issues found!` /
+> 用户终端 `flutter test` **479 passed / 0 skipped** / 真机走查断点 ①–⑤ 含真实支付端到端）**全部通过**。
+> 下一阶段（F7.16 起）**尚无需求，等用户提**。
 >
 > **🔵 本轮（2026-10-08 · F7.15 真机走查修复 · 代码基线 `e4e53b4`）**：
 > - **用户主诉**：支付宝 / 微信**能抓到通知但入不了账**（怀疑关键词识别）→ 要求排查 + 真机查验（Redmi K50）。
@@ -35,14 +34,14 @@
 >   而 `settings` 与 `dumpsys` 都显示「已授权」—— 正是既有教训「**用户开关是开的 ≠ 功能在工作**」。
 >   **好消息**：重新绑定（设置里「通知使用权」关→开）会让系统把**仍在通知栏的活跃通知重投**
 >   （实测延迟 1 分 37 秒）→ 页面那条提示**真能救回数据**，不必重付。**代价**：force-stop / 覆盖安装后**必须重绑一次**。
-> - **本机门禁**：analyze 等效 **全项目 `No issues found!`** ✅；纯 `test()` **386 例全绿 / 0 失败**（分 4 批）；
->   `rules` 47 + `flow` 15 + **新增 `real_samples` 16**（文案逐字抄自真机）。
->   ⚠️ **仍缺**：用户终端全量 `flutter test`（14 个 `testWidgets` 文件本机跑不了）。
+> - **门禁已闭合**：analyze 等效 **全项目 `No issues found!`** ✅；本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批）
+>   → ✅ **2026-10-08 用户终端全量 `flutter test` `479 passed / 0 skipped`**（= `test()` 391 + `testWidgets` 88；
+>   本批 +79 全落在 `test()`）。autobook 三文件 `rules` 47 + `flow` 15 + **新增 `real_samples` 16**（文案逐字抄自真机）。
 > - **工具**：新增 `tool/parse_notif_dump.py` / `tool/watch_notifications.py`；
 >   `dart_test_fallback.py` 加 `FX_TEST_WORK_SUFFIX`（原固定产物路径，多实例并行会互相覆盖）。
 
 >
-> **🔵 本轮（F7.15 自动记账 · **已实现、待门禁 + 真机走查** · 尚未打 tag）**：
+> **🔵 F7.15 自动记账（**✅ 已交付 · tag `v0.7.15`**）**：
 > - **需求**（用户）：「做一个自动记账功能，可能涉及权限问题，给几个方案选择」→ 选完授权后追加
 >   「能不能在通知栏里确认入账（右侧两个按钮）」→ 技术核对后**裁定设计乙**：保留静默入账，
 >   通知是「**已记账**」回执 + `撤销` / `查看` 两个按钮（设计甲的「通知栏 `导入`/`取消` 待确认收件箱」否）。
@@ -60,9 +59,8 @@
 >   + `/autobook` 路由 + 「我的」条目 + 首页 `MonthHero` 上方提示条；
 >   `ImportReport` **追加** `importedIds` / `importedAmountCents`（有默认值，既有调用方零改动）。
 >   `source` 取值域 `notification` → `notify_wechat` / `notify_alipay` / `share`（TEXT 无 CHECK → **零迁移，DB 仍 v3**）。
-> - **本机门禁**：analyze 等效 **全项目 `No issues found!`** ✅；纯 `test()` **204 例全绿**
->   （本批新增 47）。⚠️ `testWidgets`（14 文件）+ `test/data/repositories/transaction_repository_test.dart`
->   本机跑不了（后者在 fallback runner 里**编译阶段挂住**，环境问题）→ **必须用户在终端跑全量**。
+> - **门禁**：analyze 等效 **全项目 `No issues found!`** ✅；终端 `flutter test` **479 passed / 0 skipped**
+>   （2026-10-08 用户全量）；本机纯 `test()` **386 例全绿 / 0 失败**（14 个 `testWidgets` 文件本机跑不了）。
 > - **走查要点（AI 经 adb）**：MuMu 上**没有真实微信/支付宝支付** → 用
 >   `adb shell cmd notification post` 造合成通知（包名被伪造不了 → 见 SPEC §6 说明，只能验链路），
 >   验「解析 → 去重 → 入账 → 撤销 → 回执通知」；**真实通知文案必须用户在自己手机上抓取后回填规则表**。
@@ -220,9 +218,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 工程 | applicationId `com.teacodeman.yanxin`；version `0.1.0+1`；**DB schemaVersion = 3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`） |
 | 模拟器 | MuMu 12 @ `D:\Downloads\MuMu\MuMuPlayer`，adb `127.0.0.1:16384` / `7555`，设备名 `emulator-5554` |
 | 联网 | 代理 `http://127.0.0.1:7890`；`PUB_HOSTED_URL` / `FLUTTER_STORAGE_BASE_URL` 走 `*.flutter-io.cn` |
-| **门禁（最新闭合口径 = 2026-09-25 · F7.14 全闭合；🟡 F7.15 真机已闭合、仅缺终端全量）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s；本批新增文件 0 issue，全项目残留 5 条为 `D://`/`d://` 双身份的既有环境假阳性）；`flutter test` **400 passed / 0 skipped**（✅ **2026-09-25 用户终端全量通过** = `test()` 312 + `testWidgets` 88）；真机走查 ✅ **D1–D10 全部通过**（F7.14，MuMu 12，AI 经 adb 全包，0 崩溃）。<br>🟡 **F7.15（自动记账）**：analyze 等效全项目 `No issues found!` ✅ + 本机纯 `test()` **386 例全绿 / 0 失败** ✅ + APK 构建/核验通过 ✅ + **真机走查已闭环（断点①–④ + 用户实付支付宝 ¥0.01 端到端入账，2026-10-08）** ✅；**仅缺用户终端全量 `flutter test`**（含复跑 `budget_card_test`）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 实测全绿，`testWidgets` 跑不了**；多实例并行加 `FX_TEST_WORK_SUFFIX`）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**）+ 图标 / pubspec 链 `inspect_icons.py` / `check_pubspec.py`（生成用 `gen_launcher_icons.py`），前两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
-| git | **最后打 tag 的代码基线** = **`c5ea1b5`**（= `v0.7.14` tag 指向）；**最新 tag = `v0.7.14`**（tag 对象 `b3c08c2`；F 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。<br>**🟡 未推远端的 F7.15 线**：`3ec2381`（实现）→ `d51ffe8`（文档）→ `a545687`（budget flake 修复）→ `76a5e31`（todo）→ `bdcbf76`（走查补丁）→ **`e4e53b4`（2026-10-08 真机走查修复 = 代码基线）** → 文档同步（本提交，**别记哈希**）；**`origin/master` = `e197731`**（落后 **7** 个提交）。<br>⚠️ 用户改的桌面名 `android:label="颜芯记账"` **已随 `3ec2381` 提交入库**（工作区现干净）—— 别再当「未提交改动」处理。 |
-| 源码规模 | `lib/` **98** 个 `.dart`（F7.15 +9 = `lib/features/autobook/`），`test/` **51** 个 `.dart`（49 个 `*_test.dart` + 2 个 helper；其中 **14** 个文件含 `testWidgets`），`tool/` **14** 个脚本 = **11 个 Python + 3 个 `.dart`**（Python：4 个门禁等效 —— `dart_analyze_fallback` / `dart_test_fallback` / `build_kernel_fallback` / `data_layer_probe`；`verify_apk_kernel.py` 装机核验；F7.15 走查取证 —— `parse_notif_dump` / `watch_notifications`；4 个图标与 pubspec 工具 —— `png_util` / `gen_launcher_icons` / `inspect_icons` / `check_pubspec`）；用例 **400 passed**（**F7.14 口径，用户终端实跑**）= `test()` **312** + `testWidgets` **88**；🟡 F7.15 把本机可跑的纯 `test()` 推到 **386 例全绿**（其中 autobook 三文件 rules 47 + flow 15 + real_samples 16 = 78）**，仅本机验证过**；`lib/core/db/database.g.dart` 已入库。<br>另新增 Kotlin 源（本项目首个平台通道）：`android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/` **5 个 `.kt`** + `MainActivity.kt`。 |
+| **门禁（最新闭合口径 = 2026-10-08 · F7.15 全闭合）** | `flutter analyze` **No issues found**（等效手段 `python tool/dart_analyze_fallback.py`，全项目 19s；全项目残留 5 条为 `D://`/`d://` 双身份的既有环境假阳性）；`flutter test` **479 passed / 0 skipped**（✅ **2026-10-08 用户终端全量** = `test()` **391** + `testWidgets` **88**；上一版 400 的口径见 F7.14 段）；真机走查 ✅ **D1–D10 全部通过**（F7.14，MuMu 12，AI 经 adb 全包，0 崩溃）+ **F7.15 断点 ①–⑤ 全过**（Redmi K50，2026-10-08）。<br>✅ **F7.15（自动记账）已全闭合**（tag **`v0.7.15`**）：analyze 等效全项目 `No issues found!` ✅ + 终端 `flutter test` **479 passed** ✅ + APK 构建/核验通过 ✅ + **真机走查断点 ①–⑤ 全过（含用户实付支付宝 ¥0.01 端到端入账）** ✅ + 本机纯 `test()` **386 例全绿**（14 个 `testWidgets` 文件本机跑不了，已由用户终端覆盖）。<br>⚠️ **2026-09-23 起本机 Dart 起不了「需要管道 stdio」的子进程** → 这两个命令**在本机直连跑不了**（见「未解决问题」第 1 条）；本机等效工具（均已入库）：`python tool/dart_analyze_fallback.py`（≡ analyze，含全部 lint）+ `python tool/dart_test_fallback.py`（≡ test，**纯 `test()` 实测全绿，`testWidgets` 跑不了**；多实例并行加 `FX_TEST_WORK_SUFFIX`）+ `python tool/data_layer_probe.py`（数据层实跑）+ `python tool/build_kernel_fallback.py`（≡ `flutter assemble` 的 kernel 步骤）+ `python tool/verify_apk_kernel.py`（**装机前核验 APK 内 kernel sha256 + grep 新文案**）+ 图标 / pubspec 链 `inspect_icons.py` / `check_pubspec.py`（生成用 `gen_launcher_icons.py`），前两者配合 `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK。 |
+| git | **最后打 tag 的代码基线** = **`e4e53b4`**（= F7.15 **代码基线**）；**最新 tag = `v0.7.15`**（指向收尾提交 = `origin/master` HEAD；F 阶段一版一 tag，表在 `CHANGELOG.md` 顶部）。<br>✅ **F7.15 线 7 个提交已推远端**：`3ec2381`（实现）→ `d51ffe8`（文档）→ `a545687`（budget flake 修复）→ `76a5e31`（todo）→ `bdcbf76`（走查补丁）→ **`e4e53b4`（2026-10-08 真机走查修复 = 代码基线）** → **收尾提交**（CHANGELOG 转正 `v0.7.15` + HANDOFF/SPEC/todo）。<br>⚠️ 用户改的桌面名 `android:label="颜芯记账"` **已随 `3ec2381` 提交入库**（工作区干净）—— 别再当「未提交改动」处理。 |
+| 源码规模 | `lib/` **98** 个 `.dart`（F7.15 +9 = `lib/features/autobook/`），`test/` **51** 个 `.dart`（49 个 `*_test.dart` + 2 个 helper；其中 **14** 个文件含 `testWidgets`），`tool/` **14** 个脚本 = **11 个 Python + 3 个 `.dart`**（Python：4 个门禁等效 —— `dart_analyze_fallback` / `dart_test_fallback` / `build_kernel_fallback` / `data_layer_probe`；`verify_apk_kernel.py` 装机核验；F7.15 走查取证 —— `parse_notif_dump` / `watch_notifications`；4 个图标与 pubspec 工具 —— `png_util` / `gen_launcher_icons` / `inspect_icons` / `check_pubspec`）；用例 **479 passed / 0 skipped**（**2026-10-08 用户终端实跑**）= `test()` **391** + `testWidgets` **88**（F7.14 口径 400，本批 **+79** 全落在 `test()`）；autobook 三文件 `rules` 47 + `flow` 15 + `real_samples` 16 = **78**；`lib/core/db/database.g.dart` 已入库。<br>另新增 Kotlin 源（本项目首个平台通道）：`android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/` **5 个 `.kt`** + `MainActivity.kt`。 |
 
 **依赖版本锁死（不能随意升级）**：
 `drift 2.31.0` / `drift_flutter 0.2.8` / `sqlite3 2.9.4` / `drift_dev 2.31.0` / `build_runner 2.15.1` /
@@ -341,15 +339,15 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   **零新依赖、不动 schema**（标记写既有 `schema_meta` 键 `onboarding_done`，DB 仍 **v3**）；
   示意图全矢量手绘（`MiniScreen` / `HighlightBox` / `Callout`，零图片资源、零裸色值）。
   门禁 **400** 全绿（+17）+ 走查 D1–D10 全过 0 崩溃（`docs/acceptance-F7.14-onboarding.md`）。
-- **🟡 F7.15 自动记账 · 真机走查已通过**（2026-10-08，代码基线 `e4e53b4`；**未推远端**）：
+- **✅ F7.15 自动记账 · 已交付**（2026-10-08，代码基线 `e4e53b4`，tag **`v0.7.15`**；**已推远端**）：
   通知使用权（`NotificationListenerService`）为主 + `ACTION_SEND` 分享兜底。**架构 = Kotlin 只过滤 + 落盘 JSONL
   队列 + 发通知，Dart 才解析入库**（drift 单写者）；Dart 在 `AppShell` 首帧后 + 每次 `resumed` drain。
   **零迁移（DB 仍 v3；批次记录落 `schema_meta` KV）+ 零新依赖**。签字 SPEC `docs/SPEC-F7.15-auto-bookkeeping.md`。
   2026-10-07 走查补丁新增**活性诊断**（`AutoBookDiagnostics.kt` + `/autobook` 页「诊断」区块）并修 3 缺陷（丢账回写 /
   忽略规则误杀 / 多金额取错）；**2026-10-08 真机走查修复**（Redmi K50）：硬忽略收窄（支付宝付款标题
   「交易提醒」被 `提醒` 误杀）+ 软忽略扩容 + 组摘要去重 + 金额优先级 + 诊断层「瞒报」族 + `last_run` 空 drain 覆盖。
-  门禁：analyze 等效 `No issues found!` + 本机纯 `test()` **386 例全绿** + APK 构建核验通过；
-  **真机断点①–④ + 用户实付支付宝 ¥0.01 端到端入账均已验** ✅；**仅缺用户终端全量 `flutter test`**。
+  门禁：analyze 等效 `No issues found!` + 终端 `flutter test` **479 passed / 0 skipped** + APK 构建核验通过；
+  **真机断点 ①–⑤ 全过，含用户实付支付宝 ¥0.01 端到端入账** ✅。
 - **真机走查抓到的老 bug 并修复** ✅（`04c2bfd`）：`searchProvider` 快照过期（未接 `dataEpochProvider`，
   **F7.4 起就存在**）→ 加 `ref.watch(dataEpochProvider)`；回归测试 `test/features/search/search_freshness_test.dart`
   （**实测注释掉那行 watch 必失败**）。走查记录：`docs/acceptance-F7.7-DE.md`。
@@ -394,7 +392,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 
 # 当前状态
 
-- **🟡 F7.15 自动记账 已实现、待门禁 + 真机走查（未打 tag、未推远端；本地 5 个提交领先 `origin/master`）**：
+- **✅ F7.15 自动记账 已交付（tag `v0.7.15`，已推远端；代码基线 `e4e53b4`）**：
   - **需求**：用户要「自动记账」→ 选方案（**A 通知使用权为主 + D3 零权限兜底 + 强化已有导入**）→
     SPEC 签字时**设计乙**（静默入账 + 通知栏「已自动记账 N 笔」回执 + `撤销`/`查看` 两按钮）。
     SPEC = `docs/SPEC-F7.15-auto-bookkeeping.md`（已签字；§3.7 三处 Android 硬约束、§3.5 忽略规则、§8 实施记录）。
@@ -419,9 +417,9 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
     新增 `AutoBookQueue.restore()`：**临时性失败回写重试，解析不出的永久性失败仍丢弃**（否则无限重试）；
     ② 忽略规则误杀真实回执（P0）→ 拆 硬忽略 / 软忽略 / 强支付词 三张表，「软忽略命中且无强支付词」才丢；
     ③ 多金额取错（P1）→ 金额优先级 **实付类 > 支付动作紧邻 > 货币符号 > 裸金额**。
-  - **本机门禁（AI 侧）**：analyze 等效 **全项目 `No issues found!`** ✅；纯 `test()` **386 例全绿 / 0 失败**
-    （分 4 批并行跑完 49 个文件）；本批 autobook 三文件：`rules` **47** + `flow` **15** + `real_samples` **16**；
-    **APK `BUILD SUCCESSFUL`** + `verify_apk_kernel` 新鲜度与文案核验通过 ✅。
+  - **门禁（全闭合）**：analyze 等效 **全项目 `No issues found!`** ✅；**用户终端 `flutter test` 479 passed / 0 skipped** ✅
+    （2026-10-08；= `test()` 391 + `testWidgets` 88）；本机可跑部分：纯 `test()` **386 例全绿 / 0 失败**（分 4 批 49 文件），
+    本批 autobook 三文件 `rules` **47** + `flow` **15** + `real_samples` **16**；**APK `BUILD SUCCESSFUL`** + `verify_apk_kernel` 通过 ✅。
   - **模拟器走查（MuMu · 用 `ACTION_SEND` 分享路径 —— 不受包名白名单限制）**：落盘 → drain →
     解析（「你已付款成功，优惠 0.50元，实付 12.00元」正确取**实付 ¥12.00**，旧版会丢弃）→ 入账 →
     自动建「分享记账」账户 → 首页提示条「已自动记账 1 笔 · 合计 ¥12.00」→ 撤销（软删 + 摘批次）→
@@ -440,11 +438,10 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
       （重投场景实测差 **1 分 37 秒**）—— 别拿两者互相校验。
     - 取证手法见 `.workbuddy/memory/2026-10-08.md`（`dumpsys notification --noredact` 抓文案、
       `run-as` 读 App 私有队列、`cmd notification post` **伪造不了包名**所以只能靠真实通知验第①层）。
-  - ⚠️ **仍未验证（新 Agent 别当已验）**：**只有一件** —— 用户终端全量 `flutter test`
-    （本机跑不了 14 个 `testWidgets` 文件；顺带复核 `budget_card_test` 2 条）。
-    **真机监听路径 + 真实通知文案本轮已验完**（见上）。
-  - **收尾线（待执行）**：`## [Unreleased]` 转正 `## [v0.7.15]`（含 I 段）→ 我的页 `_BrandTip` 角标 `v0.7.14` → `v0.7.15`
-    → `git tag -a v0.7.15` → `git push && git push --tags`（**直推、不加管道**）→ `git ls-remote --tags` 核对
+  - ✅ **无遗留项**：真机监听路径 + 真实通知文案 + **用户终端全量 `flutter test`（479 passed / 0 skipped）** 三项均已验完。
+    （「我的」页 `_BrandTip` 角标早在 `3ec2381` 实现提交里就已置 `v0.7.15` → 原收尾清单里「角标 → `v0.7.15`」这条已自然消解，无需再改。）
+  - **收尾已执行**：`## [Unreleased]` → `## [v0.7.15]`（含 I 段）+ tag 表补行 → `git tag -a v0.7.15` →
+    `git push && git push --tags`（**直推、不加管道**）→ `git ls-remote --tags` 核对
     → HANDOFF / SPEC §8 / `tasks/todo-flutter.md` / 当日 memory。
 - **F7.14 新手引导 已交付 ✅（`v0.7.14` 已打 tag 并推远端）**：7 页全屏导览（底栏中央方块 / 首页三图标 /
   翻月 + 预算铅笔 / 三个隐藏手势 / 资产页与报表页）+ 「我的」重看入口 + **老用户不弹**。
@@ -530,29 +527,30 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
   `adb shell run-as com.teacodeman.yanxin ls files/` 确认有 `autobook_queue.jsonl` / `autobook_diag.json` 才算装到了新包。
   ✅ 2026-09-23 走查留下的临时账本 **`QA-Temp` 已软删**（`run-as` + 设备自带 `sqlite3` 改 `books.deleted_at`；
   改前已备份到 `app_flutter/yanxin.sqlite.bak-20260923`）。抽屉现在只剩「默认账本」，走查造的流水（88.88 那笔）与预算数据完好。
-- **本机 ≠ 远端（F7.15 未推）** —— **2026-10-07 复核** `git ls-remote origin refs/heads/master` = **`e197731`**：
-  **最后打 tag 的代码基线 = `c5ea1b5`**（= `v0.7.14` tag 指向；含 F7.7 A/B/C/D/E 五批 + F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive
-  + 统计页图表绘制修复 + F7.14 新手引导 + 构建阻塞修复 + 全部门禁 / 构建 / 核验 / 生成等效工具）；
-  **本地 HEAD = `bdcbf76`，领先远端 5 个提交（F7.15 全批）**，**未推远端、未打 tag**；
+- **本机 = 远端（F7.15 已收尾推送）** —— **2026-10-08 复核** `git ls-remote origin refs/heads/master` = **收尾提交**
+  （= **`v0.7.15`** tag 指向）；**最新 tag = `v0.7.15`**，代码基线 = **`e4e53b4`**。
+  （上一版 `v0.7.14` tag 指向 `c5ea1b5`，含 F7.7 A/B/C/D/E 五批 + F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive
+  + 统计页图表绘制修复 + F7.14 新手引导 + 构建阻塞修复 + 全部门禁 / 构建 / 核验 / 生成等效工具。）
+  F7.15 线 7 个提交（`3ec2381` → `d51ffe8` → `a545687` → `76a5e31` → `bdcbf76` → `e4e53b4` → 收尾提交）
+  **均已推远端**；工作区干净；
   `.qa-probe/` 等临时产物已归档到 `.workbuddy/trash/20260923-*`（**该目录需用户手工删，>50 文件会被 safe-delete 拦**）；
   工作区已有九个**已入库**的工具：`tool/dart_analyze_fallback.py`（等效 analyze）+
   `tool/dart_test_fallback.py`（等效 test）+ `tool/data_layer_probe.py`（数据层实跑）+
   **`tool/build_kernel_fallback.py`（等效 `flutter assemble` 的 kernel 步骤，配合
   `./gradlew assembleDebug -x compileFlutterBuildDebug` 出 APK）** + `tool/verify_apk_kernel.py`（装机前核验）
   + 图标链 `tool/png_util.py` / `gen_launcher_icons.py` / `inspect_icons.py` + `tool/check_pubspec.py`。
-  tag `v0.7.1`…`v0.7.14` 已推远端（**`v0.7.14` = 当前最新**，`refs/tags/v0.7.14^{}` = `c5ea1b5`）；**`v0.7.15` 待打**。
+  tag `v0.7.1`…`v0.7.15` 已推远端（**`v0.7.15` = 当前最新**，指向收尾提交；`refs/tags/v0.7.14^{}` = `c5ea1b5`）。
 
 # 未解决问题
 
 > 说明：**F7.7 五批（A→E）+ F7.8 左滑删除 + F7.9 吸底保存 + 启动图标 adaptive + 统计页图表绘制修复
-> 全部实现并交付**（`v0.7.7`–`v0.7.14` 已打 tag），**无待签字批次、无遗留项**；
+> + F7.14 新手引导 + F7.15 自动记账 全部实现并交付**（`v0.7.7`–`v0.7.15` 已打 tag），**无待签字批次、无遗留项**；
 > 第 **1** 条是**环境级阻塞**（本机 Dart 起不了子进程），**只影响本机** —— 已由 9 个等效 / 核验 / 生成工具绕开
 > （analyze / test / 数据层 / **APK 构建** / **装机前 kernel 核验** / 图标链 / pubspec 体检，见第 1 条末尾的「构建路径」）；
 > 第 **2** 条**已闭合**（F7.13 统计页图表绘制修复收尾完毕；其下含 F7.9 / F7.8 留档）；
 > 第 **6** 条**已闭合**（F7.14 新手引导，`v0.7.14` 已交付并推远端，2026-09-25）；
+> 第 **7** 条**已闭合**（F7.15 自动记账，`v0.7.15` 已交付并推远端，2026-10-08 —— 真机断点 ①–⑤ + 用户终端 `flutter test` 479 全过）。
 > F2 / F5 已裁定保持现状（2026-09-23）。
-> **🟡 F7.15 自动记账尚未「闭合」** —— 已实现 + 模拟器走查通过，但**等用户真机验监听路径 + 终端全量 `flutter test`**；
-> 详见「当前状态」首条与下方第 7 条。
 
 1. 【**最高优先 · 环境阻塞**】本机 **Dart VM 起不了任何子进程**（2026-09-23 发现）。
    - **现象**：`ProcessException: 所有的管道范例都在使用中 (CreateFile failed 231)`（`runtime/bin/process_win.cc:744`）。
@@ -709,18 +707,21 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
      → 报告 `docs/acceptance-F7.14-onboarding.md`。
    - ✅ 出包路径（本轮再次验证可用）：`source env.sh` → `python tool/build_kernel_fallback.py` →
      `( cd android && ./gradlew assembleDebug -x compileFlutterBuildDebug )` → `python tool/verify_apk_kernel.py 新手引导`。
-7. 【**🟡 F7.15 自动记账 · 真机已闭合、仅缺终端全量**】已实现 + 模拟器走查通过 + **真机走查通过（2026-10-08 · Redmi K50，代码基线 `e4e53b4`）**，**未推远端 / 未打 tag**：
+7. 【**✅ F7.15 自动记账 · 已全闭合**】已实现 + 模拟器走查通过 + **真机走查通过（2026-10-08 · Redmi K50，代码基线 `e4e53b4`）** + **用户终端全量 `flutter test` 479 passed / 0 skipped** → 已打 tag **`v0.7.15`** 并推远端：
    - ✅ **真机监听路径已验完（不再是「等用户验」）**：断点① 系统绑定（`cmd notification allow_listener` +
      `dumpsys activity services`）/ ② 服务收通知（发非白名单探针 → `skippedNotWatched` **0→1**）/
-     ③ Dart 取队列 / ④ 解析入账（8 条真实文案注入 → `imported:6 dropped:2` 逐条吻合）；
+     ③ Dart 取队列 / ④ 解析入账（8 条真实文案注入 → `imported:6 dropped:2` 逐条吻合）/ ⑤ **真实支付端到端**：
      **用户实付支付宝 ¥0.01 → 入库 `cents=1 / type=expense / src=notify_alipay`**（金额·方向·来源全对）。
    - ✅ **真实通知文案已回填**：`test/features/autobook/auto_book_real_samples_test.dart`（16 例，**逐字抄自真机**）
      —— 忽略表 / 金额优先级 / 商户提取**不再是「对着推测文案写的」**。
-   - ☐ **用户终端跑全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件）。⚠️ 上次记录的
-     `transaction_repository_test` 「编译阶段挂住」**本轮未复现**（跑完 `+12`，并发下耗时 610s）。
-   - ⚠️ **现场教训（对真实使用有影响）**：**MIUI/HyperOS 在 `force-stop` 后会解绑监听服务**，而设置与
+   - ✅ **用户终端全量 `flutter test` 已通过**（2026-10-08，**479 passed / 0 skipped**；本机跑不了 14 个 `testWidgets` 文件）。
+     ⚠️ 上次记录的 `transaction_repository_test` 「编译阶段挂住」**本轮未复现**（跑完 `+12`，并发下耗时 610s）。
+   - ⚠️ **现场教训（对真实使用有影响，已写进页面提示口径）**：**MIUI/HyperOS 在 `force-stop` 后会解绑监听服务**，而设置与
      `dumpsys` 都显示「已授权」（难查的「开关开着但没工作」）→ force-stop / 覆盖安装后**必须重绑一次**；
-     **重绑会把仍在通知栏的活跃通知重投**（实测延迟 1 分 37 秒）→ `/autobook` 页那条提示**真能救回数据**。
+     **重绑会把仍在通知栏的活跃通知重投**（实测延迟 1 分 37 秒）→ `/autobook` 页那条提示**真能救回数据**，不必重付一笔。
+   - 📌 **本地环境备注（非产品遗留）**：`android/local.properties` 被改成 `flutter.versionCode=2001` / `buildMode=debug`
+     （**不入版本控制**，为「同签名覆盖安装保数据」）—— 正式出包前若要 release 号需确认还原；本机无 `flutter` CLI，
+     改 `pubspec.yaml` **不会**自动刷新它（曾因此撞 `INSTALL_FAILED_VERSION_DOWNGRADE`）。
 
    **「诊断」五行 → 断点定位表（用户报「不生效」时照此问）**：
 
@@ -762,12 +763,15 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 - 【**✅ 已解决（2026-10-07）**】**桌面应用名**：`AndroidManifest.xml` 的 `android:label` 原为脚手架默认
   `"yanxin"`（桌面显示「yanxin」）→ 用户 2026-09-25 自行改成 `"颜芯记账"`，**已随 F7.15 实现提交 `3ec2381` 入库**
   （现工作区干净）。另 `<service>` 声明里也带了一条 `android:label="颜芯记账 · 自动记账"`（通知设置页展示用）。
-- 【**🟡 F7.15 §3.5 忽略规则默认值 · 已签字、尚未真机校验**】签字稿 = 硬忽略（转账 / 红包 / 退款 / 已验证码 / 账单 /
-  等）+ 软忽略（优惠 / 立减 / 满减 / 活动 / 提醒）+ 强支付词三层（**软忽略命中且无强支付词才丢**）。
-  ⚠️ **这套是「软忽略」的第三次修正**，规则本身仍是对着**推测文案**写的 —— **用户真机抓回原文后再定稿**。
-- 【**🟡 F7.15 三处「推测实现」待真机校正**】① 忽略表（上条）；② **金额优先级**
-  （实付类 > 支付动作紧邻 > 货币符号 > 裸金额）；③ **商户提取**（微信/支付宝的 C 端支付通知**通常不含商户名**
-  → 自动分类大概率落「其他」）。三处都只在模拟器合成文案上验过。
+- 【**✅ 已解决（2026-10-08）**】**F7.15 §3.5 忽略规则 —— 已按真机文案定稿**：硬忽略（`转账 / 退款 / 已退款 /
+  充值成功 / 验证码 / 月账单 / 账单汇总 / 还款`）+ 软忽略（`优惠 / 立减 / 满减 / 活动 / 红包 / 提醒 / 领取 /
+  积分 / 即将`）+ 强收支词（含 `支出 / 收入 / 已收款 / 成功收款`）三层（**软忽略命中且无强收支词才丢**）。
+  真根因：支付宝付款通知**标题就叫「交易提醒」**、正文含「红包」→ 旧版两处硬忽略一票否决 → **静默丢弃**。
+  规则已对着**真机原文**写并固化为 `test/features/autobook/auto_book_real_samples_test.dart`（16 例）。
+- 【**✅ 已解决（2026-10-08）**】**三处「推测实现」已用真机文案校正**：① 忽略表（上条）；
+  ② **金额优先级** —— 新增「金额在动作词之前」规则压过营销语金额（真机实测「你有一笔0.01元的支出，领1元生活缴费红包。」
+  旧版会取到 `1元`）；③ **商户提取** —— 通知**确实通常不含商户名**，自动分类落「其他」是**预期行为**（备注退化为
+  「微信支付 / 支付宝支付」），纠错入口 = 提示条 + 撤销，**不再是待修缺陷**。
 - 【待确认】`android/gradle.properties` 里 `org.gradle.jvmargs=-Xmx8G` 是 B 机调大的；**A 机内存未知**，若构建 OOM 可改回 `-Xmx4G`
 - 【待确认】`lib/core/result.dart`（SPEC §4 的 `Result<T>`）**暂未建**：校验全走异常，无调用方，等有需要再引入
 - 【待确认】日历页是否要加农历 / 节假日（原型参考图上有，当前无农历依赖）→ **已并入 F7.7 SPEC 的 E.5**，默认不做
@@ -785,7 +789,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 - **「功能需求文档」在哪**：`docs/PRD-yanxin-flutter.md` —— 汇总稿（FR 编号 + 状态图例 + 口径 + backlog），
   **只看这一份就能知道 App 现在该有哪些行为**。注意它是**汇总不是签字件**，新需求仍要另出小 SPEC。
 - `SPEC-flutter-migration.md`（已签字）、小 SPEC：`docs/SPEC-F7.3-budget.md`、`docs/SPEC-F7.4-search.md`、`docs/SPEC-F7.5-search-overlay.md`、`docs/SPEC-F7.5-assets.md`、`docs/SPEC-F7.6-cartoon-ui.md`（F7.6 视觉改版，已交付）、**`docs/SPEC-F7.7-backlog.md`（F7.7 五批 backlog —— **A–E 五批全部已签字并已交付**；其 §G 是实施记录 + 环境阻塞原理 + 「SPEC 前提修正」三处：C 批 schema、D 批 KV 复用、E 批 date 单位）**、
-  **`docs/SPEC-F7.15-auto-bookkeeping.md`（🟡 已签字、实现完成、**真机走查已通过（2026-10-08）**，待终端全量 → `v0.7.15` —— §3.1 架构 / §3.5 忽略规则 / §3.7 通知栏三处 Android 硬约束 / §8 实施记录与走查补丁）**
+  **`docs/SPEC-F7.15-auto-bookkeeping.md`（✅ 已签字、**已交付 `v0.7.15`（2026-10-08 用户终端全量通过）** —— §3.1 架构 / §3.5 忽略规则 / §3.7 通知栏三处 Android 硬约束 / §8 实施记录 + 走查补丁 + 真机走查与修复）**
 - **F7.15 自动记账代码位置**：原生侧 `android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/`
   （`AutoBookListenerService` 监听 / `AutoBookQueue` JSONL 队列 + `restore()` / `AutoBookNotifier` 回执通知 /
   `AutoBookChannel` MethodChannel `yanxin/autobook` / `AutoBookDiagnostics` 诊断落盘）+ `MainActivity.kt`；
@@ -985,19 +989,19 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：**F7.15 自动记账 已实现、真机走查已通过（**未打 tag、未推远端**；本地 7 个提交领先
-   `origin/master`，代码基线 = `e4e53b4`）**。**只剩一件事**：
-   - ☐ **用户终端跑全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件，别拿本机脚本当最终判据；
-     顺带复核 `budget_card_test` 2 条）。
+1. **当前最重要的事**：**F7.15 自动记账 已全闭合、已交付 `v0.7.15`**（tag 指向收尾提交 = `origin/master` HEAD；
+   代码基线 = `e4e53b4`）。**无遗留项** —— 三项门禁全过：
+   - ✅ **用户终端全量 `flutter test` 479 passed / 0 skipped**（2026-10-08；= `test()` **391** + `testWidgets` **88**，
+     本批 **+79** 全落在 `test()`）。本机跑不了 14 个 `testWidgets` 文件，**别拿本机脚本当最终判据**。
    - ✅ **真机监听路径已验完（2026-10-08 · Redmi K50）**：断点① 系统绑定（`allow_listener` + `dumpsys activity services`）/
      ② 服务收通知（非白名单探针 → `skippedNotWatched` **0→1**）/ ③ Dart 取队列 / ④ 解析入账
-     （`imported:6 dropped:2` 逐条吻合）；**用户实付支付宝 ¥0.01 → 入账 `cents=1 / expense / notify_alipay`**。
+     （`imported:6 dropped:2` 逐条吻合）/ ⑤ **用户实付支付宝 ¥0.01 → 入账 `cents=1 / expense / notify_alipay`**。
    - ✅ **真实通知文案已拿到并固化**：`test/features/autobook/auto_book_real_samples_test.dart`（16 例，
      逐字抄自真机）—— §3.5 忽略表 / 金额优先级 / 商户提取**不再是「对着推测文案写的」**。
    - 入口 = `lib/features/autobook/`（Dart 9 文件）+ `android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/`
      （Kotlin 5 文件）；需求与设计在 `docs/SPEC-F7.15-auto-bookkeeping.md`（§3.1 架构 / §3.7 三处 Android 硬约束 /
-     §8 实施记录 + 走查补丁）。**别重写、别换个形式做**。
-   - ✅ 本机门禁（AI 侧）：analyze 等效 **全项目 `No issues found!`**（残留 5 条为既有环境假阳性，见第 48 条）；
+     §8 实施记录 + 走查补丁 + 真机走查与修复）。**别重写、别换个形式做**。
+   - ✅ analyze 等效 **全项目 `No issues found!`**（残留 5 条为既有环境假阳性，见第 48 条）；
      本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批并行跑完 49 文件）；autobook 三文件
      rules **47** + flow **15** + real_samples **16**；
      **APK `BUILD SUCCESSFUL`**（Kotlin 首次编译通过）+ `verify_apk_kernel` 新鲜度与文案核验通过。
@@ -1007,10 +1011,11 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
    - ⚠️ **现场教训（对真实使用有影响）**：**MIUI/HyperOS 在 `force-stop` 后会解绑监听服务**，而设置与
      `dumpsys` 都显示「已授权」（= 难查的「开关开着但没工作」）→ `force-stop` / 覆盖安装后**必须重绑一次**；
      **重绑会把仍在通知栏的活跃通知重投**（实测延迟 1 分 37 秒）→ 页面那条提示**真能救回数据**，不必重付。
-   - **收尾四步（**待终端全量通过后执行**）**：① CHANGELOG `## [Unreleased]` → `## [v0.7.15]`（含 I 段）+ tag 表补行；
-     ② 我的页 `_BrandTip` 角标 `v0.7.14` → `v0.7.15`；③ `git tag -a v0.7.15` →
-     `git push && git push --tags`（**直推、不加管道**）→ `git ls-remote --tags` 核对；
-     ④ 文档收尾（本文件 + `SPEC-F7.15` §8 + `tasks/todo-flutter.md` + 当日 memory）。
+   - ✅ **收尾四步已执行完（2026-10-08）**：① CHANGELOG `## [Unreleased]` → `## [v0.7.15]`（含 I 段）+ tag 表补行 ✅；
+     ② 我的页 `_BrandTip` 角标 —— 早在 `3ec2381` 实现提交里就已置 `v0.7.15`（**已核对，无需再改**）✅；
+     ③ `git tag -a v0.7.15` → `git push && git push --tags`（**直推、不加管道**）→ `git ls-remote --tags` 核对 ✅；
+     ④ 文档收尾（本文件 + `SPEC-F7.15` §8 + `tasks/todo-flutter.md` + 当日 memory）✅。
+   - ⏭️ **下一阶段（F7.16 起）尚无需求，等用户提**；若要新开工，按本项目惯例**先出 SPEC 再动手**。
 
    **已交付的历史轮次（均已推远端 `origin/master`，别重写）**：
    - **F7.14 新手引导**（`v0.7.14`，`c5ea1b5`）：7 页全屏导览 + 「我的」重看入口 + **老用户不弹**
@@ -1106,12 +1111,11 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
   `python tool/verify_apk_kernel.py`（装机前核验 kernel 新鲜度）、
   `python tool/inspect_icons.py` / `tool/check_pubspec.py`（图标与 pubspec 体检；生成用 `tool/gen_launcher_icons.py`）。
   **用户自己的 Git Bash 终端不受影响**。协议三坑见 SPEC §G（行分隔 JSON / OS 路径无尾斜杠 / `isAnalyzing` 完成信号）。
-- **门禁状态**：**截至 `v0.7.14` 全部闭合 ✅** —— analyze **0 issue**（等效手段；全项目残留 5 条
-  为 `D:\`/`d:\` 双身份既有假阳性）；`flutter test` **400 passed / 0 skipped**（**2026-09-25 用户终端全量**，
-  = `test()` **312** + `testWidgets` **88**）；真机走查 ✅（F7.14 D1–D10 全过，0 崩溃）。
-  🟡 **F7.15 真机已闭合、仅缺终端全量** —— AI 侧 analyze 等效 `No issues found!` + 本机纯 `test()` **386 例全绿**
-  （分 4 批）+ APK 构建/核验通过 + **真机断点①–④ 与用户实付支付宝 ¥0.01 端到端入账均已验（2026-10-08）**；
-  只剩**用户终端全量 `flutter test`**（`budget_card_test` 两条日期 flake 已修 `a545687`，待复跑确认）。
+- **门禁状态**：**截至 `v0.7.15` 全部闭合 ✅** —— analyze **0 issue**（等效手段；全项目残留 5 条
+  为 `D:\`/`d:\` 双身份既有假阳性）；`flutter test` **479 passed / 0 skipped**（**2026-10-08 用户终端全量**，
+  = `test()` **391** + `testWidgets` **88**）；真机走查 ✅（F7.14 D1–D10 全过 0 崩溃 + **F7.15 断点 ①–⑤ 全过**）。
+  ✅ **F7.15（自动记账）已交付 `v0.7.15`** —— analyze 等效 `No issues found!` + 终端 `flutter test` **479 passed**
+  + 本机纯 `test()` **386 例全绿**（分 4 批）+ APK 构建/核验通过 + **真机断点 ①–⑤（含用户实付支付宝 ¥0.01 端到端入账）**。
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`。版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
 - 最致命五坑：① **gradle 缓存只能全新空目录**（复制必挂、伪装成网络慢）；② **Bash 的 PATH 要先补 `/usr/bin:/bin`**（否则 grep/flutter 各种怪报）；③ **`flutter test` 必须去代理**、构建走镜像；④ **不 `source env.sh` 就 `pub get` 会把 lock 的 url 改成 pub.dev**；⑤ **flutter 残留 `bin/cache/lockfile` → 命令卡死**（用 `mv` 挪走，别 `rm`）。
 - drift 四坑：**索引走原始 SQL**、**数据类名 `TxRow`**、**`isNull` 要 `hide`**、**改表必重跑 `build_runner` + 迁移只能真机覆盖安装验**。
@@ -1122,7 +1126,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 - 视觉：**全站卡通浅色一套主题**（原型 `D:\new file\modao\yanxin\`；令牌 `Tok` 在 `lib/core/theme/tokens.dart`，
   通用件在 `toon.dart`；**禁止裸色值**）。**F7.6 已全部交付（`v0.7.6`）。**
 - 版本：`v0.7.<N>` ↔ `F7.<N>`，一版一 tag；表在 `CHANGELOG.md` 顶部，回滚 `git checkout v0.7.13`。
-- **🟡 F7.15 自动记账 已实现、真机走查已通过（未打 tag、未推远端；本地 7 提交领先 `origin/master`，代码基线 = `e4e53b4`）**：
+- **✅ F7.15 自动记账 已交付（tag `v0.7.15`，已推远端；代码基线 = `e4e53b4`）**：
   Kotlin 只做「包名过滤 + 落盘 JSONL 队列 + 发通知」，**Dart 才落库**（drift 单写者）；Dart 在 `AppShell`
   首帧后 + 每次 `resumed` drain → 解析 → 复用 `importRows()` → 记批次 → 回执通知。**零迁移（DB 仍 v3）**、
   **零新依赖**。新增 `lib/features/autobook/`（Dart 9 文件）+ `android/.../autobook/`（Kotlin 5 文件）+ `/autobook` 路由
@@ -1135,8 +1139,8 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
   ② 组摘要去重（Kotlin `FLAG_GROUP_SUMMARY` + Dart `^\[\d+条\]` 兜底）；③ 金额「动作词之前」优先级；
   ④ 诊断层「瞒报」族（`capturedTotal` 11→0 / 空 drain 把 `drainedTotal` 8→0 / `skipped*` 不落盘 /
   `listenerConnected` 回填谎报「已绑定」）→ 改「盘上基线 + 本进程增量」合成；⑤ `last_run` 空 drain 覆盖（入账 7 秒后被抹）。
-  ⏭️ **下一步 = 只剩用户终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件）→ 通过后
-  CHANGELOG `[Unreleased]` 转正 `v0.7.15`（含 I 段）+ 我的页角标 + 打 tag。
+  ✅ **门禁已闭合（2026-10-08）**：用户终端全量 `flutter test` **479 passed / 0 skipped** → CHANGELOG 已转正
+  `v0.7.15`（含 I 段）+ tag 已打并推远端（我的页角标在 `3ec2381` 就已置 `v0.7.15`，无需再改）。
   ✅ **真机已验**：断点① 系统绑定 / ② 服务收通知（非白名单探针 → `skippedNotWatched` 0→1）/ ③ Dart 取队列 /
   ④ 解析入账（`imported:6 dropped:2` 逐条吻合）+ **用户实付支付宝 ¥0.01 → `cents=1 / expense / notify_alipay`**；
   真实文案已固化为 `test/features/autobook/auto_book_real_samples_test.dart`（16 例）。
@@ -1145,7 +1149,6 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 - **F7.14 新手引导 已交付 ✅（`v0.7.14`）**：7 页全屏导览（底栏中央方块 / 首页三图标 / 翻月 +
   预算铅笔 / 三个隐藏手势 / 资产页与报表页）；「我的 → 新手引导」可随时重看；**老用户不弹**
   （判定 = 无标记 **且** `ActiveBookIdController.isFreshInstall`）。新增 `lib/features/onboarding/` 5 文件。
-- **下一步**：**F7.15 只剩一件 —— 用户终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件；
-  真机侧断点①–④ + 真实支付端到端已于 2026-10-08 验完）
-  → 通过后收尾打 `v0.7.15`。**其余无遗留项**。（F7.14 三项门禁已闭合：analyze ✅ / test **400** ✅ /
-  走查 D1–D10 ✅；收尾四步已执行，tag `v0.7.14` 已推远端。F7.9 + 启动图标 + F7.15 代码均已落地，**别重写**。）
+- **下一步**：**F7.15 已全部闭合、无遗留项** —— 三项门禁全过（analyze 等效 ✅ / 用户终端 `flutter test`
+  **479 passed / 0 skipped** ✅ / 真机走查 断点 ①–⑤ 含真实支付端到端 ✅）；收尾四步已执行，tag `v0.7.15` 已推远端。
+  **下一阶段（F7.16 起）尚无需求，等用户提。**（F7.9 + 启动图标 + F7.14 新手引导 + F7.15 自动记账均已落地，**别重写**。）

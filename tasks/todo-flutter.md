@@ -453,7 +453,7 @@
       → `git tag -a v0.7.14`（tag 对象 `b3c08c2` → 提交 `c5ea1b5`）→ 直推 + `ls-remote` 核对
       → 文档收尾（HANDOFF / SPEC §8 / 本文件 / memory）
 
-### F7.15 自动记账（通知使用权为主 + 零权限兜底）—— 用户新需求，**已实现、真机走查已通过 🟡（仅缺终端全量）**（2026-09-30 起）
+### F7.15 自动记账（通知使用权为主 + 零权限兜底）—— 用户新需求，**✅ 已交付（tag `v0.7.15`）**（2026-09-30 起）
 
 > 需求：用户要「自动记账」，并先问权限方案；选完组合后又追加「能不能在通知栏里确认入账」。
 > SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（**已签字**：方案 A + D3 + 强化导入 / 静默直入 /
@@ -540,5 +540,8 @@
 - [x] 本机全量回归：纯 `test()` **386 例全绿 / 0 失败**（分 4 批并行）；analyze 等效 **`No issues found!`** ✅
 - [x] 工具新增：`parse_notif_dump.py`（抽真实文案）/ `watch_notifications.py`（轮询落 JSONL）；
       `dart_test_fallback.py` 加 `FX_TEST_WORK_SUFFIX`（原固定产物路径，并行会互相覆盖）
-- [ ] **用户终端全量 `flutter test`**（本机跑不了 14 个 `testWidgets` 文件；含复核 `budget_card_test` 2 条）
-- [ ] 收尾四步：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]` + 我的页角标 `v0.7.15` → tag → 直推核对 → 文档收尾
+- [x] **✅ 用户终端全量 `flutter test`**（2026-10-08，**479 passed / 0 skipped** = `test()` 391 + `testWidgets` 88）
+- [x] **✅ 收尾四步**（2026-10-08）：CHANGELOG `[Unreleased]` 转正 `## [v0.7.15]`（含 I 段）+ tag 表补行
+      → `git tag -a v0.7.15` → 直推核对 → 文档收尾（我的页角标早在 `3ec2381` 实现提交即置 `v0.7.15`，无需再改）
+- [ ] **非阻断遗留**：真机「权限引导三态」未覆盖（去开启 / 返回自检 / 通知权限被拒态）
+      —— 首页提示条与 `/autobook` 撤销已在模拟器 `ACTION_SEND` 通道验过
