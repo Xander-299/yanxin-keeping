@@ -26,6 +26,7 @@ class AutoBookDiagnostics {
     required this.skippedNotWatched,
     required this.skippedEmpty,
     required this.skippedDedup,
+    required this.skippedGroupSummary,
     required this.lastDrainAtMs,
     required this.lastDrainCount,
     required this.drainedTotal,
@@ -49,6 +50,10 @@ class AutoBookDiagnostics {
   final int skippedNotWatched;
   final int skippedEmpty;
   final int skippedDedup;
+
+  /// 被丢弃的**组摘要**条目数（`[N条]…`）：聚合通知的汇总条目，丢了才对，
+  /// 留着会把同一笔支付记两遍（2026-10-08 真机排查新增）。
+  final int skippedGroupSummary;
 
   /// 最近一次被 Dart 取走队列的时间与条数。
   final int lastDrainAtMs;
@@ -79,6 +84,7 @@ class AutoBookDiagnostics {
         skippedNotWatched: _asInt(m['skippedNotWatched']),
         skippedEmpty: _asInt(m['skippedEmpty']),
         skippedDedup: _asInt(m['skippedDedup']),
+        skippedGroupSummary: _asInt(m['skippedGroupSummary']),
         lastDrainAtMs: _asInt(m['lastDrainAtMs']),
         lastDrainCount: _asInt(m['lastDrainCount']),
         drainedTotal: _asInt(m['drainedTotal']),

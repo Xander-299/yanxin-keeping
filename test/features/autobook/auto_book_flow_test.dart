@@ -358,6 +358,44 @@ void main() {
     expect(run.summary, contains('新入账 1 笔'));
   });
 
+  test('空 drain 不覆盖「上次检查」的成功结果（走查修复的回归守卫）', () async {
+    // 先成功入账一笔 → last_run 记下「新入账 1 笔」
+    bridge.queue = <String>[_notify('你已成功支付 12.00元', at: _t)];
+    await controller().drain();
+
+    // 再跑一次空 drain（模拟冷启动 / 从后台回来的例行检查）
+    final AutoBookDrainResult again = await controller().drain();
+    expect(again.touched, isFalse);
+
+    final String? raw = await container
+        .read(appMetaRepositoryProvider)
+        .get(kAutoBookLastRunKey);
+    final AutoBookLastRun? run = AutoBookLastRun.parse(raw);
+
+    // 真机走查现场：入账 7 秒后的空 drain 曾把这里写成 imported:0，
+    // 于是页面「上次检查」变成「没有新的支付通知」，盖住刚发生的成功。
+    expect(run!.imported, 1);
+    expect(run.summary, contains('新入账 1 笔'));
+  });
+
+  test('空队列但有撤销命令：「上次检查」仍要记撤销（有效动作不丢）', () async {
+    bridge.queue = <String>[_notify('你已成功支付 12.00元', at: _t)];
+    final AutoBookDrainResult r = await controller().drain();
+
+    // 队列已空，只剩一条撤销命令 —— 这是「有动作」的 drain，不能当 no-op
+    bridge.command = '{"action":"undo","batchId":"${r.batch!.batchId}"}';
+    final AutoBookDrainResult after = await controller().drain();
+    expect(after.undone, 1);
+
+    final String? raw = await container
+        .read(appMetaRepositoryProvider)
+        .get(kAutoBookLastRunKey);
+    final AutoBookLastRun? run = AutoBookLastRun.parse(raw);
+
+    expect(run!.undone, 1);
+    expect(run.summary, contains('撤销 1 笔'));
+  });
+
   test('软忽略：真实回执含「优惠」仍入账（走查修复的回归守卫）', () async {
     bridge.queue = <String>[_notify('你已付款成功，优惠 0.50元，实付 12.00元', at: _t)];
 

@@ -3,8 +3,12 @@
 /// 输入是 Kotlin 侧落盘的原始通知（或分享文本），输出归一化的 `ParsedRow`
 /// —— 与账单导入**共用同一条入账链路**（`importRows` + 指纹去重）。
 ///
-/// 三层顺序（先命中先赢，与 `category_rules.dart` 同写法，不另发明 DSL）：
-///   ① 包名白名单（仅通知；分享文本跳过） → ② 忽略规则（非消费，命中即丢） → ③ 模板规则
+/// 四层顺序（先命中先赢，与 `category_rules.dart` 同写法，不另发明 DSL）：
+///   ⓪ 组摘要剔除（`[N条]…`，否则同笔支付记两遍） → ① 包名白名单（仅通知；分享文本跳过）
+///   → ② 忽略规则（非消费，命中即丢） → ③ 模板规则（方向 + 金额）
+///
+/// ⚠️ 规则**逐字对着真机通知**校准（样本见 `test/features/autobook/auto_book_real_samples_test.dart`）；
+/// 改关键词前先看那里的真实文案，别按想象写。
 ///
 /// 铁律（与导入链路一致）：金额全程 `yuanToCents` 字符串转分，**禁止浮点**。
 /// 解析不出方向 / 金额 → 返回 null（**丢弃而不误记**）。
@@ -40,25 +44,22 @@ const List<String> kAutoBookSources = <String>[
   'share',
 ];
 
-/// 忽略关键词（包含匹配）：命中即丢，**优先于**模板规则（SPEC §3.5）。
+/// 硬忽略关键词（包含匹配）：命中即丢，**优先于**模板规则（SPEC §3.5）。
 ///
-/// 都是「看着像支付、其实不是消费」的文案：转账 / 红包 / 退款 / 各类营销与提醒。
+/// 判据：这个词描述的是**另一类交易**（资金调度 / 退款 / 非消费凭证），
+/// 只要出现就不可能是本 App 要记的「消费 / 收入」。
 /// ⚠️ 这张表里的词只要出现就判非消费 —— 所以**只放「必然不是消费」的词**；
-/// 可能出现在真实支付回执里的营销词（如「优惠」「立减」）走
-/// [kAutoBookSoftIgnoreKeywords]，见那里的说明。
+/// 凡是可能搭在真实回执里一起出现的营销词 / 提醒词（`优惠` `立减` `红包` `提醒` `即将` …）
+/// 一律走 [kAutoBookSoftIgnoreKeywords]，见那里的说明与 2026-10-08 真机复盘。
 const List<String> kAutoBookIgnoreKeywords = <String>[
   '转账',
-  '红包',
   '退款',
   '已退款',
   '充值成功',
   '验证码',
   '月账单',
   '账单汇总',
-  '领取',
-  '积分',
-  '即将',
-  '提醒',
+  '还款',
 ];
 
 /// 条件性忽略词：**只有整条文案看不出是支付时**才丢。
@@ -68,6 +69,11 @@ const List<String> kAutoBookIgnoreKeywords = <String>[
 /// 但**是真实消费**。原实现把「优惠 / 立减 / 满减」放进硬忽略表 → 这类回执被静默丢弃，
 /// 用户完全无从得知（表现为「自动记账不生效」）。
 ///
+/// 第二轮修正（2026-10-08 真机排查 · Redmi K50）：把 `红包` / `提醒` / `领取` / `积分` / `即将`
+/// 也从硬忽略表**降级**到这里 —— 真机上支付宝的付款通知标题就是「交易提醒」，
+/// 正文还带营销尾巴「你有一笔0.01元的支出，领2元小荷包支付红包。」，
+/// 两条都撞硬忽略 → 支付宝付款**一笔都记不上**，且全程静默。
+///
 /// 现在的判定：软忽略词命中 **且** [kAutoBookStrongPaymentKeywords] 一个都不中 → 丢弃。
 /// 宁可多记一笔（用户可整批撤销），也不要静默漏记。
 const List<String> kAutoBookSoftIgnoreKeywords = <String>[
@@ -75,12 +81,19 @@ const List<String> kAutoBookSoftIgnoreKeywords = <String>[
   '立减',
   '满减',
   '活动',
+  '红包',
+  '提醒',
+  '领取',
+  '积分',
+  '即将',
 ];
 
-/// 强支付词：出现即认定「这是一条支付回执」，压过软忽略词。
+/// 强收支词：出现即认定「这是一条支付 / 收款回执」，压过软忽略词。
 ///
 /// ⚠️ **不要往里加 `支付` / `付款` 这种宽词** —— 微信支付通知的标题就是「微信支付」，
 /// 加了之后任何微信营销通知（「周末活动，立减 5 元」）都会因为标题里的「支付」被放行并误记。
+/// `支出` / `收入` 是支付宝交易提醒的实际措辞（「你有一笔0.01元的支出」/「…元的收入」），
+/// 必须收进来；收入侧同理补 `已收款` / `成功收款`（`收款到账` 的「到账」已在表内）。
 const List<String> kAutoBookStrongPaymentKeywords = <String>[
   '支付成功',
   '成功支付',
@@ -90,11 +103,17 @@ const List<String> kAutoBookStrongPaymentKeywords = <String>[
   '已付款',
   '扣款',
   '消费',
+  '支出',
+  '收入',
   '到账',
   '实付',
+  '已收款',
+  '成功收款',
 ];
 
 /// 保留关键词：用于确认这是**消费/收入**通知（方向判定也靠它）。
+///
+/// 收入先判（`到账` 类通知常同时含 `支付` 字样，如「收款到账」）。
 const List<String> kAutoBookIncomeKeywords = <String>[
   '收款到账',
   '到账',
@@ -102,12 +121,14 @@ const List<String> kAutoBookIncomeKeywords = <String>[
   '收入',
 ];
 
+/// 支出侧方向词。`支出` 来自支付宝交易提醒的真实措辞（2026-10-08 真机抓取）。
 const List<String> kAutoBookExpenseKeywords = <String>[
   '支付成功',
   '付款成功',
   '已支付',
   '扣款',
   '消费',
+  '支出',
   '支付',
   '付款',
 ];
@@ -202,12 +223,16 @@ int _asInt(Object? v) {
 /// 所以先用「实付 / 支付 / 付款」类词锚定，再退化为符号 / 裸金额。
 final List<RegExp> _amountPatterns = <RegExp>[
   // ① 实付类（明确指向实际支出）
-  RegExp(r'(?:实付|实际支付|支付金额|付款金额|扣款金额)\D{0,4}?(\d+(?:\.\d{1,2})?)\s*元'),
-  // ② 支付动作紧邻的金额
-  RegExp(r'(?:支付|付款|扣款|消费|已付)\D{0,6}?(\d+(?:\.\d{1,2})?)\s*元'),
-  // ③ 货币符号
+  RegExp(r'(?:实付|实际支付|支付金额|付款金额|扣款金额|支出金额)\D{0,4}?(\d+(?:\.\d{1,2})?)\s*元'),
+  // ② 金额在动作词**之前**（支付宝交易提醒的典型句式：「你有一笔0.01元的支出」）
+  //    ⚠️ 必须排在「裸 N 元」之前：同一条里营销语可能带着更靠前的金额
+  //    （「…0.01元的支出，领2元小荷包支付红包」→ 裸匹配会先抓到营销的 2 元）
+  RegExp(r'(\d+(?:\.\d{1,2})?)\s*元\s*的?\s*(?:支出|消费|收入|付款|支付|收款)'),
+  // ③ 支付动作紧邻的金额
+  RegExp(r'(?:支付|付款|扣款|消费|支出|已付)\D{0,6}?(\d+(?:\.\d{1,2})?)\s*元'),
+  // ④ 货币符号
   RegExp(r'[¥￥]\s*(\d+(?:\.\d{1,2})?)'),
-  // ④ 裸「N 元」/「N.NN」
+  // ⑤ 裸「N 元」/「N.NN」
   RegExp(r'(\d+(?:\.\d{1,2})?)\s*元'),
   RegExp(r'(\d+\.\d{2})'),
 ];
@@ -224,6 +249,10 @@ final List<RegExp> _counterpartyPatterns = <RegExp>[
 ParsedRow? parseNotification(RawNotification n) {
   final String? source = kPackageSource[n.pkg];
   if (source == null) return null; // ① 包名白名单
+  // ⓪ 组摘要（聚合多条通知时系统发的汇总条目）先丢：它的文案是
+  //    `[N条]<应用>: <最新一条正文>`，与子通知文案不同 → 指纹不同 →
+  //    不过滤就会把**同一笔支付记两遍**。真实内容以子通知为准。
+  if (_isGroupSummary(n)) return null;
   final String text = n.combined;
   if (text.trim().isEmpty) return null;
   if (_isIgnored(text)) return null; // ② 忽略规则
@@ -275,6 +304,16 @@ ParsedRow? parseSharedText(RawShare share) {
     rawIndex: 0,
   );
 }
+
+/// 组摘要文案的前缀标记：MIUI / 原生在聚合通知时生成
+/// `[2条]微信支付: 已支付¥0.01`（真机 Redmi K50 实测格式）。
+/// Kotlin 侧另有 `FLAG_GROUP_SUMMARY` / `EXTRA_IS_GROUP_SUMMARY` 直接过滤，
+/// 这里再留一道**纯函数**防线（可单测，且不依赖平台通道）。
+final RegExp _groupSummaryPattern = RegExp(r'^\[\d+条\]');
+
+bool _isGroupSummary(RawNotification n) =>
+    _groupSummaryPattern.hasMatch(n.text.trim()) ||
+    _groupSummaryPattern.hasMatch(n.bigText.trim());
 
 bool _isIgnored(String text) {
   for (final String k in kAutoBookIgnoreKeywords) {

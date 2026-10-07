@@ -540,7 +540,8 @@ class _DiagnosticsBlock extends StatelessWidget {
   static String _statsText(AutoBookDiagnostics? d) {
     if (d == null) return '—';
     return '抓到 ${d.capturedTotal} · 取走 ${d.drainedTotal} · '
-        '其他通知 ${d.skippedNotWatched} · 空文案 ${d.skippedEmpty} · 去重 ${d.skippedDedup}';
+        '其他通知 ${d.skippedNotWatched} · 空文案 ${d.skippedEmpty} · '
+        '组摘要 ${d.skippedGroupSummary} · 去重 ${d.skippedDedup}';
   }
 
   /// 按当前证据给**一句可执行的**提示（这是「失败可懂」的核心）。

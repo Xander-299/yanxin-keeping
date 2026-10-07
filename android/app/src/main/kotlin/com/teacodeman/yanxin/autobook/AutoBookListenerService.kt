@@ -51,6 +51,17 @@ class AutoBookListenerService : NotificationListenerService() {
         }
 
         val extras = sbn.notification?.extras ?: return
+        // 组摘要（系统把多条通知聚合成一条汇总时发的条目）直接丢：
+        // 它的正文是 `[2条]微信支付: 已支付¥0.01`（真机 Redmi K50 实测），与子通知文案不同 →
+        // Dart 侧指纹也不同 → 不过滤会把**同一笔支付记两遍**。真实内容以子通知为准
+        // （Dart 侧另有 `[N条]` 前缀兜底，两边互不依赖）。
+        val isGroupSummary =
+            ((sbn.notification?.flags ?: 0) and Notification.FLAG_GROUP_SUMMARY) != 0 ||
+                extras.getBoolean("android.isGroupSummary", false)
+        if (isGroupSummary) {
+            AutoBookDiagnostics.noteSkippedGroupSummary()
+            return
+        }
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
         val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString().orEmpty()

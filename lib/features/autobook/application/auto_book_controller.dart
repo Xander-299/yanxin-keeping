@@ -94,7 +94,13 @@ class AutoBookController {
     // B. 取队列（原生侧是「取走即清空」，所以从这一行起原始数据只在内存里）
     final List<String> raw = await bridge.drainQueue();
     if (raw.isEmpty) {
-      await _rememberLastRun(AutoBookLastRun(atMs: _nowMs, undone: undone));
+      // 空队列 = 没有新通知，**不覆盖**「上次检查」：冷启动 / 从后台回来的例行 drain
+      // 绝大多数是空的，若照写 `imported: 0`，就会把刚发生的「新入账 N 笔」抹成
+      // 「没有新的支付通知」（真机走查实测：入账 7 秒后的空 drain 就把结果盖掉了）。
+      // 撤销是**有效动作**，仍要记下来。
+      if (undone > 0) {
+        await _rememberLastRun(AutoBookLastRun(atMs: _nowMs, undone: undone));
+      }
       return AutoBookDrainResult(undone: undone);
     }
 

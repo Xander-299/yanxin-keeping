@@ -58,8 +58,19 @@ void main() {
 
   group('② 忽略规则（逐词验证，忽略优先于模板）', () {
     for (final String keyword in kAutoBookIgnoreKeywords) {
-      test('含「$keyword」→ 丢弃（即使同时含「支付成功」和金额）', () {
+      test('硬忽略「$keyword」→ 丢弃（即使同时含「支付成功」和金额）', () {
         expect(parseNotification(_wechat('支付成功 12.00元 $keyword')), isNull);
+      });
+    }
+
+    // 软忽略词**不得**独自否决一条真实回执（2026-10-08 真机排查）：
+    // 支付宝付款通知的标题就是「交易提醒」，正文还带营销尾巴「…红包。」——
+    // 它们原先在硬忽略表里 → 支付宝付款一笔都记不上，且全程静默。
+    for (final String keyword in kAutoBookSoftIgnoreKeywords) {
+      test('软忽略「$keyword」+ 强收支词 → 保留（不得静默漏记）', () {
+        final row = parseNotification(_wechat('支付成功 12.00元 $keyword'));
+        expect(row, isNotNull);
+        expect(row!.amountCents, 1200);
       });
     }
   });

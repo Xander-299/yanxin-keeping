@@ -54,7 +54,11 @@ import time
 
 PROJECT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PACKAGES = os.path.join(PROJECT, ".dart_tool", "package_config.json")
-WORK = os.path.join(PROJECT, ".dart_tool", "dart_test_fallback")
+# ⚠️ 引导文件/产物按 `listener_%03d.*` 固定编号命名 —— **多实例并行必须隔离目录**，
+#    否则各实例的 index 都从 1 开始、互相覆盖同一批文件 → 全部编译失败。
+#    用 FX_TEST_WORK_SUFFIX 给每路并行进程一个独立后缀即可。
+WORK = os.path.join(PROJECT, ".dart_tool",
+                    "dart_test_fallback" + os.environ.get("FX_TEST_WORK_SUFFIX", ""))
 
 FLUTTER_CANDIDATES = [
     r"D:\Download\Flutter\flutter",  # A 机
