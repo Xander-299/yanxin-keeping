@@ -4,8 +4,8 @@
 /// —— 与账单导入**共用同一条入账链路**（`importRows` + 指纹去重）。
 ///
 /// 四层顺序（先命中先赢，与 `category_rules.dart` 同写法，不另发明 DSL）：
-///   ⓪ 组摘要剔除（`[N条]…`，否则同笔支付记两遍） → ① 包名白名单（仅通知；分享文本跳过）
-///   → ② 忽略规则（非消费，命中即丢） → ③ 模板规则（方向 + 金额）
+///   ⓪ 折叠前缀归一化（`[N条]…` 是**显示层前缀**，剥掉再解析 —— 它**不是**组摘要） →
+///   ① 包名白名单（仅通知；分享文本跳过） → ② 忽略规则（非消费，命中即丢） → ③ 模板规则（方向 + 金额）
 ///
 /// ⚠️ 规则**逐字对着真机通知**校准（样本见 `test/features/autobook/auto_book_real_samples_test.dart`）；
 /// 改关键词前先看那里的真实文案，别按想象写。
@@ -172,13 +172,19 @@ class RawNotification {
   }
 
   /// 全部文案位拼成一段（解析用）。`bigText` 常在展开态才有，放最前命中率最高。
-  String get combined => <String>[title, text, bigText, subText]
+  ///
+  /// 三个正文位都先剥掉显示层的折叠前缀（[_foldPrefixPattern]）再拼 ——
+  /// 否则 `[3条]微信支付: 已支付¥0.03` 的前缀会留在最前面。
+  String get combined => <String>[title, _stripFoldPrefix(text), _stripFoldPrefix(bigText), subText]
       .where((String s) => s.isNotEmpty)
       .join(' ');
 
   /// 指纹用的稳定标识（不用系统通知 id —— 它不稳定）。
+  ///
+  /// ⚠️ 用**归一化后**的正文：同一条通知的折条数会变（`[2条]…` → `[3条]…`），
+  /// 若指纹带上原始前缀，同一条通知会被算成两笔 → **重复入账**。
   String get externalId => sha1
-      .convert(utf8.encode('$pkg|$title|$text|${postTimeMs ~/ 1000}'))
+      .convert(utf8.encode('$pkg|$title|${_stripFoldPrefix(text)}|${postTimeMs ~/ 1000}'))
       .toString();
 }
 
@@ -249,10 +255,8 @@ final List<RegExp> _counterpartyPatterns = <RegExp>[
 ParsedRow? parseNotification(RawNotification n) {
   final String? source = kPackageSource[n.pkg];
   if (source == null) return null; // ① 包名白名单
-  // ⓪ 组摘要（聚合多条通知时系统发的汇总条目）先丢：它的文案是
-  //    `[N条]<应用>: <最新一条正文>`，与子通知文案不同 → 指纹不同 →
-  //    不过滤就会把**同一笔支付记两遍**。真实内容以子通知为准。
-  if (_isGroupSummary(n)) return null;
+  // ⓪ 折叠前缀已在 `combined` / `externalId` 里归一化（见 [RawNotification.combined]）。
+  //    ⚠️ 这里**刻意不再按 `[N条]` 丢弃** —— 取证与理由见 [_foldPrefixPattern]。
   final String text = n.combined;
   if (text.trim().isEmpty) return null;
   if (_isIgnored(text)) return null; // ② 忽略规则
@@ -305,15 +309,32 @@ ParsedRow? parseSharedText(RawShare share) {
   );
 }
 
-/// 组摘要文案的前缀标记：MIUI / 原生在聚合通知时生成
-/// `[2条]微信支付: 已支付¥0.01`（真机 Redmi K50 实测格式）。
-/// Kotlin 侧另有 `FLAG_GROUP_SUMMARY` / `EXTRA_IS_GROUP_SUMMARY` 直接过滤，
-/// 这里再留一道**纯函数**防线（可单测，且不依赖平台通道）。
-final RegExp _groupSummaryPattern = RegExp(r'^\[\d+条\]');
+/// 显示层的**折叠前缀**：`[N条]`（MIUI 把同应用的未读通知折叠展示时加在正文最前面）。
+///
+/// ⚠️⚠️ **它不是「组摘要」** —— 这是 2026-10-08 事故排查（Redmi K50 / HyperOS）的取证结论，
+/// 推翻 F7.15 `e4e53b4` 时的判断：
+///
+/// | 证据 | 值 | 含义 |
+/// |---|---|---|
+/// | `dumpsys notification` 的 `Group summaries:` 段 | **没有 `com.tencent.mm`** | 系统没把它登记为组摘要 |
+/// | `flags` | `0x11`（不含 `FLAG_GROUP_SUMMARY=0x200`） | 系统标志说它不是摘要 |
+/// | `groupKey` | `0|com.tencent.mm|-656511598|…`（**等于自己的 key**） | 压根没进任何分组 |
+/// | `tickerText` | `微信支付: 已支付¥0.03`（**无前缀**） | 前缀是显示层加的，不是原文 |
+///
+/// 当时的反例（`[2条]微信支付: 已支付¥0.01` + `[2条]微信支付: 个人收款码到账¥0.01`）
+/// 被当成了「摘要 + 子通知」，其实那是**两笔不同交易**（一笔支出、一笔收款），各自独立。
+///
+/// 后果：旧实现 `if (^\[\d+条\] → return null)` 把这唯一载体**静默丢弃** →
+/// 微信支付一笔都记不上（用户报「识别不到微信支付」）。
+///
+/// 现在只做**归一化**（剥前缀再解析），并且 `externalId` 也用归一化后的正文 ——
+/// 同一条通知的折条数变化（`[2条]` → `[3条]`）不会变成两笔。
+/// 真正需要丢弃的组摘要由 Kotlin 侧按 `FLAG_GROUP_SUMMARY` / `EXTRA_IS_GROUP_SUMMARY`
+/// **权威判定**（`AutoBookListenerService.handle`），根本到不了这里。
+final RegExp _foldPrefixPattern = RegExp(r'^\s*\[\d+条\]\s*');
 
-bool _isGroupSummary(RawNotification n) =>
-    _groupSummaryPattern.hasMatch(n.text.trim()) ||
-    _groupSummaryPattern.hasMatch(n.bigText.trim());
+/// 剥掉显示层折叠前缀（`[3条]微信支付: …` → `微信支付: …`）；无前缀时原样返回。
+String _stripFoldPrefix(String s) => s.replaceFirst(_foldPrefixPattern, '');
 
 bool _isIgnored(String text) {
   for (final String k in kAutoBookIgnoreKeywords) {

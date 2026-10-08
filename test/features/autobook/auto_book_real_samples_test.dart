@@ -62,28 +62,44 @@ void main() {
     });
   });
 
-  group('真机样本 · 组摘要必须丢弃（否则同笔支付记两遍）', () {
-    // MIUI 的组摘要文案 = `[N条]<应用>: <最新一条正文>`，与被聚合的子通知**文案不同**，
-    // 指纹因此不同 → 若不过滤，同一笔支付会入账两次。判据：正文以 `[数字条]` 开头。
-    test('「[2条]微信支付: 已支付¥0.01」→ 丢弃', () {
-      expect(
-        parseNotification(_wechat('微信支付', '[2条]微信支付: 已支付¥0.01')),
-        isNull,
-      );
+  group('真机样本 · 折叠前缀 `[N条]` 必须归一化后照常记账（2026-10-08 事故回归守卫）', () {
+    // ⚠️ 旧实现把 `[N条]` 当「组摘要」直接丢弃 → 微信支付**静默漏记**（用户报「识别不到微信支付」）。
+    // 真机取证（`dumpsys notification` 的 `Group summaries:` 段里**没有** com.tencent.mm、
+    // `flags=0x11` 不含 `FLAG_GROUP_SUMMARY`、`groupKey == 自己的 key`、`tickerText` 无前缀）
+    // 证明 `[N条]` 只是**显示层的折叠前缀**，整条通知就是那笔支付本身。
+    // 真正需要丢弃的组摘要由 Kotlin 按 `FLAG_GROUP_SUMMARY` 权威判定，到不了这一层。
+    test('事故原文「[3条]微信支付: 已支付¥0.03」→ expense ¥0.03（曾被误杀）', () {
+      final row = parseNotification(_wechat('微信支付', '[3条]微信支付: 已支付¥0.03'));
+      expect(row, isNotNull, reason: '这是 2026-10-08 漏记的那笔，不得再被 [N条] 规则丢弃');
+      expect(row!.direction, 'expense');
+      expect(row.amountCents, 3);
+      expect(row.source, 'notify_wechat');
     });
 
-    test('「[2条]微信支付: 个人收款码到账¥0.01」→ 丢弃', () {
-      expect(
-        parseNotification(_wechat('微信支付', '[2条]微信支付: 个人收款码到账¥0.01')),
-        isNull,
-      );
+    test('「[2条]微信支付: 已支付¥0.01」→ expense ¥0.01', () {
+      final row = parseNotification(_wechat('微信支付', '[2条]微信支付: 已支付¥0.01'));
+      expect(row, isNotNull);
+      expect(row!.direction, 'expense');
+      expect(row.amountCents, 1);
     });
 
-    test('「[10条]…」同样丢弃（条数不限一位）', () {
-      expect(
-        parseNotification(_wechat('微信支付', '[10条]微信支付: 已支付¥9.90')),
-        isNull,
-      );
+    test('「[2条]微信支付: 个人收款码到账¥0.01」→ income ¥0.01（与上一条是两笔不同交易）', () {
+      final row = parseNotification(_wechat('微信支付', '[2条]微信支付: 个人收款码到账¥0.01'));
+      expect(row, isNotNull);
+      expect(row!.direction, 'income', reason: '当年被当成「同笔的摘要」，其实是独立的一笔收款');
+      expect(row.amountCents, 1);
+    });
+
+    test('「[10条]…」金额不受条数影响 → ¥9.90', () {
+      final row = parseNotification(_wechat('微信支付', '[10条]微信支付: 已支付¥9.90'));
+      expect(row, isNotNull);
+      expect(row!.amountCents, 990, reason: '前缀里的 10 不得被当成金额');
+    });
+
+    test('折条数变化（[2条] → [3条]）不改变指纹 → 同一条通知不会重复入账', () {
+      final a = _wechat('微信支付', '[2条]微信支付: 已支付¥0.01');
+      final b = _wechat('微信支付', '[3条]微信支付: 已支付¥0.01');
+      expect(a.externalId, b.externalId);
     });
   });
 

@@ -89,7 +89,14 @@ class AutoBookListenerService : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
-        val decision = handle(sbn, fromCatchUp = false)
+        // 判定链整体兜异常：这里抛出去会被系统吞掉，外部只表现为「什么都没发生」——
+        // 排查时最怕这种静默（2026-10-08 事故里，实时回调没落下任何一行日志，只能靠猜）。
+        val decision = try {
+            handle(sbn, fromCatchUp = false)
+        } catch (t: Throwable) {
+            Log.e(TAG, "posted pkg=${sbn.packageName} 判定链异常，已吞掉", t)
+            return
+        }
         // 非白名单是绝大多数（每个 App 的每条通知都算）→ 不打日志，否则日志会被淹掉
         if (decision != Decision.NOT_WATCHED) {
             Log.i(TAG, "posted pkg=${sbn.packageName} → $decision")
@@ -116,7 +123,14 @@ class AutoBookListenerService : NotificationListenerService() {
         var added = 0
         for (sbn in active) {
             if (now - sbn.postTime > CATCH_UP_MAX_AGE_MS) continue
-            if (handle(sbn, fromCatchUp = true) == Decision.CAPTURED) added++
+            // 单条炸掉不能拖垮整轮补抓（通知栏里常有 80+ 条，坏一条就全没了）
+            val d = try {
+                handle(sbn, fromCatchUp = true)
+            } catch (t: Throwable) {
+                Log.e(TAG, "catchUp($reason) pkg=${sbn.packageName} 判定链异常，跳过该条", t)
+                continue
+            }
+            if (d == Decision.CAPTURED) added++
         }
         Log.i(TAG, "catchUp($reason) 活动通知=${active.size} 补入队=$added")
         AutoBookDiagnostics.noteCatchUp(this, active.size, added)
@@ -144,10 +158,15 @@ class AutoBookListenerService : NotificationListenerService() {
             return Decision.EMPTY
         }
 
-        // 组摘要（系统把多条通知聚合成一条汇总时发的条目）直接丢：
-        // 它的正文是 `[2条]微信支付: 已支付¥0.01`（真机 Redmi K50 实测），与子通知文案不同 →
-        // Dart 侧指纹也不同 → 不过滤会把**同一笔支付记两遍**。真实内容以子通知为准
-        // （Dart 侧另有 `[N条]` 前缀兜底，两边互不依赖）。
+        // 组摘要（系统把多条通知聚合成一条汇总时发的条目）直接丢 —— **只认系统标志**：
+        // 它的文案与子通知不同 → 指纹不同 → 不过滤会把同一笔支付记两遍。
+        //
+        // ⚠️ 2026-10-08 修正：**不要拿正文里的 `[N条]` 前缀当判据**。真机取证
+        // （`dumpsys notification` 的 `Group summaries:` 段里没有 com.tencent.mm、
+        // flags=0x11 不含 FLAG_GROUP_SUMMARY、groupKey == 自己的 key、tickerText 无前缀）
+        // 证明 `[3条]微信支付: 已支付¥0.03` 里的前缀只是 MIUI **显示层**加的，
+        // 整条通知就是那笔支付本身。Dart 侧曾按 `^\[\d+条\]` 再兜一道 → 微信支付被**静默漏记**。
+        // 现在判组摘要只有这一处（系统标志），到不了 Dart。
         val isGroupSummary =
             ((sbn.notification?.flags ?: 0) and Notification.FLAG_GROUP_SUMMARY) != 0 ||
                 extras.getBoolean("android.isGroupSummary", false)
