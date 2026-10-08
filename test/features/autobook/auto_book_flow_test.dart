@@ -55,6 +55,22 @@ class FakeAutoBookBridge extends AutoBookBridge {
     return out;
   }
 
+  /// 补抓时「通知栏里现存的」原始行 —— 由用例预置，`catchUp()` 会把它注入队列。
+  List<String> catchUpRows = <String>[];
+
+  /// 补抓被调用的次数（用于断言「补抓排在取队列之前」）。
+  int catchUpCount = 0;
+
+  @override
+  Future<int> catchUp() async {
+    catchUpCount++;
+    final int n = catchUpRows.length;
+    if (n == 0) return 0;
+    queue = <String>[...catchUpRows, ...queue];
+    catchUpRows = <String>[];
+    return n;
+  }
+
   @override
   Future<void> restoreQueue(List<String> lines) async {
     restored.add(List<String>.of(lines));
@@ -403,5 +419,42 @@ void main() {
 
     expect(r.imported, 1);
     expect((await visibleTxs()).single.amountCents, 1200);
+  });
+
+  test('补抓：服务未连接期间错过的支付通知仍能入账（真机事故回归守卫）', () async {
+    // 2026-10-08 Redmi K50 事故：支付宝付款通知 22:29:37 发布，监听服务 22:31:28 才连上
+    // → `onNotificationPosted` 是推送式回调，系统不会补发 → 那笔支付永久丢失。
+    // 修法 = 每次 drain 前先补抓通知栏里仍存在的通知。
+    bridge.queue = <String>[]; // 实时回调一条都没接到
+    bridge.catchUpRows = <String>[_notify('你已成功支付 12.00元', at: _t)];
+
+    final AutoBookDrainResult r = await controller().drain();
+
+    expect(bridge.catchUpCount, 1);
+    expect(r.caughtUp, 1);
+    // 补抓必须排在取队列之前，否则这一批要等到下一次 drain 才入账
+    expect(r.imported, 1);
+    expect((await visibleTxs()).single.amountCents, 1200);
+  });
+
+  test('补抓没捞到东西：仍不覆盖「上次检查」的成功结果', () async {
+    bridge.queue = <String>[_notify('你已成功支付 12.00元', at: _t)];
+    await controller().drain();
+
+    // 第二次 drain：补抓跑了，但通知栏里已没有可捞的通知 → 队列仍空
+    bridge.catchUpRows = <String>[];
+    final AutoBookDrainResult again = await controller().drain();
+    expect(bridge.catchUpCount, 2); // 每轮 drain 都会补抓一次
+    expect(again.touched, isFalse);
+
+    final String? raw = await container
+        .read(appMetaRepositoryProvider)
+        .get(kAutoBookLastRunKey);
+    final AutoBookLastRun? run = AutoBookLastRun.parse(raw);
+
+    // 若补抓把「已入过队的通知」重复入队，这里会被写成 duplicates:1 / imported:0，
+    // 页面「上次检查」就会从「新入账 1 笔」变成「重复 1 笔」。
+    expect(run!.imported, 1);
+    expect(run.summary, contains('新入账 1 笔'));
   });
 }

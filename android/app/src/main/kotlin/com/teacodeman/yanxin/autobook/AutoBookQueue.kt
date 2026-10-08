@@ -13,9 +13,11 @@ import java.io.File
  * 文件（都在 `filesDir`，随 App 卸载清理）：
  * - `autobook_queue.jsonl`：一行一条 JSON，Dart drain 后整文件清空
  * - `autobook_command.json`：通知按钮落下的待办命令（撤销），Dart 取走后删除
+ * - 已入队指纹见 `AutoBookSeen`（`autobook_seen.json`）
  *
- * 队列纪律：上限 500 条 / 保留 7 天；写入侧用「同 pkg+title+text 5 秒窗口」粗筛去重
- * （Dart 侧还有指纹唯一索引兜底，两层互不依赖）。
+ * 队列纪律：上限 500 条 / 保留 7 天；写入侧两层去重 —— 实时捕获用「同 pkg+title+text
+ * 5 秒窗口」，补抓（catch-up）用 [AutoBookSeen] 的持久指纹；Dart 侧还有指纹唯一索引兜底，
+ * 三层互不依赖。
  */
 object AutoBookQueue {
 
@@ -35,7 +37,13 @@ object AutoBookQueue {
     private fun commandFile(context: Context): File =
         File(context.filesDir, COMMAND_FILE)
 
-    /** 通知入队；5 秒窗口内重复（同 pkg+title+text）返回 false 表示已丢弃。 */
+    /**
+     * 通知入队；已被丢弃（实时 5 秒窗口内重复 / 补抓时发现指纹已见过）返回 false。
+     *
+     * [fromCatchUp] = true 时**不走 5 秒窗口**（补抓与实时捕获可能相隔数小时），
+     * 改用 [AutoBookSeen] 的持久指纹去重 —— 两条路径都必须回答同一个问题：
+     * 「这条通知是不是已经入过队了」。
+     */
     @Synchronized
     fun enqueueNotification(
         context: Context,
@@ -45,18 +53,28 @@ object AutoBookQueue {
         bigText: String,
         subText: String,
         postTimeMs: Long,
+        fromCatchUp: Boolean = false,
     ): Boolean {
         val key = "$pkg|$title|$text"
-        val now = System.currentTimeMillis()
-        // 过期条目先清掉，避免 deque 无限增长
-        while (recent.isNotEmpty() && now - recent.first().second > DEDUP_WINDOW_MS) {
-            recent.removeFirst()
+        if (fromCatchUp) {
+            // 补抓：只看持久指纹，不看 5 秒窗口
+            if (AutoBookSeen.contains(context, "$key|$postTimeMs")) return false
+        } else {
+            val now = System.currentTimeMillis()
+            // 过期条目先清掉，避免 deque 无限增长
+            while (recent.isNotEmpty() && now - recent.first().second > DEDUP_WINDOW_MS) {
+                recent.removeFirst()
+            }
+            for (entry in recent) {
+                if (entry.first == key) return false
+            }
         }
-        for (entry in recent) {
-            if (entry.first == key) return false
+        // 双保险：实时与补抓共用一份持久指纹（同一条通知经两条路径到达时只入队一次）
+        if (!AutoBookSeen.remember(context, "$key|$postTimeMs")) return false
+        if (!fromCatchUp) {
+            recent.addLast(key to System.currentTimeMillis())
+            while (recent.size > DEDUP_KEEP) recent.removeFirst()
         }
-        recent.addLast(key to now)
-        while (recent.size > DEDUP_KEEP) recent.removeFirst()
 
         val json = JSONObject()
             .put("kind", "notification")

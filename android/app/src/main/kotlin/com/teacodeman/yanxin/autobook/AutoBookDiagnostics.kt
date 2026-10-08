@@ -51,6 +51,24 @@ object AutoBookDiagnostics {
     @Volatile var skippedGroupSummary: Int = 0
         private set
 
+    /**
+     * 补抓（catch-up）次数与结果。
+     *
+     * `lastCatchUpActive` = 补抓时通知栏里的通知总数（0 说明拉到空，多半是服务没连上），
+     * `catchUpAddedTotal` = 累计补入队条数。两者用来判断「通知栏里明明有支付消息却没记上」
+     * 到底是补抓没跑、还是跑了但通知已不在栏里。
+     */
+    @Volatile var lastCatchUpAtMs: Long = 0L
+        private set
+    @Volatile var lastCatchUpActive: Int = 0
+        private set
+    @Volatile var lastCatchUpAdded: Int = 0
+        private set
+    @Volatile var catchUpTotal: Int = 0
+        private set
+    @Volatile var catchUpAddedTotal: Int = 0
+        private set
+
     /** 最后一次被 Dart drain 取走的时间与条数。 */
     @Volatile var lastDrainAtMs: Long = 0L
         private set
@@ -69,6 +87,8 @@ object AutoBookDiagnostics {
     private var addSkippedEmpty = 0
     private var addSkippedDedup = 0
     private var addSkippedGroupSummary = 0
+    private var addCatchUp = 0
+    private var addCatchUpAdded = 0
 
     /** 本进程是否已读过盘。 */
     private var loaded = false
@@ -112,6 +132,11 @@ object AutoBookDiagnostics {
             lastDrainAtMs = base.optLong("lastDrainAtMs", 0L)
             lastDrainCount = base.optInt("lastDrainCount", 0)
         }
+        if (lastCatchUpAtMs == 0L) {
+            lastCatchUpAtMs = base.optLong("lastCatchUpAtMs", 0L)
+            lastCatchUpActive = base.optInt("lastCatchUpActive", 0)
+            lastCatchUpAdded = base.optInt("lastCatchUpAdded", 0)
+        }
         recomputeTotals()
     }
 
@@ -128,6 +153,8 @@ object AutoBookDiagnostics {
         skippedEmpty = b.optInt("skippedEmpty", 0) + addSkippedEmpty
         skippedDedup = b.optInt("skippedDedup", 0) + addSkippedDedup
         skippedGroupSummary = b.optInt("skippedGroupSummary", 0) + addSkippedGroupSummary
+        catchUpTotal = b.optInt("catchUpTotal", 0) + addCatchUp
+        catchUpAddedTotal = b.optInt("catchUpAddedTotal", 0) + addCatchUpAdded
     }
 
     fun noteConnected(context: Context, connected: Boolean) {
@@ -166,6 +193,21 @@ object AutoBookDiagnostics {
         recomputeTotals()
     }
 
+    /**
+     * 补抓跑了一轮。**必然落盘** —— 「通知栏里有支付消息却没记上」这类问题的判别
+     * 全靠这次记录（服务没连上时 `active` 会是 0）。
+     */
+    fun noteCatchUp(context: Context, active: Int, added: Int) {
+        load(context)
+        lastCatchUpAtMs = System.currentTimeMillis()
+        lastCatchUpActive = active
+        lastCatchUpAdded = added
+        addCatchUp++
+        addCatchUpAdded += added
+        recomputeTotals()
+        persist(context)
+    }
+
     fun noteDrained(context: Context, count: Int) {
         load(context)
         lastDrainAtMs = System.currentTimeMillis()
@@ -194,6 +236,11 @@ object AutoBookDiagnostics {
             .put("lastDrainAtMs", lastDrainAtMs)
             .put("lastDrainCount", lastDrainCount)
             .put("drainedTotal", drainedTotal)
+            .put("lastCatchUpAtMs", lastCatchUpAtMs)
+            .put("lastCatchUpActive", lastCatchUpActive)
+            .put("lastCatchUpAdded", lastCatchUpAdded)
+            .put("catchUpTotal", catchUpTotal)
+            .put("catchUpAddedTotal", catchUpAddedTotal)
             .put("nowMs", System.currentTimeMillis())
             .toString()
     }

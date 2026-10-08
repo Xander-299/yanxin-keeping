@@ -32,6 +32,7 @@ class AutoBookDrainResult {
     this.dropped = 0,
     this.undone = 0,
     this.restored = false,
+    this.caughtUp = 0,
     this.batch,
   });
 
@@ -49,6 +50,9 @@ class AutoBookDrainResult {
 
   /// 本次因**临时性失败**（账本未就绪 / 写库异常）把队列回写了 —— 不是丢账，是等下次。
   final bool restored;
+
+  /// 本次**补抓**（通知栏里仍存在、但服务未连接期间漏掉的通知）入队的条数。
+  final int caughtUp;
 
   /// 本批（imported > 0 时非空）。
   final AutoBookBatch? batch;
@@ -91,7 +95,13 @@ class AutoBookController {
       undone = await _handleCommand(command, bridge);
     }
 
-    // B. 取队列（原生侧是「取走即清空」，所以从这一行起原始数据只在内存里）
+    // B. 补抓 —— **必须在取队列之前**：通知在服务未连接期间发布时系统不会补发回调，
+    //    所以要主动把通知栏里仍存在的通知捞回队列（真机事故：支付宝付款通知发布早于
+    //    服务连接 1 分 51 秒 → 那笔支付永久丢失）。去重由原生侧持久指纹保证，
+    //    重复补抓不会重复入队。
+    final int caughtUp = await bridge.catchUp();
+
+    // C. 取队列（原生侧是「取走即清空」，所以从这一行起原始数据只在内存里）
     final List<String> raw = await bridge.drainQueue();
     if (raw.isEmpty) {
       // 空队列 = 没有新通知，**不覆盖**「上次检查」：冷启动 / 从后台回来的例行 drain
@@ -101,11 +111,11 @@ class AutoBookController {
       if (undone > 0) {
         await _rememberLastRun(AutoBookLastRun(atMs: _nowMs, undone: undone));
       }
-      return AutoBookDrainResult(undone: undone);
+      return AutoBookDrainResult(undone: undone, caughtUp: caughtUp);
     }
 
     try {
-      return await _process(raw, bridge: bridge, undone: undone);
+      return await _process(raw, bridge: bridge, undone: undone, caughtUp: caughtUp);
     } catch (e) {
       // **临时性失败**（写库异常 / 处理中断）→ 把原始行放回队列，等下次重试。
       // 不做这一步，这批通知会随「取走即清空」永久消失 —— 这正是「只成功过一次」的典型成因。
@@ -127,6 +137,7 @@ class AutoBookController {
     List<String> raw, {
     required AutoBookBridge bridge,
     required int undone,
+    int caughtUp = 0,
   }) async {
     final AutoBookBatchStore store = _ref.read(autoBookBatchStoreProvider);
 
@@ -148,7 +159,7 @@ class AutoBookController {
       await _rememberLastRun(
         AutoBookLastRun(atMs: _nowMs, dropped: dropped, undone: undone),
       );
-      return AutoBookDrainResult(dropped: dropped, undone: undone);
+      return AutoBookDrainResult(dropped: dropped, undone: undone, caughtUp: caughtUp);
     }
 
     final String? bookId = await _ref.read(activeBookIdProvider.future);
@@ -164,7 +175,12 @@ class AutoBookController {
           error: '账本未就绪',
         ),
       );
-      return AutoBookDrainResult(dropped: dropped, undone: undone, restored: true);
+      return AutoBookDrainResult(
+        dropped: dropped,
+        undone: undone,
+        restored: true,
+        caughtUp: caughtUp,
+      );
     }
 
     final BillCategoryMaps categoryMaps = await buildCategoryMaps(
@@ -225,6 +241,7 @@ class AutoBookController {
         duplicates: duplicates,
         dropped: dropped,
         undone: undone,
+        caughtUp: caughtUp,
       );
     }
 
@@ -261,6 +278,7 @@ class AutoBookController {
       duplicates: duplicates,
       dropped: dropped,
       undone: undone,
+      caughtUp: caughtUp,
       batch: batch,
     );
   }

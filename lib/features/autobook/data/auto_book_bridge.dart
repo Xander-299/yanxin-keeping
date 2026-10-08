@@ -66,6 +66,21 @@ class AutoBookBridge {
     return const <String>[];
   }
 
+  /// **补抓**：把通知栏里仍存在、但原生侧当时没接到的通知补入队。
+  ///
+  /// 为什么必须有：`onNotificationPosted` 是推送式回调，**通知在服务未连接期间发布时
+  /// 系统不会补发** —— 真机实测支付宝付款通知发布早于服务连接 1 分 51 秒，那笔支付
+  /// 永久丢失，且界面上完全看不出来。
+  ///
+  /// ⚠️ **必须在 [drainQueue] 之前调用**（补抓是往队列里写，取队列在后面）。
+  ///
+  /// @return 补入队条数；服务未被系统绑定 / 非 Android → 0。
+  Future<int> catchUp() async {
+    final Object? res = await _invoke<Object?>('catchUp');
+    if (res is int && res > 0) return res;
+    return 0;
+  }
+
   /// 临时性失败时把原始行**放回原生队列**（等下次重试）。
   ///
   /// 不这么做的话「取走即清空」会让这批通知永久消失 —— 冷启动首帧账本未就绪、

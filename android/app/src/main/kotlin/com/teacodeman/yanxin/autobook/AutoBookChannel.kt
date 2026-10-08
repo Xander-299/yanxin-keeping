@@ -89,6 +89,11 @@ class AutoBookChannel(private val activity: Activity) : MethodChannel.MethodCall
 
             "drainQueue" -> result.success(AutoBookQueue.drain(activity))
 
+            // 补抓：通知在服务未连接期间发布时系统**不会补发回调**（真机实测：支付宝付款
+            // 通知早于服务连接 1 分 51 秒 → 永久丢失）。App 每次回前台、drain 之前调一次，
+            // 把通知栏里仍存在的通知捞回队列。返回补入队条数；服务未绑定返回 -1。
+            "catchUp" -> result.success(AutoBookListenerService.catchUpNow())
+
             // 兜底回写：Dart 侧临时性失败（账本未就绪 / 写库异常）时把原始行放回队列，
             // 否则「取走即清空」会让这批通知永久消失
             "restoreQueue" -> {
