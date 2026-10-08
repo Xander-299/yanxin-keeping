@@ -476,3 +476,91 @@ enabled_notification_listeners` 与 `dumpsys` **都显示「已授权」** —�
       —— 首页提示条与撤销已在模拟器 `ACTION_SEND` 通道验过，仅**权限引导三态**未在真机覆盖
 - [x] **✅ 收尾四步**（2026-10-08 完成）：CHANGELOG `[Unreleased]` → `## [v0.7.15]`（含 I 段）+ tag 表补行
       → `git tag -a v0.7.15` → 直推核对（「我的」页角标早在 `3ec2381` 实现提交即置 `v0.7.15`，无需再改）
+
+### F7.16 补抓（2026-10-08 深夜 · 用户报「通知栏里有支付消息，但均未被捕获」）
+
+> ⚠️ 本轮**未打 tag**（`[Unreleased]`）—— F7.16 的「扩展监听应用清单」需求尚未落地，待其完成一并转 `v0.7.16`。
+> 代码基线 **`d44f8c6`**。
+
+**根因（暴露了 §3.1 未考虑的时序）**
+
+`NotificationListenerService.onNotificationPosted` 是**推送式回调**：通知在服务**未连接期间**发布时，
+系统**不会在服务连上后补发** → **永久丢失**。§3.1 只设计了「服务在工作时」的链路，
+**没回答「服务不在时的事件去哪了」**。
+
+真机现场（Redmi K50）：支付宝付款通知 `交易提醒 / 你有一笔3.00元的支出，点击领3元电费红包。`
+发布于 **22:29:37**，而 `lastConnectedAtMs` = **22:49:40**（晚 20 分 3 秒）；旁证 `lastCaptureAtMs`
+停在 **17:52:33**、`capturedTotal` 恒为 **2**，而 `skippedNotWatched=226` 说明服务此前确实工作过
+—— 即「**服务活着，但那段时间没连上**」。
+
+> ⚠️ 用户最初的判断是「能抓取但无法识别（关键词识别问题）」—— **本轮证明不是**：通知根本没到达服务，
+> 解析规则无从谈起。（关键词问题见上一节「真机走查与修复」。）
+
+**修复（5 项）**
+
+1. **补抓（catch-up）** —— `AutoBookListenerService.catchUp(reason)`：`getActiveNotifications()` 扫通知栏
+   **现存**通知，逐条走与实时回调**同一条**判定链（抽 `handle(sbn, fromCatchUp)`，两处各写一遍必然漂移）。
+   过滤：**24h 内**（更早的多半是过期营销）/ 白名单 / 非组摘要 / 去重。触发点两个：
+   ① `onListenerConnected()`（服务刚被系统绑上）；② Dart 每次 `drainQueue()` **之前**（新通道方法 `catchUp`）
+   —— **顺序不可颠倒**，否则刚补入队的条目要等下一轮。
+2. **`AutoBookSeen`（新文件）** —— 持久化「已入队指纹集」`pkg|title|text|postTimeMs`（cap 200，
+   `filesDir/autobook_seen.json`）。**为什么必须**：补抓会反复看到同一条仍在栏里的通知，而队列是
+   「取走即清空」→ 不做持久去重就会**每次回前台重复入队**，Dart 记「重复 N 条」→ 把「上次检查：
+   新入账 N 笔」盖掉。**指纹必须带 `postTimeMs`** —— 只按文案去重会漏记「已支付¥1.00」这种同文案多笔。
+3. **`AutoBookQueue.enqueueNotification` 加 `fromCatchUp`** —— 补抓走持久指纹、实时走既有 5 秒窗口，
+   最后**共用同一份 `AutoBookSeen`** 兜底（同一条通知经两条路径到达也只入队一次）。
+4. **可观测性** —— `Decision` 枚举（`NOT_WATCHED / EMPTY / GROUP_SUMMARY / DEDUP / CAPTURED`）逐层 `Log`
+   （`TAG=AutoBookListener`；`NOT_WATCHED` 不打，否则日志被淹）；诊断新增
+   `lastCatchUpAtMs / lastCatchUpActive / lastCatchUpAdded / catchUpTotal / catchUpAddedTotal`
+   且**必然落盘**（此前 `noteSkippedDedup` 刻意不落盘 → 「回调没来」与「来了被去重丢掉」在文件上
+   **完全不可区分**，无法判因）。
+5. **Dart 侧** —— `AutoBookBridge.catchUp()` + `AutoBookController._drain()` 在取队列**之前**插入补抓步骤
+   + `AutoBookDrainResult.caughtUp`。
+
+**真机验证（Redmi K50 · 通过 ✅）**
+
+| 步骤 | 观测 |
+|---|---|
+| 重绑监听（见下方「⭐ 修正」） | `Live notification listeners` 出现本服务（live=1 / services 命中 8） |
+| `onListenerConnected` → `catchUp("connect")` | `lastCatchUpActive=87`（扫到 87 条活动通知）、`lastCatchUpAdded=2` |
+| 队列 | 补入 2 条：**支付宝 `交易提醒` / `你有一笔3.00元的支出…`** ✅ + 支付宝营销广告 1 条 |
+| App 回前台 drain | 队列清空、`drainedTotal` 3 → **5**、`skippedDedup` 0 → **10** |
+| 数据库 | **165 → 166**，`notify_alipay` 5 → **6**；新增 `cents=300 / expense / notify_alipay /` **`occurred_at=22:29:37`** |
+| 去重 | `catchUpTotal=6` 而 `catchUpAddedTotal` 恒为 **2** → **反复补抓零重复入队** ✅ |
+
+解析顺带复核：支付宝那条同时命中软忽略 `红包`/`提醒`，但含强支付词 `支出` → 正确放行；
+金额取规则② `3.00元的支出` = **300 分**（**没被营销尾巴「领3元电费红包」的 3 元抢走**）；
+同批捞进的营销广告按 `direction == null` 被 Dart 侧丢弃 → **只 +1 不 +2** ✅。
+
+**⚠️ 补抓的固有边界（走查时必须知道）**
+
+- 只能捞「**此刻仍在通知栏里**」的通知 —— 已被系统 / 用户清掉的**补不回来**。真机：微信那条
+  `已支付¥1.00` 验证时 `dumpsys notification | grep -c 已支付` 已为 **0** → 没补到（用户需手动补记）。
+  **所以补抓是兜底，主防线仍是服务保持连接时的实时捕获。**
+- `AutoBookNotifier.showPending`（「识别到 N 笔支付通知」）按**队列条数**弹，而 Kotlin 侧只做包名过滤
+  → 补抓一次可能捞进多条非支付通知 → 数字偏高。属**既有行为**（实时路径同样如此），最终被 Dart 侧
+  `showReceipt`（「已自动记账 N 笔」）覆盖为准确值。若要收紧，归入 F7.16「扩展清单」时一并设计预筛。
+
+**⭐ 修正一个既有认知：重绑监听必须「先摘再挂」**
+
+单独 `cmd notification allow_listener <pkg>/<component>` **不生效** —— 实测：setting 里有了、App 进程也在，
+但 `dumpsys notification` 的 `Live notification listeners` 里**没有**本服务、`dumpsys activity services`
+仍是 `(nothing)`。**系统不会因「新增一条授权」而绑定。**
+
+正确序列：`disallow_listener` → `sleep 2` → `allow_listener` → 之后 live 计数 1、services 命中 8。
+
+判定「到底绑上没」**只看 `Live notification listeners`**（`dumpsys notification` 的
+`Allowed notification listeners` 段只反映 setting，不反映是否真连上）。
+
+**构建链备忘**
+
+`android/local.properties` 会被 flutter 工具改写（用户跑过 `flutter build apk --release` 后变成
+`buildMode=release / versionCode=1`）→ 直接 `assembleDebug` 出的包 **versionCode=1**，而设备上是 **2001**
+→ `install -r` 必撞 `INSTALL_FAILED_VERSION_DOWNGRADE`。**构建前先看这个文件**（不入版本控制）。
+
+另：`aapt` 与 kernel 校验只覆盖 Dart 侧；**Kotlin 改动是否真进包，用 dex 二进制 grep 验**
+（读 zip 里全部 `classes*.dex` 拼起来搜新类名/新方法名/新字符串常量）。
+
+**门禁**：analyze 等效 **全项目 `No issues found!`** ✅；`auto_book_flow_test` **17 passed / 0 failed**
+（15 → 17，+2：补抓入账回归守卫 + 补抓空转不覆盖「上次检查」）。
+⚠️ **未跑全量 479** —— 本批 Dart 改动仅 autobook 内 3 个文件（`bridge` / `controller` / 其测试）。

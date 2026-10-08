@@ -27,6 +27,62 @@
 | `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
 | `v0.7.15` | F7.15 自动记账（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写） | 本段所在提交 |
 
+## [Unreleased] · F7.16 自动记账补抓（服务未连接期间错过的支付通知）
+
+> **门禁**：`flutter analyze` 等效 —— **全项目 `No issues found!`** ✅；
+> `auto_book_flow_test` **17 passed / 0 failed**（15 → 17，本批 **+2**，纯 `test()`）；
+> 其余测试不受影响（本批 Dart 改动仅限 autobook 内的 `bridge` / `controller` / 该测试文件）。
+> 真机（**Redmi K50**，AI 经 adb 取证）**补抓链路端到端通过** ✅ —— 把 22:29:37 那笔
+> 已丢失的支付宝支付**补记入账**（`cents=300 / expense / notify_alipay / occurred_at=22:29:37`）。
+> **回滚**：`git revert d44f8c6`。
+> **不动 schema**（DB 仍 **v3**）· **零新 pub 依赖**（补抓全在 Kotlin + MethodChannel）。
+> ⚠️ 本段**暂未转正、未打 tag** —— F7.16 的「扩展监听应用清单」需求尚未落地，待其完成一并转 `v0.7.16`。
+
+### 变更
+
+- **根因（真机钉死）**：`onNotificationPosted` 是**推送式回调** —— 通知在服务**未连接期间**发布时，
+  系统**不会在连上后补发**，永久丢失。现场：支付宝付款通知 `交易提醒 / 你有一笔3.00元的支出…`
+  发布于 **22:29:37**，而服务 **22:49:40** 才连上；旁证 `lastCaptureAtMs` 停在 17:52:33、
+  `capturedTotal` 恒为 2，而 `skippedNotWatched=226` 说明服务此前确实工作过（「活着但没接上」）。
+- **补抓（catch-up）**：`AutoBookListenerService.catchUp(reason)` 用 `getActiveNotifications()`
+  扫通知栏现存通知（**24h 内** + 白名单 + 非组摘要 + 去重）；在 **`onListenerConnected`** 时
+  立即执行，并由 Dart 侧在**每次 `drainQueue()` 之前**经新通道方法 `catchUp` 触发
+  （顺序不可颠倒 —— 先补抓后取队列，否则刚补入队的条目要等下一轮）。
+- **`AutoBookSeen`（新文件）**：持久化「已入队指纹集」`pkg|title|text|postTimeMs`（cap 200）。
+  补抓会反复看到同一条通知，而队列是「取走即清空」→ 不做持久去重就会**每次回前台重复入队**，
+  Dart 记「重复 N 条」→ 把「上次检查：新入账 N 笔」盖掉。**指纹必须带 `postTimeMs`**
+  —— 只按文案去重会漏记「已支付¥1.00」这种同文案的多笔。
+- **`AutoBookQueue.enqueueNotification` 加 `fromCatchUp`**：补抓走持久指纹、实时走既有 5 秒窗口，
+  最后共用同一份 `AutoBookSeen` 兜底（同一条通知经两条路径到达也只入队一次）。
+- **可观测性**：抽出 `handle(sbn, fromCatchUp)`，让**实时回调与补抓共用同一条判定链**
+  （两处各写一遍必然漂移）+ `Decision` 枚举逐层 `Log`（`NOT_WATCHED` 不打，否则日志被淹）；
+  诊断新增 `lastCatchUpAtMs / lastCatchUpActive / lastCatchUpAdded / catchUpTotal / catchUpAddedTotal`
+  且**必然落盘**（此前 `noteSkippedDedup` 刻意不落盘 → 「回调没来」与「来了被去重丢掉」
+  在文件上完全不可区分，无法判因）。
+- **Dart 侧**：`AutoBookBridge.catchUp()` + `AutoBookController._drain()` 在取队列**之前**插入补抓步骤
+  + `AutoBookDrainResult.caughtUp`。
+
+### 修复
+
+- 服务未连接窗口期内发布的支付通知**不再永久丢失** —— 只要通知仍挂在通知栏，重连 / 回前台即自动补记。
+- 补抓**不会**因反复执行而重复入账（真机：`catchUpTotal=6` 而 `catchUpAddedTotal` 恒为 **2**）。
+
+### 新增
+
+- 测试 2 条（`auto_book_flow_test` 15 → 17）：
+  「补抓：服务未连接期间错过的支付通知仍能入账（真机事故回归守卫）」、
+  「补抓没捞到东西：仍不覆盖『上次检查』的成功结果」。
+
+### 已知边界
+
+- 补抓只能捞「**此刻仍在通知栏里**」的通知 —— 已被系统 / 用户清掉的补不回来
+  （真机：微信那条 `已支付¥1.00` 验证时 `grep -c 已支付` 已为 0）。
+  **补抓是兜底，主防线仍是服务保持连接时的实时捕获。**
+- `AutoBookNotifier.showPending`（「识别到 N 笔支付通知」）按**队列条数**弹，而 Kotlin 侧只做包名过滤
+  → 补抓一次可能捞进多条非支付通知（真机同时捞进 1 条支付宝营销广告）→ 数字偏高。
+  属**既有行为**（实时路径同样如此），最终被 Dart 侧 `showReceipt`（「已自动记账 N 笔」）
+  覆盖为准确值；若要收紧，归入 F7.16「扩展应用清单」时一并设计预筛。
+
 ## [v0.7.15] — 2026-10-08 · 自动记账（通知使用权为主 + 零权限兜底；含真机走查收口）
 
 > **门禁**：`flutter test` **479 passed / 0 skipped**（2026-10-08 用户终端全量；

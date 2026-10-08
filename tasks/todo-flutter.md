@@ -545,3 +545,40 @@
       → `git tag -a v0.7.15` → 直推核对 → 文档收尾（我的页角标早在 `3ec2381` 实现提交即置 `v0.7.15`，无需再改）
 - [ ] **非阻断遗留**：真机「权限引导三态」未覆盖（去开启 / 返回自检 / 通知权限被拒态）
       —— 首页提示条与 `/autobook` 撤销已在模拟器 `ACTION_SEND` 通道验过
+
+#### F7.16 补抓修复（2026-10-08 深夜 · 用户报「通知栏里有支付消息，但均未被捕获」）
+
+> ⚠️ **未打 tag** —— 「扩展监听应用清单」需求未落地，待其完成一并转 `v0.7.16`。代码基线 `d44f8c6`。
+
+- [x] 真机取证：确认那两条通知**此刻仍在通知栏**（`dumpsys notification --noredact`），
+      并读出 `when` / `posttimeElapsedMs` / `flags` / 正文
+- [x] **定位真根因**：`onNotificationPosted` 是**推送式回调** —— 支付宝付款通知 **22:29:37** 发布，
+      而服务 **22:49:40** 才连上（晚 20 分 3 秒）→ 系统**不补发** → **永久丢失**。
+      ⚠️ **不是关键词识别问题**（那正是用户最初的怀疑方向）
+- [x] 修 **补抓（catch-up）**：`catchUp()` 扫 `getActiveNotifications()`（24h 内 / 白名单 / 非组摘要 / 去重）；
+      `onListenerConnected` 时立即跑 + Dart `drainQueue()` **之前**经新通道方法触发（顺序不可颠倒）
+- [x] 新增 **`AutoBookSeen`**：持久化「已入队指纹集」`pkg|title|text|postTimeMs`（cap 200）
+      —— 补抓会反复看到同一条通知，而队列「取走即清空」，不持久去重就会**每次回前台重复入队**
+- [x] 修 **可观测性缺口**：抽出 `handle(sbn, fromCatchUp)` 让实时与补抓**共用同一条判定链** +
+      `Decision` 枚举逐层 `Log`；诊断补 5 个补抓字段且**必然落盘**
+      （此前 `noteSkippedDedup` 不落盘 → 「回调没来」与「来了被去重丢掉」在文件上完全不可区分）
+- [x] Dart 侧：`AutoBookBridge.catchUp()` + 控制器插步骤 + `AutoBookDrainResult.caughtUp`
+- [x] 新增测试 2 条（`auto_book_flow_test` 15 → **17**）：
+      「补抓：服务未连接期间错过的支付通知仍能入账（真机事故回归守卫）」「补抓没捞到东西：仍不覆盖『上次检查』的成功结果」
+- [x] **真机验证（Redmi K50）通过**：补抓扫 **87** 条活动通知 → 补入队 **2** 条 → DB **165 → 166**，
+      新增 `cents=300 / expense / notify_alipay / occurred_at=22:29:37`（**真实支付时刻被完整保住**）；
+      `catchUpTotal=6` 而 `catchUpAddedTotal` 恒为 **2** → **反复补抓零重复入队**
+- [x] 门禁：analyze 等效 **`No issues found!`** ✅；`auto_book_flow_test` **17 passed / 0 failed**
+      （⚠️ 未跑全量 479 —— 本批 Dart 改动仅 autobook 内 3 个文件）
+- [ ] ⚠️ **边界（不可修）**：补抓只能捞「**此刻仍在通知栏里**」的通知 —— 微信那条 `已支付¥1.00`
+      验证时已被系统清掉（`grep -c 已支付` = 0）→ **补不回**，需**用户手动补记**
+- [ ] **F7.16 未完，待做**：
+      ① **扩展内置监听应用清单**（用户 2026-10-08 提）。技术方案要点：候选渠道已扫 ——
+      京东 / 拼多多 / 抖音的普通支付**资金流经微信或支付宝** → 加白名单会**重复记账**
+      → **跨应用去重是必做前置**（现 `externalId = sha1(pkg|title|text|postTime)` **含 pkg** → 跨来源必然不重）；
+      另发现**银行短信**（`com.android.mms`）是独立通道、覆盖所有走卡交易，但需 `READ_SMS` 且重叠区更大
+      ② 微信那条 22:35:52 在服务**已连接**状态下为何仍未实时捕获 —— **仍未证死**，
+      现已补齐 Kotlin 全链路日志，等**下一笔真实支付**抓日志定位
+- [x] 本轮踩到的环境坑已回写 `MEMORY.md`：**`android/local.properties` 会被 flutter 工具改写**
+      （构建前必看 versionCode）+ **重绑监听必须 `disallow_listener` → 2s → `allow_listener`**
+      （单独 allow 不生效；判定只看 `Live notification listeners`）
