@@ -582,3 +582,26 @@
 - [x] 本轮踩到的环境坑已回写 `MEMORY.md`：**`android/local.properties` 会被 flutter 工具改写**
       （构建前必看 versionCode）+ **重绑监听必须 `disallow_listener` → 2s → `allow_listener`**
       （单独 allow 不生效；判定只看 `Live notification listeners`）
+
+### F7.16 · B 批 · 微信支付「识别不到」—— `[N条]` 折叠前缀误杀（2026-10-08）
+
+- [x] **先取证再改**：诊断快照显示 `lastCapturePkg=com.tencent.mm`、`autobook_seen.json` 里
+      **已有** `com.tencent.mm|微信支付|[3条]微信支付: 已支付¥0.03|…` → 微信那条**已入队**，
+      卡在**捕获之后**（队列已清空但 DB 的 `notify_wechat` 仍是 7）
+- [x] **钉死根因**：`auto_book_rules.dart` 的 `^\[\d+条\]` 把正文 `[3条]微信支付: 已支付¥0.03`
+      判成「组摘要」→ `parseNotification` 返回 null → **静默漏记**
+- [x] **推翻旧判据**（`dumpsys notification --noredact`）：`Group summaries:` 段**无 `com.tencent.mm`**
+      + `flags=0x11`（不含 `FLAG_GROUP_SUMMARY=0x200`）+ `groupKey == 自己的 key` + `tickerText` 无前缀
+      → `[3条]` 只是**显示层**加的折叠前缀；`e4e53b4` 当年那两个「反例」其实是**两笔不同交易**
+- [x] 修 **Dart**：`_foldPrefixPattern` 剥掉 `^\s*\[\d+条\]\s*` 再解析；`combined` / `externalId`
+      均用归一化文本（折条数 `[2条]`→`[3条]` 不改变指纹 → 不会重复入账）；**删除**按文本丢弃的分支
+- [x] 修 **Kotlin**：删掉「Dart 侧另有 `[N条]` 兜底」的错误注释；`onNotificationPosted` 与 `catchUp`
+      的判定链**整体兜异常 + 打日志**（此前抛出去会被系统吞掉，外部只表现为「什么都没发生」）
+- [x] 测试 **3 条反转**（`auto_book_real_samples_test` 15 → **18**）：原「`[N条]` 必须丢弃」
+      → 「必须入账」回归守卫（事故原文 ¥0.03 · `[10条]` 金额不受条数影响 · 折条数不改变指纹）
+- [x] **真机验证（Redmi K50）通过**：把真机原文注入落盘队列 → 回前台 drain → DB **167 → 168**、
+      `notify_wechat` **7 → 8**，新增 `cents=3 / expense / occurred_at=2026-10-08 23:31:35`
+- [x] 门禁：analyze 等效 **`No issues found!`** ✅；autobook 三文件 **82 passed / 0 failed**
+      （`flow` 17 / `real_samples` **18** / `rules` 47；⚠️ 未跑全量）
+- [ ] **遗留**：Kotlin 侧为何在 23:31:35 **没收到实时回调**（只有补抓看到）仍未证死 ——
+      现已补全链路日志 + 异常兜底，等**下一笔真实支付**抓日志定位
