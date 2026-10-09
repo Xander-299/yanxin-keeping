@@ -27,17 +27,111 @@
 | `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
 | `v0.7.15` | F7.15 自动记账（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写） | 本段所在提交 |
 
-## [Unreleased] · F7.16 自动记账两处修复（补抓 + 「`[N条]`」折叠前缀误杀）
+## [Unreleased] · F7.16 自动记账两处修复（补抓 + 「`[N条]`」折叠前缀误杀）+ C 段（撤回通道 + 补抓守护层）
 
 > **门禁**：`flutter analyze` 等效 —— **全项目 `No issues found!`** ✅；
-> autobook 三个测试文件 **82 passed / 0 failed**（`flow` 17 · `real_samples` **18** · `rules` 47；
-> 本批 **+5**：补抓 +2、`[N条]` 回归守卫 +3，**全部落在 `test()`**）。
-> 真机（**Redmi K50**，AI 经 adb 取证）**两处修复均已端到端通过** ✅ ——
+> autobook 四个测试文件 **99 passed / 0 failed**（`diagnostics` **17** · `flow` 17 · `real_samples` **18** · `rules` 47；
+> A/B 段 **+5**、C 段 **+17**，全部落在 `test()`）。
+> 真机（**Redmi K50**，AI 经 adb 取证）**三段均已端到端通过** ✅ ——
 > A 补抓把 22:29:37 那笔已丢失的支付宝支付**补记入账**（`cents=300 / notify_alipay / occurred_at=22:29:37`）；
-> B 把真机原文 `[3条]微信支付: 已支付¥0.03` 注入落盘队列 → **成功入账**（`cents=3 / notify_wechat / occurred_at=23:31:35`）。
-> **回滚**：A 段 `git revert d44f8c6`；B 段 `git revert 85e416d`。
-> **不动 schema**（DB 仍 **v3**）· **零新 pub 依赖**（全在 Kotlin 原生 + MethodChannel）。
+> B 把真机原文 `[3条]微信支付: 已支付¥0.03` 注入落盘队列 → **成功入账**（`cents=3 / notify_wechat / occurred_at=23:31:35`）；
+> C 两笔真实 `¥0.01` 微信支付**均自动入账**（DB **163 → 164**、合计 ¥2363.42 → **¥2363.43**），
+> 其中 `20:05:31` 那笔由 **`onNotificationRemoved` 独立救回**（`removedCaptureTotal` 0 → 1）。
+> **回滚**：A 段 `git revert d44f8c6`；B 段 `git revert 85e416d`；C 段 `git revert 84a35ed`。
+> **不动 schema**（DB 仍 **v3**）· **零新 pub 依赖** · **零新用户权限**
+> （仅新增 `RECEIVE_BOOT_COMPLETED`，normal 级、安装即授予）。
 > ⚠️ 本段**暂未转正、未打 tag** —— F7.16 的「扩展监听应用清单」需求尚未落地，待其完成一并转 `v0.7.16`。
+
+### C · 撤回通道 + 补抓守护层（2026-10-09 · 用户提案「悬浮窗」经查证否决后的替代方案）
+
+#### 起因：用户提案与它的否决理由
+
+用户报「**返回微信/支付宝后通知会被丢弃，没来得及采集**」，并提议用**悬浮窗权限**
+（`SYSTEM_ALERT_WINDOW`）在微信「支付成功」页就开始采集。**该方案经查证否决 —— 前提即错**：
+
+| # | 事实 |
+|---|---|
+| 1 | `SYSTEM_ALERT_WINDOW` **只授权「在别的应用上层画窗口」，读不到别屏任何文字** —— Play 官方把它与 screen capture / accessibility **明确分列**；且它是 Restricted Permission |
+| 2 | 要读别屏文字只能换 `AccessibilityService`（或 MediaProjection 截屏）→ Play Accessibility API 政策**仅允许「服务身心障碍者」**；且 **Android 17.2 起 APM 模式下非 `isAccessibilityTool=true` 的 App 被系统直接切断** |
+| 3 | 即便能读，用户截图那个页面**只有金额**（`¥0.01`），而通知文案里本来就有（`已支付¥0.01`）→ **信息增量为零** |
+
+#### 取证：通知只活 26 秒，且撤回由「用户点进去」触发
+
+新增 `tool/probe_notify_lifecycle.py`（轮询 `dumpsys` 0.7s + 后台 logcat）。Redmi K50 实测一笔真实微信支付：
+
+| 时刻 | 事件 |
+|---|---|
+| 19:16:03 | `[2条]微信支付: 已支付¥0.01` 出现 |
+| 19:16:29 | 最后一次可见（轮询 160 次，**存活仅 26 秒**） |
+| 19:16:31 | **被撤回** —— 用户点进支付成功页，微信 `cancel()` |
+
+**对照组是关键**：两条支付宝「交易提醒」在通知栏**存活 419 秒仍在** → 通知**不是自己消失的**，
+触发点是**用户点进去**。撤回后 `getActiveNotifications()` 捞不到 → A 段的补抓也有固有边界。
+
+#### 更硬的根因：实时推送这条通道本身不可靠
+
+同一笔 ¥0.01，**`onNotificationPosted` 一条回调都没收到**，而：
+
+- 进程健康：`foreground` cgroup、49 线程、未冻结、`oom_score_adj=250`；
+- 绑定关系在：`Live notification listeners` 含本 App（`INotificationListener$Stub$Proxy`）；
+- 补抓通道通：唤醒后立刻返回「活动通知=115」。
+
+且 **`disallow_listener` → 2s → `allow_listener` 重绑也救不了** —— 能恢复 `onListenerConnected`
+与补抓，但之后发 8 条探针通知 `posted` 仍为 **0 条** → 失效点在
+**「NotificationManager → listener 的事件投递」**这一环，**不可通过重绑自愈**。
+
+#### 变更
+
+- **① `onNotificationRemoved` 第三层兜底**（`AutoBookListenerService`，约 30 行）：
+  撤回那一刻 `extras` 仍完整 —— AOSP 注释保证丢的只有 `contentView` / `largeIcon`，
+  而解析金额/方向/商户靠的 `EXTRA_TITLE` / `EXTRA_TEXT` / `EXTRA_BIG_TEXT` / `EXTRA_SUB_TEXT`
+  **全部保留**。直接复用既有 `handle()`，与 posted / catchUp **共用同一条判定链与
+  `AutoBookSeen` 持久指纹**（故同一笔不会因三条通道记两遍）。
+- **② `AutoBookGuard` 补抓守护层**（新文件）：`AlarmManager` **60 秒周期** + 每次醒来**续期**
+  （刻意不用 `setRepeating` —— 它在 doze 里被静默丢弃后会永久停摆）；
+  `TickReceiver` 注册 `TICK` / `BOOT_COMPLETED` / `SCREEN_ON` 三类唤醒源；
+  Dart 侧新增 `ensureGuard` 通道，在**每次 drain 前**补排期，让「进程活着期间守护在转」成为不变量。
+- **③ 通道可用性诊断**：`AutoBookDiagnostics` 新增 8 个字段
+  （`postedCallbackSeen` / `lastPostedAtMs` / `removedCaptureTotal` / `lastRemovedAtMs` /
+  `tickCatchUpTotal` / `lastTickCatchUpAtMs` + 补抓三字段），跨进程**必然落盘**；
+  `/autobook` 诊断区新增**「采集通道」**一行，并按证据给可执行提示。
+
+#### 新增
+
+- `android/app/src/main/kotlin/.../autobook/AutoBookGuard.kt` —— 补抓守护层 + `TickReceiver`。
+- `tool/probe_notify_lifecycle.py` —— 通知生命周期取证工具（可 `--summarize` 离线汇总）。
+- `test/features/autobook/auto_book_diagnostics_test.dart` —— **17 例**
+  （解析容错 / 向后兼容 / 两个阈值判定的边界）。
+
+#### 门禁与真机验证
+
+- analyze 等效 **全项目 `No issues found!`** ✅；
+  autobook 四文件 **99 passed / 0 failed** ✅（新增 17 例里 **2 例当场抓到真实 bug**：
+  `postedChannelUnavailable` 漏了 `lastConnectedAtMs <= 0` 的守卫，
+  会让「从未绑定过」被误判成「推送不可用」→ 提示指向错误方向）；
+- APK **BUILD SUCCESSFUL** + `aapt2`/dex **13/13 探针命中** + 正式签名重签后覆盖安装
+  （**数据零丢失**：DB 196608 B、`integrity_check ok`）；
+- ⭐ **真机端到端（Redmi K50）**：两笔真实 `¥0.01` 微信支付**均自动入账** ——
+  `20:01:02`（补抓捞到）与 **`20:05:31`（`removed → CAPTURED` 独立救回**，
+  发生在通知已被撤回、补抓已捞不到之后）→ `removedCaptureTotal` **0 → 1**，
+  DB **163 → 164**、合计 **¥2363.42 → ¥2363.43**。
+
+#### 踩坑记录（两条，都是「差点误判成环境坏了」）
+
+- ⚠️ **`adb install -r` 会 force-stop 应用并清掉已排期的闹钟** —— 装完立刻测会得到
+  「守护层从不被触发」的**假结论**（本次先误判了一轮）。必须**装完 → 重绑监听 → 给足重排期时间**再测。
+  实测守护层每 **~53 秒**准点触发（19:57:09 → 19:58:02 → 19:58:55 → … → 20:06:01）。
+- ⚠️ **「logcat 里 `posted pkg=` 为 0」不能证明回调没来** —— 代码只在
+  `decision != NOT_WATCHED` 时打日志，而探针是 `com.android.shell` 包名 →
+  走 NOT_WATCHED 分支 → **一行日志都不打**。**唯一可信判据是内存计数差分**
+  （本次靠 `skippedNotWatched` 4730 → 4847 与 catchUp 扫描量比对才拿到真结论）。
+
+#### 已知边界（如实告知，未夸大）
+
+- `onNotificationPosted` 在该机型**时通时不通**，故它被降级为「可选加速通道」，
+  **主防线是补抓守护 + 回前台 catchUp**；页面会按证据显示当前走的是哪条通道。
+- 支付通知只活 **26 秒** → 若守护层被 ROM 限流且用户未及时回 App，仍可能丢；
+  此时页面会明确提示「支付后请打开本 App 一次」，而不是让用户误以为后台在记。
 
 ### A · 补抓：服务未连接期间错过的支付通知（2026-10-08 第一起）
 

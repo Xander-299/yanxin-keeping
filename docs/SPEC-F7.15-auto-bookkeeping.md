@@ -614,3 +614,112 @@ DB **167 → 168**、`notify_wechat` **7 → 8**，新增记录
   诊断计数只能定位「哪一层丢的」，**不能替你做价值判断**。
 - **兜底规则的注释必须写清「它想防的具体场景」**，否则后人无从判断它是否仍成立
   （`e4e53b4` 把两笔不同交易记成了「摘要 + 子通知」）。
+
+---
+
+## §10 · 第三轮：「通知被丢弃」= 撤回窗口 + 推送通道不可靠（2026-10-09 · 用户提案「悬浮窗」被否决）
+
+### 起因与裁定
+
+用户报「**返回微信/支付宝后通知会被丢弃，没来得及采集**」，并提议用**悬浮窗权限**
+（`SYSTEM_ALERT_WINDOW`）在微信「支付成功」页就开始采集（附该页截图）。
+
+**裁定：悬浮窗方案不可行，前提即错。** 三条独立事实：
+
+1. **`SYSTEM_ALERT_WINDOW` 只授权「在别的应用上层画窗口」，读不到别屏任何文字。**
+   Play 官方把该权限与 screen capture / accessibility **明确分列**（Restricted Permission）。
+2. 要读别屏文字只能换 **`AccessibilityService`**（或 MediaProjection 截屏）——
+   Play Accessibility API 政策**仅允许「服务身心障碍者」**用途；
+   且 **Android 17.2 起 APM 模式下非 `isAccessibilityTool=true` 的 App 被系统直接切断**。
+3. **信息增量为零**：用户截图那个页面只有金额（`¥0.01`），而通知文案里本来就有
+   （`已支付¥0.01`）→ 即便能读屏也拿不到额外信息。
+
+### §10.1 取证：支付通知只活 26 秒，撤回由「用户点进去」触发
+
+新增工具 `tool/probe_notify_lifecycle.py`（轮询 `dumpsys notification --noredact`
+0.7s + 后台 logcat）。Redmi K50 实测一笔**真实微信支付 ¥0.01**：
+
+| 时刻 | 事件 |
+|---|---|
+| 19:16:03 | `[2条]微信支付: 已支付¥0.01` 出现 |
+| 19:16:29 | 最后一次可见（轮询 160 次，**存活 26 秒**） |
+| 19:16:31 | **被撤回**（用户点进支付成功页 → 微信 `cancel()`） |
+
+**对照组是关键**：两条支付宝「交易提醒」在通知栏**存活 419 秒仍在** → 通知
+**不是自己消失的**，触发点是**用户点进去**。撤回后 `getActiveNotifications()`
+捞不到 → §9 之前的 `catchUp()` 有固有边界。
+
+### §10.2 更硬的根因：实时推送这条通道本身不可靠
+
+同一笔 ¥0.01，**`onNotificationPosted` 一条回调都没收到**，而进程健康
+（`foreground` cgroup、49 线程、未冻结、`oom_score_adj=250`）、绑定关系在
+（`Live notification listeners` 含本 App）、补抓通道通（唤醒即返回 115 条）。
+
+且 **`disallow_listener` → 2s → `allow_listener` 重绑也救不了** ——
+能恢复 `onListenerConnected` 与补抓，但之后发 8 条探针通知 `posted` 仍为 **0 条**
+→ 失效点在「**NotificationManager → listener 的事件投递**」这一环，
+**不可通过重绑自愈**（本条推翻了「先做 `requestRebind` 自愈」的原始设计）。
+
+### §10.3 采纳方案：三层采集 + 通道自暴露
+
+| 层 | 通道 | 触发 | 实测状态 |
+|---|---|---|---|
+| 1 | `onNotificationPosted` | 通知发布 | ⚠️ 时通时不通 → **降级为可选加速** |
+| 2 | **补抓守护层**（新 `AutoBookGuard`） | `AlarmManager` 60s 周期 + `BOOT_COMPLETED` / `SCREEN_ON` | ✅ **实测每 ~53 秒准点，12 轮** |
+| 3 | **`onNotificationRemoved`** | 通知被撤回那一刻 | ✅ **实测独立救回 1 笔** |
+
+**层 3 的合法性依据**（AOSP `NotificationListenerService.onNotificationRemoved` 注释原文）：
+
+> the StatusBarNotification object you receive will be "light"; that is, the result from
+> getNotification() may be missing some heavyweight fields such as `contentView` and
+> `largeIcon`. **However, all other fields on StatusBarNotification, sufficient to match
+> this call with a prior call to `onNotificationPosted(StatusBarNotification), will be intact.**
+
+即丢的只有 `contentView` / `largeIcon`，而解析金额/方向/商户靠的 `EXTRA_TITLE` /
+`EXTRA_TEXT` / `EXTRA_BIG_TEXT` / `EXTRA_SUB_TEXT` **全部保留** → 直接复用既有
+`handle()`，与层 1/2 共用 `AutoBookSeen` 持久指纹（同一笔不会记两遍）。
+
+**守护层为何不用前台服务**：常驻 FGS 需（Android 14+）类型申报 + 常驻通知 +
+更复杂生命周期，且国产 ROM 照样能干掉它；`setAndAllowWhileIdle` 在 doze 下能被放行，
+代价小得多 —— 本功能本质是「低频拉取」，不需要常驻。
+**为何不用 `setRepeating`**：它在 doze 里被静默丢弃后会**永久停摆** →
+改「一次性闹钟 + 每次醒来续期」，让系统按当下负载决定下次唤醒时机。
+
+### §10.4 通道可用性自暴露（新增，8 个诊断字段）
+
+`postedCallbackSeen` / `lastPostedAtMs` / `removedCaptureTotal` / `lastRemovedAtMs` /
+`tickCatchUpTotal` / `lastTickCatchUpAtMs` + 补抓三字段，跨进程**必然落盘**。
+`/autobook` 诊断区新增**「采集通道」**一行，按证据给可执行提示。
+
+⚠️ **不夸大**：若守护层被 ROM 限流且用户未及时回 App，仍可能丢（通知只活 26 秒）。
+此时页面**明确提示「支付后请打开本 App 一次」**，而不是让用户误以为后台在记。
+
+### §10.5 门禁与真机验证
+
+- analyze 等效 **全项目 `No issues found!`** ✅
+- autobook 四文件 **99 passed / 0 failed** ✅
+  （`diagnostics` **17** · `flow` 17 · `real_samples` **18** · `rules` 47；
+  新增 17 例里 **2 例当场抓到真实 bug**：`postedChannelUnavailable` 漏了
+  `lastConnectedAtMs <= 0` 守卫，会让「从未绑定过」被误判成「推送不可用」）
+- APK **BUILD SUCCESSFUL** + dex **13/13 探针命中** + 正式签名重签后覆盖安装
+  （**数据零丢失**：DB 196608 B、`integrity_check ok`）
+- ⭐ **真机端到端**：两笔真实 `¥0.01` 微信支付**均自动入账** ——
+  `20:01:02`（层 2 捞到）与 **`20:05:31`（层 3 `removed → CAPTURED` 独立救回**，
+  发生在通知已被撤回、层 2 已捞不到之后）→ `removedCaptureTotal` **0 → 1**，
+  DB **163 → 164**、合计 **¥2363.42 → ¥2363.43**。
+
+### §10.6 两条踩坑（都是「差点误判成环境坏了」）
+
+- ⚠️ **`adb install -r` 会 force-stop 应用并清掉已排期的闹钟** —— 装完立刻测会得到
+  「守护层从不被触发」的**假结论**（本次先误判了一轮）。必须
+  **装完 → 重绑监听 → 给足重排期时间**再测。
+- ⚠️ **「logcat 里 `posted pkg=` 为 0」不能证明回调没来** —— 代码只在
+  `decision != NOT_WATCHED` 时打日志，而探针是 `com.android.shell` 包名 →
+  走 NOT_WATCHED 分支 → **一行日志都不打**。**唯一可信判据是内存计数差分**
+  （本次靠 `skippedNotWatched` 4730 → 4847 与 catchUp 扫描量比对才拿到真结论）。
+
+### §10.7 遗留
+
+「**扩展内置监听应用清单**」未落地 —— 跨应用去重是必做前置
+（现 `externalId = sha1(pkg|title|text|postTime)` **含 pkg**，跨来源必然不重）。
+故 F7.16 **仍不打 tag**，待其完成一并转 `v0.7.16`。
