@@ -2,6 +2,9 @@
     <!-- F7.15 自动记账：回执通知（Android 13+ 运行时权限，用户主动开启时才申请）。
          通知监听不需要在这里声明权限 —— 它是 <service> 的 android:permission 属性。 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- F7.16：开机后重新排期补抓守护（Android 要求显式声明才能收 BOOT_COMPLETED）。
+         属 normal 权限，安装即授予，用户无需任何额外操作。 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <application
         android:label="颜芯记账"
         android:name="${applicationName}"
@@ -50,6 +53,18 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+        <!-- F7.16 补抓守护：posted 推送在国产 ROM 上实测不投递（详见 AutoBookGuard 类注释），
+             故主防线改为「AlarmManager 周期主动补抓」。BOOT_COMPLETED 让开机后自动续期；
+             屏幕亮起也会唤醒一轮 —— 用户亮屏往往就是为了看刚付的款。 -->
+        <receiver
+            android:name=".autobook.TickReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.teacodeman.yanxin.autobook.TICK" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.SCREEN_ON" />
+            </intent-filter>
+        </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

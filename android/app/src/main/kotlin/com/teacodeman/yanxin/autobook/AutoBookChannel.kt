@@ -94,6 +94,13 @@ class AutoBookChannel(private val activity: Activity) : MethodChannel.MethodCall
             // 把通知栏里仍存在的通知捞回队列。返回补入队条数；服务未绑定返回 -1。
             "catchUp" -> result.success(AutoBookListenerService.catchUpNow())
 
+            // 补抓守护排期：闹钟是「一次性 + 每次醒来续期」的，进程被杀就没人续期 →
+            // App 每次启动 / 回前台都补一次排期，保证「进程活着期间守护在转」
+            "ensureGuard" -> {
+                AutoBookGuard.schedule(activity)
+                result.success(null)
+            }
+
             // 兜底回写：Dart 侧临时性失败（账本未就绪 / 写库异常）时把原始行放回队列，
             // 否则「取走即清空」会让这批通知永久消失
             "restoreQueue" -> {

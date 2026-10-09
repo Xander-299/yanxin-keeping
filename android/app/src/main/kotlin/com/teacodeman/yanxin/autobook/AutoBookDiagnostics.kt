@@ -77,6 +77,43 @@ object AutoBookDiagnostics {
     @Volatile var drainedTotal: Int = 0
         private set
 
+    /**
+     * **通道可用性**（2026-10-09 真机取证新增）。
+     *
+     * 国产 ROM（MIUI/HyperOS 实测）上，`onNotificationPosted` 这个**推送式回调**
+     * 可能**完全不投递**，而服务进程健康、绑定关系仍在（`dumpsys` 的
+     * `Live notification listeners` 里也有）。实测证据：重绑（disallow→allow）
+     * 能恢复 `onListenerConnected` 与补抓，但探针通知的 posted 回调仍然 0 条。
+     *
+     * 所以「实时推送」必须被当作**可选加速通道**，而不是唯一防线 ——
+     * 主防线是 [AutoBookListenerService.catchUp] 主动拉取。
+     *
+     * - [postedCallbackSeen]：本进程内**是否见到过任何** posted 回调（哪怕被去重/过滤掉的）。
+     *   为 false 且已过观察窗口 → `/autobook` 页面提示「实时推送不可用，已靠主动补抓」。
+     * - [lastPostedAtMs]：最后一次收到 posted 回调的时刻，用于算「推送静默了多久」。
+     */
+    @Volatile var postedCallbackSeen: Boolean = false
+        private set
+    @Volatile var lastPostedAtMs: Long = 0L
+        private set
+
+    /**
+     * 撤回通道（`onNotificationRemoved`）的捕获计数。
+     *
+     * 通知被撤回（微信/支付宝在用户点进支付结果页时 cancel）那一刻，
+     * extras 仍然完整（AOSP 保证只丢 contentView/largeIcon）→ 窗口消失前的最后机会。
+     */
+    @Volatile var removedCaptureTotal: Int = 0
+        private set
+    @Volatile var lastRemovedAtMs: Long = 0L
+        private set
+
+    /** 守护补抓（AlarmManager 周期任务）跑了几轮 —— 用于确认它到底有没有在转。 */
+    @Volatile var tickCatchUpTotal: Int = 0
+        private set
+    @Volatile var lastTickCatchUpAtMs: Long = 0L
+        private set
+
     /** 本进程启动时盘上的值（每进程只读一次），只作为累计值的**基线**。 */
     @Volatile private var base: JSONObject = JSONObject()
 
@@ -89,6 +126,8 @@ object AutoBookDiagnostics {
     private var addSkippedGroupSummary = 0
     private var addCatchUp = 0
     private var addCatchUpAdded = 0
+    private var addRemovedCapture = 0
+    private var addTickCatchUp = 0
 
     /** 本进程是否已读过盘。 */
     private var loaded = false
@@ -137,6 +176,15 @@ object AutoBookDiagnostics {
             lastCatchUpActive = base.optInt("lastCatchUpActive", 0)
             lastCatchUpAdded = base.optInt("lastCatchUpAdded", 0)
         }
+        if (lastPostedAtMs == 0L) {
+            lastPostedAtMs = base.optLong("lastPostedAtMs", 0L)
+        }
+        if (lastRemovedAtMs == 0L) {
+            lastRemovedAtMs = base.optLong("lastRemovedAtMs", 0L)
+        }
+        if (lastTickCatchUpAtMs == 0L) {
+            lastTickCatchUpAtMs = base.optLong("lastTickCatchUpAtMs", 0L)
+        }
         recomputeTotals()
     }
 
@@ -155,6 +203,48 @@ object AutoBookDiagnostics {
         skippedGroupSummary = b.optInt("skippedGroupSummary", 0) + addSkippedGroupSummary
         catchUpTotal = b.optInt("catchUpTotal", 0) + addCatchUp
         catchUpAddedTotal = b.optInt("catchUpAddedTotal", 0) + addCatchUpAdded
+        removedCaptureTotal = b.optInt("removedCaptureTotal", 0) + addRemovedCapture
+        tickCatchUpTotal = b.optInt("tickCatchUpTotal", 0) + addTickCatchUp
+    }
+
+    /**
+     * 收到了一条 posted 回调（**无论最终是否入队**）—— 只用来回答
+     * 「实时推送这个通道到底通不通」。**必须落盘**，否则跨进程重启后看不出通道状态。
+     */
+    fun notePostedCallback(context: Context) {
+        load(context)
+        postedCallbackSeen = true
+        lastPostedAtMs = System.currentTimeMillis()
+        persist(context)
+    }
+
+    /**
+     * 撤回通道捕获到一条（`onNotificationRemoved` 里成功入队）。
+     *
+     * **必然落盘**：这条计数是「通知撤回那一刻我们救回来了多少笔」的唯一证据，
+     * 而通知撤回是**不可复现**的（错过就永远错过）→ 必须跨进程留存。
+     */
+    fun noteRemovedCapture(context: Context) {
+        load(context)
+        lastRemovedAtMs = System.currentTimeMillis()
+        addRemovedCapture++
+        recomputeTotals()
+        persist(context)
+    }
+
+    /**
+     * 守护补抓（AlarmManager 周期任务）跑完一轮。
+     *
+     * **必然落盘** —— 「守护层到底有没有在转」只能靠这条。
+     * 如果用户的 `/autobook` 页面显示 `tickCatchUpTotal` 长期为 0，
+     * 说明周期任务被国产 ROM 的后台限制干掉了（与监听服务被解绑同一类问题）。
+     */
+    fun noteTickCatchUp(context: Context) {
+        load(context)
+        lastTickCatchUpAtMs = System.currentTimeMillis()
+        addTickCatchUp++
+        recomputeTotals()
+        persist(context)
     }
 
     fun noteConnected(context: Context, connected: Boolean) {
@@ -241,6 +331,12 @@ object AutoBookDiagnostics {
             .put("lastCatchUpAdded", lastCatchUpAdded)
             .put("catchUpTotal", catchUpTotal)
             .put("catchUpAddedTotal", catchUpAddedTotal)
+            .put("postedCallbackSeen", postedCallbackSeen)
+            .put("lastPostedAtMs", lastPostedAtMs)
+            .put("removedCaptureTotal", removedCaptureTotal)
+            .put("lastRemovedAtMs", lastRemovedAtMs)
+            .put("tickCatchUpTotal", tickCatchUpTotal)
+            .put("lastTickCatchUpAtMs", lastTickCatchUpAtMs)
             .put("nowMs", System.currentTimeMillis())
             .toString()
     }

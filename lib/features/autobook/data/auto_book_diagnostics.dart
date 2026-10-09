@@ -31,6 +31,17 @@ class AutoBookDiagnostics {
     required this.lastDrainCount,
     required this.drainedTotal,
     required this.nowMs,
+    this.lastCatchUpAtMs = 0,
+    this.lastCatchUpActive = 0,
+    this.lastCatchUpAdded = 0,
+    this.catchUpTotal = 0,
+    this.catchUpAddedTotal = 0,
+    this.postedCallbackSeen = false,
+    this.lastPostedAtMs = 0,
+    this.removedCaptureTotal = 0,
+    this.lastRemovedAtMs = 0,
+    this.tickCatchUpTotal = 0,
+    this.lastTickCatchUpAtMs = 0,
   });
 
   /// 系统当前是否绑定着监听服务。
@@ -60,6 +71,45 @@ class AutoBookDiagnostics {
   final int lastDrainCount;
   final int drainedTotal;
 
+  /// 最近一次补抓（`getActiveNotifications` 主动拉取）的时间与结果。
+  ///
+  /// [lastCatchUpActive] = 当时通知栏里的通知总数（0 说明服务没连上）；
+  /// [lastCatchUpAdded] = 那一轮补入队的条数。两者用来区分「补抓没跑」与
+  /// 「跑了但通知已被撤回、捞不到」。
+  final int lastCatchUpAtMs;
+  final int lastCatchUpActive;
+  final int lastCatchUpAdded;
+  final int catchUpTotal;
+  final int catchUpAddedTotal;
+
+  // ---------------------------------------------------------------------
+  // F7.16 新增：通道可用性（2026-10-09 Redmi K50 实测）
+  //
+  // 实测结论：`onNotificationPosted` 这个**推送式回调**在部分国产 ROM 上
+  // **一条都不投递**，而进程健康、绑定关系仍在 —— 且**重绑也救不了**
+  // （disallow→allow 能恢复 onListenerConnected 与补抓，但 posted 仍然 0 条）。
+  // 所以实时推送被降级为「可选加速通道」，主防线是补抓守护。
+  // ---------------------------------------------------------------------
+
+  /// 本进程内是否**见到过**任何一条 posted 回调（哪怕被过滤/去重掉的）。
+  ///
+  /// 为 false 且 [lastCaptureAtMs] 也不算太久 → 判定「推送通道不可用，已降级靠补抓」。
+  final bool postedCallbackSeen;
+
+  /// 最后一次收到 posted 回调的时刻（0 = 从未收到过）。
+  final int lastPostedAtMs;
+
+  /// 撤回通道（`onNotificationRemoved`）累计救回来的条数。
+  final int removedCaptureTotal;
+  final int lastRemovedAtMs;
+
+  /// 补抓守护（`AlarmManager` 周期任务）已跑过的轮数。
+  ///
+  /// ⚠️ **长期为 0 = 周期任务被国产 ROM 的后台限制干掉了** ——
+  /// 那时主防线也没了，页面必须明确提示用户去关掉后台限制。
+  final int tickCatchUpTotal;
+  final int lastTickCatchUpAtMs;
+
   /// 取快照时的设备时间（页面据此算「多久之前」，不依赖端上时钟一致性）。
   final int nowMs;
 
@@ -69,6 +119,30 @@ class AutoBookDiagnostics {
   /// 「设置里开着，但系统并未绑定服务」—— 典型的国产 ROM 后台限制表现。
   bool get listenerLooksDead => !listenerConnected && lastConnectedAtMs > 0;
 
+  /// 实时推送通道是否**确定不可用**。
+  ///
+  /// 判据要保守，三个条件**同时**成立才下结论：
+  /// - [lastConnectedAtMs] > 0 —— 得先有观察窗口。从未被绑定过时说什么都是空话，
+  ///   那是 [listenerLooksDead] 的职责，混进来会把用户指向错误方向。
+  /// - 从绑定起已过 **10 分钟** —— 期间任何一笔支付都足以让 posted 回调出现，
+  ///   刚启动的一会儿内不判定，避免误报。
+  /// - [postedCallbackSeen] 为 false —— 本进程内一条 posted 回调都没见过。
+  bool get postedChannelUnavailable {
+    if (postedCallbackSeen || lastConnectedAtMs <= 0) return false;
+    return nowMs - lastConnectedAtMs > _kObserveWindowMs;
+  }
+
+  /// 「后台唤醒有没有真的生效过」。
+  ///
+  /// ⚠️ 实测（Redmi K50 / MIUI，2026-10-09）：本机**恒为 false** ——
+  /// 闹钟被系统吞、`BroadcastReceiver` 投递被吞（`am broadcast` 还回报 `result=0` 假成功）。
+  /// 页面据此如实提示「后台被限制，请打开本 App 一次」，而不是让用户误以为后台在记。
+  bool get backgroundWakeWorks => tickCatchUpTotal > 0;
+
+  /// 「有没有足够观测时间」的门槛：10 分钟（[postedChannelUnavailable] 用）。
+  static const int _kObserveWindowMs = 10 * 60 * 1000;
+
+  /// 补抓守护是否**疑似被系统限制**（跑过至少一轮，但最近 5 分钟没转过）。
   static AutoBookDiagnostics? tryParse(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     try {
@@ -89,6 +163,18 @@ class AutoBookDiagnostics {
         lastDrainCount: _asInt(m['lastDrainCount']),
         drainedTotal: _asInt(m['drainedTotal']),
         nowMs: _asInt(m['nowMs']),
+        // ⚠️ 新字段必须有默认值 —— 原生侧比 Dart 旧时不能解析失败
+        lastCatchUpAtMs: _asInt(m['lastCatchUpAtMs']),
+        lastCatchUpActive: _asInt(m['lastCatchUpActive']),
+        lastCatchUpAdded: _asInt(m['lastCatchUpAdded']),
+        catchUpTotal: _asInt(m['catchUpTotal']),
+        catchUpAddedTotal: _asInt(m['catchUpAddedTotal']),
+        postedCallbackSeen: m['postedCallbackSeen'] == true,
+        lastPostedAtMs: _asInt(m['lastPostedAtMs']),
+        removedCaptureTotal: _asInt(m['removedCaptureTotal']),
+        lastRemovedAtMs: _asInt(m['lastRemovedAtMs']),
+        tickCatchUpTotal: _asInt(m['tickCatchUpTotal']),
+        lastTickCatchUpAtMs: _asInt(m['lastTickCatchUpAtMs']),
       );
     } catch (_) {
       return null;

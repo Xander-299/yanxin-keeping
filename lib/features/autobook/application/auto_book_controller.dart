@@ -99,6 +99,9 @@ class AutoBookController {
     //    所以要主动把通知栏里仍存在的通知捞回队列（真机事故：支付宝付款通知发布早于
     //    服务连接 1 分 51 秒 → 那笔支付永久丢失）。去重由原生侧持久指纹保证，
     //    重复补抓不会重复入队。
+    //    顺带补一次守护排期：闹钟是「一次性 + 醒来续期」的，进程被杀后没人续期 →
+    //    每次 drain 前补排，让「进程活着期间守护在转」成为不变量。
+    await bridge.ensureGuardScheduled();
     final int caughtUp = await bridge.catchUp();
 
     // C. 取队列（原生侧是「取走即清空」，所以从这一行起原始数据只在内存里）

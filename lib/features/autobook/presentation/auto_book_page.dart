@@ -510,6 +510,8 @@ class _DiagnosticsBlock extends StatelessWidget {
         _InfoLine('上次检查', lastRun?.summary ?? '还没有检查过'),
         const ToonDashedLine(),
         _InfoLine('抓取统计', _statsText(d)),
+        const ToonDashedLine(),
+        _InfoLine('采集通道', _channelText(d)),
         const SizedBox(height: 10),
         Text(
           _hint(d),
@@ -544,6 +546,33 @@ class _DiagnosticsBlock extends StatelessWidget {
         '组摘要 ${d.skippedGroupSummary} · 去重 ${d.skippedDedup}';
   }
 
+  /// **采集通道**（F7.16 新增）。
+  ///
+  /// 为什么值得单独一行：实测（Redmi K50 / MIUI，2026-10-09）这台机器上
+  /// ① `onNotificationPosted` 一条都不投递，② 后台闹钟与广播被 ROM 静默吞掉
+  /// （`am broadcast` 还回报 `result=0` 假成功）→ 用户看到的现象是「时灵时不灵」。
+  /// 把「当前靠哪条通道在采集」摆出来，排查就不再靠猜。
+  static String _channelText(AutoBookDiagnostics? d) {
+    if (d == null) return '—';
+    final List<String> parts = <String>[];
+    parts.add(
+      d.postedChannelUnavailable
+          ? '实时推送 不可用'
+          : (d.postedCallbackSeen ? '实时推送 可用' : '实时推送 待观察'),
+    );
+    if (d.tickCatchUpTotal > 0) {
+      parts.add('后台唤醒 已生效 ${d.tickCatchUpTotal} 轮');
+    } else {
+      // 实测：本机后台唤醒被 ROM 吞掉。这是**已知且如实告知**的限制，
+      // 不能让用户以为「后台已经在帮我记了」而放心地不看通知。
+      parts.add('后台唤醒 被系统限制');
+    }
+    if (d.removedCaptureTotal > 0) {
+      parts.add('撤回时补回 ${d.removedCaptureTotal} 笔');
+    }
+    return parts.join(' · ');
+  }
+
   /// 按当前证据给**一句可执行的**提示（这是「失败可懂」的核心）。
   String _hint(AutoBookDiagnostics? d) {
     if (!listenerOn) {
@@ -567,6 +596,17 @@ class _DiagnosticsBlock extends StatelessWidget {
     if (waiting > 0) {
       return '有 $waiting 条已捕获但还没入账 —— 切到桌面再打开本 App 会自动入账，'
           '也可以点右上角立刻检查。';
+    }
+    // ⭐ F7.16 真机结论：这台机器后台唤醒被 ROM 拦死（实测闹钟与广播都被吞），
+    // 且支付通知只活 26 秒 → **唯一的可靠时机就是用户自己打开本 App**。
+    // 这段话必须说清楚，否则用户以为「后台在记」，结果漏账还不知道为什么。
+    if (d.postedChannelUnavailable && d.tickCatchUpTotal == 0) {
+      return '这台手机的后台自动记账被系统限制了（国产 ROM 常见）——'
+          '支付后请打开本 App 一次，会立刻把通知里的账单补记上。';
+    }
+    if (d.postedChannelUnavailable) {
+      return '系统不投递实时通知（国产 ROM 常见），已改由定时补抓采集 ——'
+          '支付后最多等一分钟就会记上。';
     }
     return '链路正常：捕获与入账都在工作。支付后回到本 App 就能看到结果。';
   }

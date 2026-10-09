@@ -5,7 +5,9 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 
-/** 监听范围的包名白名单（**MVP 仅微信 + 支付宝**，SPEC §3.4 第 ① 层）。 */
+/**
+ * 监听范围的包名白名单（**MVP 仅微信 + 支付宝**，SPEC §3.4 第 ① 层）。
+ */
 object AutoBookPackages {
     const val WECHAT = "com.tencent.mm"
     const val ALIPAY = "com.eg.android.AlipayGphone"
@@ -25,6 +27,27 @@ object AutoBookPackages {
  *
  * 另：每层判定都往 [AutoBookDiagnostics] 记一笔 + `Log` 一行 —— 这个功能一旦不生效，
  * 用户只看到「没记上」，必须能区分「服务没被绑定 / 没抓到 / 抓到被过滤 / 没 drain」。
+ *
+ * ## 采集通道的真实状况（2026-10-09 两轮真机取证，Redmi K50 / MIUI）
+ *
+ * ⚠️ **不要假设 `onNotificationPosted` 一定来** —— 实测它**一条都不投递**，
+ * 而进程健康（`foreground` cgroup、未冻结）、绑定在（`dumpsys` 的
+ * `Live notification listeners` 里有）、补抓通道通。
+ * **重绑也救不了**（`disallow`→`allow` 能恢复 `onListenerConnected` 与补抓，
+ * 但之后发探针通知 posted 仍为 0 条）。
+ *
+ * ⚠️ **也不要假设后台唤醒可靠** —— [AutoBookGuard] 的闹钟与 `TickReceiver`
+ * 在本机**全被静默吞掉**（`am broadcast` 还回报 `result=0` 假成功），详见该文件。
+ *
+ * | 通道 | 本机实测 | 角色 |
+ * |---|---|---|
+ * | [onNotificationPosted] | ❌ 不投递 | 可选加速（非国产 ROM 上可能可用） |
+ * | [AutoBookGuard] 周期补抓 | ❌ 被 ROM 吞 | 仅非国产 ROM 兜底 |
+ * | [onNotificationRemoved] | ✅ 理论可用（extras 完整） | 撤回窗口内的兜底 |
+ * | **Dart 侧回前台 catchUp** | ✅ **实测通**（扫 123~124 条） | **本机唯一可靠主防线** |
+ *
+ * 支付通知**只活 26 秒**（实测）→ 用户若没在这段时间内回到 App，就丢失。
+ * 这不是代码能补的，是 ROM 限制；页面必须如实告诉用户「打开 App 即可补上」。
  *
  * ## 补抓（catch-up）为什么是必需的（2026-10-08 Redmi K50 事故）
  *
@@ -78,6 +101,8 @@ class AutoBookListenerService : NotificationListenerService() {
         super.onListenerConnected()
         AutoBookDiagnostics.noteConnected(this, true)
         Log.i(TAG, "onListenerConnected → 立即补抓通知栏（服务未连接期间发布的通知不会补发）")
+        // 补抓守护层从「服务可用」这一刻开始排期 —— posted 推送不可靠时，它是主防线。
+        AutoBookGuard.schedule(this)
         catchUp("connect")
     }
 
@@ -85,10 +110,18 @@ class AutoBookListenerService : NotificationListenerService() {
         super.onListenerDisconnected()
         AutoBookDiagnostics.noteConnected(this, false)
         Log.w(TAG, "onListenerDisconnected → 此后实时通知不再送达")
+        // ⚠️ 此刻仍可调用 requestRebind（官方允许），但实测（2026-10-09 Redmi K50）
+        // **重绑恢复不了 posted 推送投递** —— 只能恢复连接状态与主动拉取。
+        // 所以这里不指望它救 posted，只留一条日志说明现状，避免后人误以为漏了自愈。
+        Log.w(TAG, "onListenerDisconnected：注意——实测重绑无法恢复 posted 投递，主防线是 catchUp 守护")
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (sbn == null) return
+        // 通道可用性信号：只要回调**到过**就记一笔（无论最终是否入队）。
+        // 实测部分国产 ROM 下本回调完全不投递（见 AutoBookGuard 的类注释），
+        // 这条信号让 `/autobook` 页面能直接告诉用户「走的是哪条通道」。
+        AutoBookDiagnostics.notePostedCallback(this)
         // 判定链整体兜异常：这里抛出去会被系统吞掉，外部只表现为「什么都没发生」——
         // 排查时最怕这种静默（2026-10-08 事故里，实时回调没落下任何一行日志，只能靠猜）。
         val decision = try {
@@ -100,6 +133,49 @@ class AutoBookListenerService : NotificationListenerService() {
         // 非白名单是绝大多数（每个 App 的每条通知都算）→ 不打日志，否则日志会被淹掉
         if (decision != Decision.NOT_WATCHED) {
             Log.i(TAG, "posted pkg=${sbn.packageName} → $decision")
+        }
+    }
+
+    /**
+     * **撤回通道**（2026-10-09 真机取证后新增 · 第三层兜底）。
+     *
+     * ## 为什么需要
+     *
+     * 实测：微信支付通知**只存活 26 秒**，用户点进支付结果页后微信就 `cancel()` 掉它 →
+     * 此后 [catchUp] 用的 `getActiveNotifications()` **捞不到**（实测补抓扫 115 条补入队 0）。
+     * 而 `posted` 推送在该机型上根本不投递 → 这 26 秒是**唯一的采集窗口**。
+     *
+     * ## 官方保证（这是本方案成立的前提）
+     *
+     * AOSP `NotificationListenerService.onNotificationRemoved` 注释原文：
+     * > the StatusBarNotification object you receive will be "light"; that is, the result
+     * > from getNotification() may be missing some heavyweight fields such as contentView
+     * > and largeIcon. **However, all other fields on StatusBarNotification, sufficient
+     * > to match this call with a prior call to onNotificationPosted(StatusBarNotification),
+     * > will be intact.**
+     *
+     * 即：**丢的只有 `contentView` 与 `largeIcon`**（自定义视图与大图），
+     * 而我们解析金额/方向/商户靠的是 `extras` 里的 `EXTRA_TITLE` / `EXTRA_TEXT` /
+     * `EXTRA_BIG_TEXT` / `EXTRA_SUB_TEXT` —— **全部保留**。
+     *
+     * ## 复用同一条判定链
+     *
+     * 直接调 [handle]，与 posted / catchUp 三条路径共用去重与过滤逻辑 ——
+     * 同一笔不会因三条通道而记两遍（`AutoBookSeen` 持久指纹兜底）。
+     */
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        if (sbn == null) return
+        val decision = try {
+            handle(sbn, fromCatchUp = true)
+        } catch (t: Throwable) {
+            Log.e(TAG, "removed pkg=${sbn.packageName} 判定链异常，已吞掉", t)
+            return
+        }
+        if (decision == Decision.NOT_WATCHED) return
+        Log.i(TAG, "removed pkg=${sbn.packageName} → $decision")
+        // 只有真的入队了才记「撤回救回来一笔」—— 必须落盘（撤回不可复现，错过就没了）
+        if (decision == Decision.CAPTURED) {
+            AutoBookDiagnostics.noteRemovedCapture(this)
         }
     }
 

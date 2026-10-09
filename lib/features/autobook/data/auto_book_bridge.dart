@@ -90,6 +90,16 @@ class AutoBookBridge {
     await _invoke<Object?>('restoreQueue', <String, Object?>{'lines': lines});
   }
 
+  /// 补抓守护（`AlarmManager` 周期任务）的排期。
+  ///
+  /// 为什么需要 App 侧也调一次：守护闹钟是**一次性 + 每次醒来续期**的
+  /// （不用 `setRepeating` —— 它在 doze 里被静默丢弃后会永久停摆，实测踩过）。
+  /// 而进程被杀后没人续期 → 每次 App 启动 / 每次进前台都补一次排期，
+  /// 让「进程活着期间守护一定在转」成为不变量。
+  Future<void> ensureGuardScheduled() async {
+    await _invoke<Object?>('ensureGuard');
+  }
+
   /// 原生侧活性快照（服务是否被绑定 / 抓到过几条 / 上次 drain 情况）。
   /// 非 Android 或通道异常 → null（页面按「不可用」展示）。
   Future<AutoBookDiagnostics?> diagnostics() async {
