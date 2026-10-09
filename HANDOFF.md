@@ -1,7 +1,7 @@
 # HANDOFF.md — 颜芯记账 uni-app → Flutter 迁移（F1–F7.6 **全部交付** ✅ · F7.7 五批 A/B/C/D/E 全部落地 ✅（`v0.7.7`–`v0.7.10`）· **F7.8 流水左滑删除** ✅（`v0.7.11`）· **F7.9 记一笔吸底保存 + 启动图标 adaptive** ✅（`v0.7.12`）· **统计页图表两处绘制修复** ✅（`v0.7.13`）· **F7.14 新手引导** ✅（`v0.7.14`）· **F7.15 自动记账** ✅（**`v0.7.15`** · 通知使用权为主 + 零权限兜底 · 2026-10-07 活性诊断补丁 + **2026-10-08 真机走查修复**：支付宝「交易提醒」误杀 / 组摘要去重 / 金额优先级 / 诊断层瞒报）· **F7.16 自动记账两处修复** 🚧（2026-10-08 两起事故：① 服务未连接期间错过的支付通知不再永久丢失；② 微信支付「识别不到」= `[N条]` 折叠前缀被误判成组摘要 · **扩展监听清单待做 → 未打 tag**））
 
 > **新会话接手时，只读这一个文件就能继续干活。**
-> 最后更新：2026-10-09 00:14 · 更新人：AI 助手（**本机 = A 机**）
+> 最后更新：2026-10-09 18:54 · 更新人：AI 助手（**本机 = A 机**）
 >
 > **🟢 交接时刻状态（2026-10-09 凌晨 · F7.16 两起事故修复均已提交，⚠️ 未打 tag）**：
 > **代码基线 = `85e416d`**（F7.16 B：微信支付「识别不到」= `[N条]` 折叠前缀误杀，3 files / +97 −41）；
@@ -1105,33 +1105,31 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 
 # 新 Agent 接手指南
 
-1. **当前最重要的事**：**F7.15 自动记账 已全闭合、已交付 `v0.7.15`**（tag 指向收尾提交 = `origin/master` HEAD；
-   代码基线 = `e4e53b4`）。**无遗留项** —— 三项门禁全过：
-   - ✅ **用户终端全量 `flutter test` 479 passed / 0 skipped**（2026-10-08；= `test()` **391** + `testWidgets` **88**，
-     本批 **+79** 全落在 `test()`）。本机跑不了 14 个 `testWidgets` 文件，**别拿本机脚本当最终判据**。
-   - ✅ **真机监听路径已验完（2026-10-08 · Redmi K50）**：断点① 系统绑定（`allow_listener` + `dumpsys activity services`）/
-     ② 服务收通知（非白名单探针 → `skippedNotWatched` **0→1**）/ ③ Dart 取队列 / ④ 解析入账
-     （`imported:6 dropped:2` 逐条吻合）/ ⑤ **用户实付支付宝 ¥0.01 → 入账 `cents=1 / expense / notify_alipay`**。
-   - ✅ **真实通知文案已拿到并固化**：`test/features/autobook/auto_book_real_samples_test.dart`（16 例，
-     逐字抄自真机）—— §3.5 忽略表 / 金额优先级 / 商户提取**不再是「对着推测文案写的」**。
-   - 入口 = `lib/features/autobook/`（Dart 9 文件）+ `android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/`
-     （Kotlin 5 文件）；需求与设计在 `docs/SPEC-F7.15-auto-bookkeeping.md`（§3.1 架构 / §3.7 三处 Android 硬约束 /
-     §8 实施记录 + 走查补丁 + 真机走查与修复）。**别重写、别换个形式做**。
-   - ✅ analyze 等效 **全项目 `No issues found!`**（残留 5 条为既有环境假阳性，见第 48 条）；
-     本机纯 `test()` **386 例全绿 / 0 失败**（分 4 批并行跑完 49 文件）；autobook 三文件
-     rules **47** + flow **15** + real_samples **16**；
-     **APK `BUILD SUCCESSFUL`**（Kotlin 首次编译通过）+ `verify_apk_kernel` 新鲜度与文案核验通过。
-   - ✅ **模拟器走查已通过**（MuMu · `ACTION_SEND` 通道 —— 不受包名白名单限制）：落盘 → drain →
-     解析（正确取**实付** ¥12.00 而非优惠 ¥0.50）→ 入账 → 建「分享记账」账户 → 首页提示条 → 撤销 →
-     回执通知（`撤销`·`查看`）→ 诊断五行全部对得上（截图 `.workbuddy/qa-f715/`）。
-   - ⚠️ **现场教训（对真实使用有影响）**：**MIUI/HyperOS 在 `force-stop` 后会解绑监听服务**，而设置与
-     `dumpsys` 都显示「已授权」（= 难查的「开关开着但没工作」）→ `force-stop` / 覆盖安装后**必须重绑一次**；
-     **重绑会把仍在通知栏的活跃通知重投**（实测延迟 1 分 37 秒）→ 页面那条提示**真能救回数据**，不必重付。
-   - ✅ **收尾四步已执行完（2026-10-08）**：① CHANGELOG `## [Unreleased]` → `## [v0.7.15]`（含 I 段）+ tag 表补行 ✅；
-     ② 我的页 `_BrandTip` 角标 —— 早在 `3ec2381` 实现提交里就已置 `v0.7.15`（**已核对，无需再改**）✅；
-     ③ `git tag -a v0.7.15` → `git push && git push --tags`（**直推、不加管道**）→ `git ls-remote --tags` 核对 ✅；
-     ④ 文档收尾（本文件 + `SPEC-F7.15` §8 + `tasks/todo-flutter.md` + 当日 memory）✅。
-   - ⏭️ **下一阶段（F7.16 起）尚无需求，等用户提**；若要新开工，按本项目惯例**先出 SPEC 再动手**。
+1. **当前最重要的事（2026-10-09）**：**F7.16 自动记账两处修复已提交、但 ⚠️ 未打 tag** —— 因为用户同日提的
+   「**扩展内置监听应用清单**」需求**还没落地**，要等它做完再一并转 `v0.7.16`。F7.16 已交付两处修复（均真机验证通过）：
+   - ✅ **A · 补抓**（代码基线 `d44f8c6`）：修「服务未连接期间发布的支付通知永久丢失」—— 新增 `catchUp()` 扫
+     `getActiveNotifications()` + `AutoBookSeen`（新，持久指纹集 `pkg|title|text|postTimeMs`，cap 200）+ 可观测性
+     （补 5 个补抓诊断字段且必然落盘）。Redmi K50 实测把 22:29:37 那笔支付宝 ¥3.00 补记入账（DB **165→166**），
+     反复补抓零重复（`catchUpTotal=6` / `catchUpAddedTotal=2`）。
+   - ✅ **B · 微信支付「识别不到」**（代码基线 `85e416d`）：`[N条]` 折叠前缀被误判成组摘要而静默丢弃 → 改成
+     **归一化**（剥 `^\s*\[\d+条\]\s*` 再解析，`combined`/`externalId` 用归一化文本，避免折条数变化变成两笔）；
+     Kotlin 判定链整体兜异常+打日志。Redmi K50 实测把 `[3条]微信支付: 已支付¥0.03` 补记入账（DB **167→168**，`occurred_at=23:31:35`）。
+   - ⏭️ **尚未收口的两件事（新 Agent 优先从这里接）**：
+     ① **扩展监听应用清单**（待做）：现有白名单已最窄（仅微信+支付宝）；Android **无系统级按包筛选 API**。
+     **跨应用去重是必做前置**（现 `externalId` 含 `pkg` 跨来源必然不重）—— 京东/拼多多/抖音普通支付
+     资金流经微信或支付宝，加白名单会**重复记账**。另发现银行短信（`com.android.mms`，发件人「中国银行」）是独立通道，
+     需 `READ_SMS` 且重叠区更大。② **微信 23:31:35 实时回调未收到**（只有补抓看到那条通知）—— 仍未证死，
+     已补全链路日志+异常兜底，等**下一笔真实支付**抓日志定位。
+   - 📌 **F7.15 自动记账已交付 `v0.7.15`（代码基线 `e4e53b4`，已推远端，无遗留项）**：架构（Kotlin 只做包名过滤+落盘、
+     Dart 解析入账，drift 唯一 DB writer）、平台侧、Dart 侧、真机走查（断点①–⑤含用户实付支付宝 ¥0.01 端到端）、
+     用户终端全量 `flutter test` **479 passed / 0 skipped**、模拟器 `ACTION_SEND` 走查均通过。
+     入口 = `lib/features/autobook/`（Dart 9 文件）+ `android/app/src/main/kotlin/com/teacodeman/yanxin/autobook/`
+     （Kotlin 5 文件）；SPEC = `docs/SPEC-F7.15-auto-bookkeeping.md`（§3.1 架构 / §3.7 三处 Android 硬约束 / §8 实施记录）。
+     **别重写、别换个形式做**。⚠️ 本机跑不了 `testWidgets`，**别拿本机脚本当最终判据**；analyze 等效全项目 `No issues found!`。
+   - ⚠️ **现场教训（对真实使用有影响，务必记牢）**：**MIUI/HyperOS 在 `force-stop` 后会解绑监听服务**，而设置与
+     `dumpsys` 都显示「已授权」→ 难查的「开关开着但没工作」；`force-stop` / 覆盖安装后**必须重绑一次**
+     （重绑姿势：**先 `disallow_listener` 再 `allow_listener`，单独 allow 不生效**；判定只看 `Live notification listeners`）。
+     **重绑会把仍在通知栏的活跃通知重投**（实测延迟 1 分 37 秒）→ 页面提示真能救回数据，不必重付。
 
    **已交付的历史轮次（均已推远端 `origin/master`，别重写）**：
    - **F7.14 新手引导**（`v0.7.14`，`c5ea1b5`）：7 页全屏导览 + 「我的」重看入口 + **老用户不弹**
@@ -1246,8 +1244,10 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
   = `test()` **391** + `testWidgets` **88**）；真机走查 ✅（F7.14 D1–D10 全过 0 崩溃 + **F7.15 断点 ①–⑤ 全过**）。
   ✅ **F7.15（自动记账）已交付 `v0.7.15`** —— analyze 等效 `No issues found!` + 终端 `flutter test` **479 passed**
   + 本机纯 `test()` **386 例全绿**（分 4 批）+ APK 构建/核验通过 + **真机断点 ①–⑤（含用户实付支付宝 ¥0.01 端到端入账）**。
-  🚧 **F7.16（补抓）** —— analyze 等效 `No issues found!` ✅ + `auto_book_flow_test` **17 passed / 0 failed**
-  + 真机补抓链路端到端通过（DB 165 → 166）。⚠️ **未跑全量 479**：本批 Dart 改动仅 autobook 内 3 个文件。
+  🚧 **F7.16（两处修复，⚠️ 未打 tag）** —— A·补抓（代码基线 `d44f8c6`）+ B·微信支付 `[N条]` 误杀（代码基线 `85e416d`）
+  均 analyze `No issues found!` ✅ + autobook 三文件 **82 passed / 0 failed**（`flow` 17 / `real_samples` **18** / `rules` 47）
+  + 真机端到端通过（A：DB 165→166 补记支付宝 ¥3.00；B：DB 167→168 补记微信 ¥0.03）。⚠️ **未跑全量 479**；⚠️ **未收口**：
+  ① 扩展监听应用清单（跨应用去重前置）待做；② 微信 23:31:35 实时回调未收到仍未证死。
   ⚠️ **本轮踩到**：`android/local.properties` 被 flutter 工具改写成 `release / versionCode=1` →
   直接 `assembleDebug` 出的包 versionCode=1，而设备上是 2001 → `install -r` 撞降级。**构建前先看这个文件。**
 - 完整功能需求清单：`docs/PRD-yanxin-flutter.md`。版本锁死：drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1 / drift_dev 2.31.0 / crypto 3.0.7 + archive / gbk_codec(override) / file_picker。
@@ -1285,4 +1285,5 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
   （判定 = 无标记 **且** `ActiveBookIdController.isFreshInstall`）。新增 `lib/features/onboarding/` 5 文件。
 - **下一步**：**F7.15 已全部闭合、无遗留项** —— 三项门禁全过（analyze 等效 ✅ / 用户终端 `flutter test`
   **479 passed / 0 skipped** ✅ / 真机走查 断点 ①–⑤ 含真实支付端到端 ✅）；收尾四步已执行，tag `v0.7.15` 已推远端。
-  **下一阶段（F7.16 起）尚无需求，等用户提。**（F7.9 + 启动图标 + F7.14 新手引导 + F7.15 自动记账均已落地，**别重写**。）
+  **F7.16 是当前活**（两处修复已提交但未打 tag，因「扩展监听应用清单」待做）—— 优先从「跨应用去重前置 + 扩展清单」
+  或「微信实时回调未证死」两处接；F7.9 + 启动图标 + F7.14 新手引导 + F7.15 自动记账均已落地，**别重写**。
