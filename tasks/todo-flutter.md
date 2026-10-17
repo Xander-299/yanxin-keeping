@@ -24,7 +24,7 @@
 - [x] `flutter test` → **All tests passed!**（踩坑：沙箱吞 PROGRAMFILES(X86) + 代理劫持 WebSocket，解法固化在 `env.sh` 的 `fx-test`/`fx-qa`）
 - [x] git init + 提交 `ba45fba` + 远端 origin 已配（远端仓库待用户网页创建）
 - [x] 门禁：`flutter build apk --debug` 成功（2026-09-09，第 8 次构建，`build/app/outputs/flutter-apk/app-debug.apk` 169MB）
-- [x] 已推送 `origin/master`（`git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`）
+- [x] 已推送 `origin/master`（`git@github.com:Xander-299/yanxin-bookkeeping-flutter.git`）
 - [x] F5 再装：excel / csv / gbk_codec / file_picker
 
 > **坑**：`flutter pub add` 本机卡死 20min+ → 改「Python 查 pub API → 手写 pubspec → `pub get`」。

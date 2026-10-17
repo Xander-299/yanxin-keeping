@@ -297,7 +297,7 @@
 | git | Git Bash 自带 `/mingw64/bin/git` | 需显式加 PortableGit 路径（`env.sh` 已处理） |
 | 仓库工作目录 | `D:\Tencent\yanxin-flutter` | `C:\Users\Administrator\Desktop\yanxin-bookkeeping-flutter-master`（zip 解出） |
 
-**远端（两台共用）**：`git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`（**SSH**，公钥已加 GitHub，`git push` 免凭据）。
+**远端（两台共用）**：`git@github.com:Xander-299/yanxin-bookkeeping-flutter.git`（**SSH**，公钥已加 GitHub，`git push` 免凭据）。
 **换机器第一件事**：`git pull` 同步 + `source env.sh`。
 
 ---
@@ -318,7 +318,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 - 【已确认】目标栈 **Flutter**，**只做 Android**（无 Mac，iOS 不做）
 - 【已确认】数据库 **drift**（编译期参数绑定，根治旧栈 ADR-5 手写 SQL 拼接）
 - 【已确认】不做旧 App 数据迁移工具，手工重建账本；旧仓库只读归档
-- 【已确认】远端 **SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`；`master` 直推
+- 【已确认】远端 **SSH** `git@github.com:Xander-299/yanxin-bookkeeping-flutter.git`；`master` 直推
 - 【已确认】功能需求以「小 SPEC 签字稿」形式落 `docs/SPEC-F7.x-*.md`（F7.3 / F7.4 / F7.5 各一份）
 - 【默认处理】旧栈 T2.8 真机复验：不做（用户未答复，按「不做」）
 
@@ -1196,7 +1196,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 
 57. **`git fetch/push` 报 "correct access rights / repository exists" ≠ 凭证坏了**（2026-10-17 实测）：
     这是**瞬时网络故障**的通用报错，极易误判成「SSH key 失效」而去做无用排查。
-    **30 秒判据**：`ssh -T git@github.com` → 返回 `Hi Tea-Codeman! You've successfully authenticated`
+    **30 秒判据**：`ssh -T git@github.com` → 返回 `Hi Xander-299! You've successfully authenticated`
     即凭证与 22 端口都通，**直接重试即可**。
     两条附带事实：① 远端是 **SSH**（`git@github.com:`）→ **不吃 `http_proxy` 环境变量**，配代理对它无效；
     ② `curl https://github.com` 在本沙箱会 **15s 超时**（出口限制）但 **SSH 通**
@@ -1314,7 +1314,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 
 # 极简版
 
-- 颜芯记账 uni-app → Flutter。**两台机器共用一个远端**（**SSH** `git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`，`git push` 免凭据）：
+- 颜芯记账 uni-app → Flutter。**两台机器共用一个远端**（**SSH** `git@github.com:Xander-299/yanxin-bookkeeping-flutter.git`，`git push` 免凭据）：
   **A 机（本机）** = 用户 `panda`、`D:` 盘、仓库 `D:\Tencent\yanxin-flutter`、MuMu 12；**B 机** = `Administrator`、`C:/M:` 盘、MuMu 15。
   `env.sh` **自动识别机器**，开终端先 `source env.sh`。
 - **F1–F7.6 全部 ✅**（日历 / 统计 / 预算 schema v2 / 搜索 / 搜索浮层 / 资产页 / 全站卡通浅色 `v0.7.6`）。
@@ -1429,6 +1429,6 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
   135 提交 · 15 tag · 2026-09-09→10-17 约 6 周。
 - ⚠️ **网络坑（2026-10-17 实测）**：`git fetch` 报 *"Please make sure you have the correct access rights,
   and the repository exists."* **是瞬时故障，不是凭证问题** —— 判据：`ssh -T git@github.com` 返回
-  `Hi Tea-Codeman!` 即凭证与 22 端口都通，**重试即好**。
+  `Hi Xander-299!` 即凭证与 22 端口都通，**重试即好**。
   远端是 **SSH**（`git@github.com:`）→ **不吃 `http_proxy`**；`curl https://github.com` 会 15s 超时
   （沙箱出口限制）但 **SSH 通** → **别用 curl 判 git 可达性**。

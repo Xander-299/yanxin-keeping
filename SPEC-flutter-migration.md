@@ -211,7 +211,7 @@ unset CODEBUDDY_SESSION_ID CLAUDE_SESSION_ID   # safe-delete shim 会拦 Dart/Gr
 
 | # | 事项 | 结论 |
 |---|---|---|
-| 1 | 仓库名与远端 | ✅ **`git@github.com:Tea-Codeman/yanxin-bookkeeping-flutter.git`**（用户 2026-09-09 二次确认）。本地目录 `D:\Tencent\yanxin-flutter`，dart 包名 `yanxin`，applicationId `com.teacodeman.yanxin` |
+| 1 | 仓库名与远端 | ✅ **`git@github.com:Xander-299/yanxin-bookkeeping-flutter.git`**（用户 2026-09-09 二次确认）。本地目录 `D:\Tencent\yanxin-flutter`，dart 包名 `yanxin`，applicationId `com.teacodeman.yanxin` |
 | 2 | 数据库 | ✅ **drift**（`drift` + `drift_flutter` + `drift_dev`/`build_runner`） |
 | 3 | 旧仓库处置 | ✅ 保留只读归档，README 顶部加「已迁移至 yanxin-flutter」说明 |
 | 4 | 旧 App 数据迁移 | ✅ 不做迁移工具，手工重建账本 |
