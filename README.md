@@ -3,6 +3,10 @@
 本地优先的个人记账 App。Flutter 3.47.2 / Dart 3.13.2，当前目标平台 **Android**。
 
 > 这是 uni-app 版的**重写**。旧仓库 `Tea-Codeman/yanxin-bookkeeping`（uni-app Vue3 + Vite）已归档为只读，不再开发。
+>
+> 📅 **本文状态核对于 2026-10-17**（基线 `4480fc0`）—— 版本号取自本机 Flutter SDK 的
+> `bin/cache/flutter.version.json`，阶段状态逐条比对 `CHANGELOG.md` tag 表与 `tasks/todo-flutter.md`。
+> 若久未更新，**以 CHANGELOG 为准**。
 
 ## 为什么要重写
 
@@ -107,10 +111,20 @@ flutter build apk --debug
 且**没有汇总行**（状态仍报 completed，极易误判跑完）→ **分批跑**。
 并行跑 `dart_test_fallback.py` 必须用 `FX_TEST_WORK_SUFFIX=<后缀>` 隔离产物目录。
 
-> **装机前必查 `android/local.properties`**：该文件**不入版本控制**，但 flutter 工具会改写它
-> （跑一次 `flutter build apk --release` 就会写入 `buildMode=release` + `versionCode=1`）
-> → 之后 `assembleDebug` 出的包 versionCode=1 而设备上是 2001 → `install -r`
-> 直接 `INSTALL_FAILED_VERSION_DOWNGRADE`。验证成品：`aapt dump badging <apk> | head -1`。
+> **版本号有三个来源，装机前必须分清**（本项目踩过 `INSTALL_FAILED_VERSION_DOWNGRADE`）：
+>
+> | 来源 | 当前值 | 入版本控制？ | 用途 |
+> |---|---|---|---|
+> | `pubspec.yaml` `version:` | `0.1.0+1` | ✅ | **新克隆的默认值** → versionCode=**1** |
+> | `android/local.properties` `flutter.versionCode` | **`2001`** | ❌ `.gitignore` 忽略 | **实际装机用的值**（`build.gradle.kts:38` → `versionCode = flutter.versionCode`） |
+> | git tag / 「我的页」角标 | `v0.7.15` | ✅ tag | 人看的版本号（`tag = v0.7.<N>` ↔ `F7.<N>`） |
+>
+> ⚠️ `local.properties` **不入版本控制**，且 `2001` 是**手工设的、不是从 tag 推导的** →
+> **新克隆 / 新机器上 versionCode 一定是 1**，直接 `install -r` 到走查机必报降级失败。
+> **装机前先把它改成设备上已装包的值**。
+> ⚠️ 该文件**还会被 flutter 工具改写**：跑一次 `flutter build apk --release` 就会写入
+> `buildMode=release` + `versionCode=1` → 之后 `assembleDebug` 出的包也变 1，同样降级失败。
+> 验证成品：`aapt dump badging <apk> | head -1`。
 
 ## 迁移进度
 
