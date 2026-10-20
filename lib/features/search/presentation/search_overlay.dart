@@ -166,6 +166,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final AsyncValue<SearchState> async = ref.watch(searchProvider);
     final SearchPlan plan = parsePlan(_input.text);
 
@@ -187,7 +188,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                 ),
                 // 原型 `.glass`：暖白画布 55% + 11px 模糊
                 child: ColoredBox(
-                  color: Tok.canvas.withValues(alpha: 0.55),
+                  color: p.canvas.withValues(alpha: 0.55),
                 ),
               ),
             ),

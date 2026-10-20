@@ -17,14 +17,15 @@ class BookDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ToonPalette p = context.toon;
     final booksAsync = ref.watch(bookListProvider);
     final activeId = ref.watch(activeBookIdProvider).value;
 
     return Drawer(
-      backgroundColor: Tok.paper,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.horizontal(right: Radius.circular(Tok.rXl)),
-        side: BorderSide(color: Tok.ink, width: Tok.bw),
+      backgroundColor: p.paper,
+      shape: RoundedRectangleBorder(
+        borderRadius: const BorderRadius.horizontal(right: Radius.circular(Tok.rXl)),
+        side: BorderSide(color: p.ink, width: Tok.bw),
       ),
       child: SafeArea(
         child: Column(
@@ -80,7 +81,7 @@ class BookDrawer extends ConsumerWidget {
                     icon: const Icon(Icons.tune_rounded, size: 18),
                     label: const Text('管理账本'),
                     style: TextButton.styleFrom(
-                      foregroundColor: Tok.ink2,
+                      foregroundColor: p.ink2,
                       textStyle: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
@@ -111,6 +112,7 @@ class _BookRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 2,
       dy: 2,
@@ -119,17 +121,17 @@ class _BookRow extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 4),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: selected ? Tok.brandTint : null,
+          color: selected ? p.brandTint : null,
           borderRadius: BorderRadius.circular(Tok.rMd),
           border: Border.all(
-            color: selected ? Tok.ink : Colors.transparent,
+            color: selected ? p.ink : Colors.transparent,
             width: 2,
           ),
-          boxShadow: selected ? Tok.hard(d: 2.5) : null,
+          boxShadow: selected ? p.hard(d: 2.5) : null,
         ),
         child: Row(
           children: <Widget>[
-            const Icon(Icons.menu_book_rounded, size: 20, color: Tok.ink2),
+            Icon(Icons.menu_book_rounded, size: 20, color: p.ink2),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -140,7 +142,7 @@ class _BookRow extends StatelessWidget {
               ),
             ),
             if (selected)
-              const Icon(Icons.check_rounded, size: 20, color: Tok.brandDeep),
+              Icon(Icons.check_rounded, size: 20, color: p.brandDeep),
           ],
         ),
       ),

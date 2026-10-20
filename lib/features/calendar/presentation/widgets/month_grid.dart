@@ -6,16 +6,10 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/features/calendar/application/calendar_aggregate.dart';
-
-/// 支出红 / 收入绿（与中国习惯一致的配色，与流水列表同源）。
-const Color kExpenseRed = Tok.red;
-const Color kIncomeGreen = Tok.green;
-
-/// 品牌琥珀（选中 / 今天）。
-const Color kCalendarAccent = Tok.brand;
 
 /// 月历网格。
 class MonthGrid extends StatelessWidget {
@@ -118,6 +112,7 @@ class MonthGrid extends StatelessWidget {
     required DateTime date,
     required DateTime today,
   }) {
+    final ToonPalette p = context.toon;
     final bool inMonth = date.month == month && date.year == year;
     final bool isToday =
         date.year == today.year &&
@@ -135,13 +130,13 @@ class MonthGrid extends StatelessWidget {
     // 原型 `.day.tint-e / .tint-i`：支出优先于收入；`.day.sel` 写在后面
     // 覆盖 tint 底色 → 选中日一定是品牌浅底 + 墨色描边 + 硬阴影。
     final Color? cellBg = selected
-        ? Tok.brandTint
+        ? p.brandTint
         : agg == null
         ? null
         : agg.hasExpense
-        ? Tok.redTint
+        ? p.redTint
         : agg.hasIncome
-        ? Tok.greenTint
+        ? p.greenTint
         : null;
 
     return InkWell(
@@ -162,11 +157,11 @@ class MonthGrid extends StatelessWidget {
             color: cellBg,
             borderRadius: BorderRadius.circular(Tok.rSm),
             border: Border.all(
-              color: selected ? Tok.ink : Colors.transparent,
+              color: selected ? p.ink : Colors.transparent,
               width: 2,
             ),
             // 选中态给硬阴影（原型 `.day.sel` 的 `--sh-sm`）
-            boxShadow: selected ? Tok.hard(d: 2.5) : null,
+            boxShadow: selected ? p.hard(d: 2.5) : null,
           ),
           child: Column(
             children: <Widget>[
@@ -181,21 +176,21 @@ class MonthGrid extends StatelessWidget {
                           height: 24,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: kCalendarAccent,
+                            color: p.brand,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Tok.ink, width: 2),
+                            border: Border.all(color: p.ink, width: 2),
                           ),
-                          child: _dayNumber(date, isToday: true),
+                          child: _dayNumber(date, p, isToday: true),
                         )
-                      : _dayNumber(date, isToday: false),
+                      : _dayNumber(date, p, isToday: false),
                 ),
               ),
               const Spacer(),
               if (inMonth && agg != null) ...<Widget>[
                 if (agg.hasExpense)
-                  _amountText('-${compactYuan(agg.expenseCents)}', kExpenseRed),
+                  _amountText('-${compactYuan(agg.expenseCents)}', p.red),
                 if (agg.hasIncome)
-                  _amountText('+${compactYuan(agg.incomeCents)}', kIncomeGreen),
+                  _amountText('+${compactYuan(agg.incomeCents)}', p.green),
               ],
             ],
           ),
@@ -205,13 +200,14 @@ class MonthGrid extends StatelessWidget {
   }
 
   /// 日期数字：今天用品牌深色 + 900 字重（原型 `.day.today .dnum`）。
-  Widget _dayNumber(DateTime date, {required bool isToday}) => Text(
+  Widget _dayNumber(DateTime date, ToonPalette p, {required bool isToday}) =>
+      Text(
     '${date.day}',
     style: TextStyle(
       fontSize: 13,
       height: 1.1,
       fontWeight: isToday ? FontWeight.w900 : FontWeight.w800,
-      color: isToday ? Tok.brandInk : Tok.ink,
+      color: isToday ? p.onBrand : p.ink,
     ),
   );
 

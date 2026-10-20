@@ -8,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
@@ -39,6 +38,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final CalendarState? current = ref.watch(calendarProvider).value;
     final AsyncValue<Map<int, Set<int>>> index = ref.watch(
       yearDayIndexProvider(_year),
@@ -66,7 +66,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
         ],
       ),
       body: Container(
-        color: Tok.paper,
+        color: p.paper,
         child: Column(
           children: <Widget>[
             Expanded(
@@ -118,15 +118,15 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 20),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: Text(
                 '琥珀色 = 这一天有记账；点某一天即跳到该月该日',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
             ),
@@ -155,6 +155,7 @@ class _MiniMonth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final DateTime now = DateTime.now();
     final int leading = DateTime(year, month, 1).weekday % 7;
     final int total = daysInMonth(year, month);
@@ -175,8 +176,8 @@ class _MiniMonth extends StatelessWidget {
                 Container(
                   width: 7,
                   height: 7,
-                  decoration: const BoxDecoration(
-                    color: Tok.brandDeep,
+                  decoration: BoxDecoration(
+                    color: p.brandDeep,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -188,7 +189,7 @@ class _MiniMonth extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w900,
-                  color: isSelectedMonth ? Tok.brandDeep : Tok.ink2,
+                  color: isSelectedMonth ? p.brandDeep : p.ink2,
                 ),
               ),
             ],
@@ -202,10 +203,10 @@ class _MiniMonth extends StatelessWidget {
                   child: Text(
                     w,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 8,
                       fontWeight: FontWeight.w800,
-                      color: Tok.ink3,
+                      color: p.ink3,
                     ),
                   ),
                 ),
@@ -240,6 +241,7 @@ class _MiniMonth extends StatelessWidget {
     required int total,
     required DateTime now,
   }) {
+    final ToonPalette p = context.toon;
     if (day < 1 || day > total) return const SizedBox.shrink();
     final bool hasTx = daysWithTx.contains(day);
     final bool isToday =
@@ -247,15 +249,15 @@ class _MiniMonth extends StatelessWidget {
 
     // 原型：`.mark`（这天有记账）= 品牌底 + 深棕字；`.today` 覆盖为墨底白字
     final Color? bg = isToday
-        ? Tok.ink
+        ? p.ink
         : hasTx
-        ? Tok.brand
+        ? p.brand
         : null;
     final Color fg = isToday
-        ? Tok.paper
+        ? p.paper
         : hasTx
-        ? Tok.brandInk
-        : Tok.ink2;
+        ? p.onBrand
+        : p.ink2;
 
     return InkWell(
       onTap: () => onPick(month, day),
@@ -292,8 +294,9 @@ class _PillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Material(
-      color: Tok.paper,
+      color: p.paper,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         onTap: onTap,

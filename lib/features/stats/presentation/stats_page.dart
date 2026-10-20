@@ -6,7 +6,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
@@ -107,6 +106,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -116,21 +116,21 @@ class _SummaryCard extends StatelessWidget {
               child: _StatCell(
                 label: '收入',
                 value: summary.incomeYuan,
-                color: Tok.green,
+                color: p.green,
               ),
             ),
             Expanded(
               child: _StatCell(
                 label: '支出',
                 value: summary.expenseYuan,
-                color: Tok.red,
+                color: p.red,
               ),
             ),
             Expanded(
               child: _StatCell(
                 label: '结余',
                 value: summary.balanceYuan,
-                color: Tok.brandDeep,
+                color: p.brandDeep,
               ),
             ),
           ],
@@ -258,6 +258,7 @@ class _LegendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -270,7 +271,7 @@ class _LegendRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
-              border: Border.all(color: Tok.ink, width: 2),
+              border: Border.all(color: p.ink, width: 2),
             ),
           ),
           const SizedBox(width: 8),
@@ -312,6 +313,7 @@ class _TrendCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     return Card(
       child: Padding(
@@ -326,9 +328,9 @@ class _TrendCard extends StatelessWidget {
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                 ),
                 const Spacer(),
-                _Dot(color: Tok.red, label: '支出', muted: muted),
+                _Dot(color: p.red, label: '支出', muted: muted),
                 const SizedBox(width: 12),
-                _Dot(color: Tok.green, label: '收入', muted: muted),
+                _Dot(color: p.green, label: '收入', muted: muted),
               ],
             ),
             const SizedBox(height: 14),
@@ -349,6 +351,7 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -358,7 +361,7 @@ class _Dot extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: Tok.ink, width: 2),
+            border: Border.all(color: p.ink, width: 2),
           ),
         ),
         const SizedBox(width: 5),

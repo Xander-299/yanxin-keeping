@@ -146,6 +146,7 @@ class _CategoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final List<ReportGroup> expense = state.groupsOf(kReportExpense);
     final List<ReportGroup> income = state.groupsOf(kReportIncome);
     final List<TxRow> transfers = state.transfers;
@@ -157,10 +158,10 @@ class _CategoryTab extends StatelessWidget {
           title: '支出',
           trailing: Text(
             '¥${centsToYuan(state.summary.expenseCents, group: true)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              color: Tok.red,
+              color: p.red,
             ),
           ),
         ),
@@ -178,10 +179,10 @@ class _CategoryTab extends StatelessWidget {
           title: '收入',
           trailing: Text(
             '¥${centsToYuan(state.summary.incomeCents, group: true)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              color: Tok.green,
+              color: p.green,
             ),
           ),
         ),
@@ -201,10 +202,10 @@ class _CategoryTab extends StatelessWidget {
             trailing: Text(
               '${transfers.length} 笔 · '
               '¥${centsToYuan(sumCentsOf(transfers, kReportTransfer), group: true)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ),
@@ -238,6 +239,7 @@ class _AccountTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: <Widget>[
@@ -246,14 +248,14 @@ class _AccountTab extends StatelessWidget {
           kind: ReportGroupKind.account,
           categoryNameOf: state.categoryNameOf,
         ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
           child: Text(
             '按流水的 account_id 归集；已删除账户的历史流水归到「其他账户」',
             style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
         ),
@@ -290,20 +292,21 @@ class _EmptyMonth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 26),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const ToonDashedBorder(
+            ToonDashedBorder(
               circle: true,
-              color: Tok.ink,
+              color: p.ink,
               thickness: Tok.bw,
               dash: 7,
               gap: 5,
-              background: Tok.brandTint,
-              child: SizedBox(
+              background: p.brandTint,
+              child: const SizedBox(
                 width: 76,
                 height: 76,
                 child: Center(child: PigMascot(size: 52)),
@@ -316,13 +319,13 @@ class _EmptyMonth extends StatelessWidget {
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               '记一笔后这里会按明细 / 分类 / 账户分别列出',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 16),

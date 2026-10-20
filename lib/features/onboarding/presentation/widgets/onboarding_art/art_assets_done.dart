@@ -7,6 +7,7 @@ class AssetsReportsArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -15,18 +16,18 @@ class AssetsReportsArt extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              const Row(
+              Row(
                 children: <Widget>[
                   Text(
                     '资产',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
-                      color: Tok.ink,
+                      color: p.ink,
                     ),
                   ),
-                  Spacer(),
-                  HighlightBox(
+                  const Spacer(),
+                  const HighlightBox(
                     radius: 9,
                     child: _MiniIconBox(icon: Icons.add),
                   ),
@@ -41,35 +42,35 @@ class AssetsReportsArt extends StatelessWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Tok.paper,
+                    color: p.paper,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: <Widget>[
                       Icon(
                         Icons.account_balance_wallet_rounded,
                         size: 13,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Text(
                         '现金',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: Tok.ink,
+                          color: p.ink,
                         ),
                       ),
-                      Spacer(),
+                      const Spacer(),
                       Text(
                         '¥286.88',
                         style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w800,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
-                      Icon(Icons.chevron_right, size: 13, color: Tok.ink2),
+                      Icon(Icons.chevron_right, size: 13, color: p.ink2),
                     ],
                   ),
                 ),
@@ -85,13 +86,13 @@ class AssetsReportsArt extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              const Text(
+              Text(
                 '报表',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: Tok.ink,
+                  color: p.ink,
                 ),
               ),
               const SizedBox(height: 8),
@@ -120,6 +121,7 @@ class DoneArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SizedBox(
       height: 176,
       child: Stack(
@@ -129,9 +131,9 @@ class DoneArt extends StatelessWidget {
             width: 128,
             height: 128,
             decoration: BoxDecoration(
-              color: Tok.brandTint,
+              color: p.brandTint,
               shape: BoxShape.circle,
-              border: Tok.inkBorder(),
+              border: p.inkBorder(),
             ),
           ),
           const PigMascot(size: 92, rotate: true),
@@ -141,31 +143,31 @@ class DoneArt extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
-                color: Tok.paper,
+                color: p.paper,
                 borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: Tok.ink, width: 2),
-                boxShadow: Tok.hard(d: 2.5),
+                border: Border.all(color: p.ink, width: 2),
+                boxShadow: p.hard(d: 2.5),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Icon(Icons.person_rounded, size: 13, color: Tok.ink2),
-                  SizedBox(width: 4),
+                  Icon(Icons.person_rounded, size: 13, color: p.ink2),
+                  const SizedBox(width: 4),
                   Text(
                     '我的',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: Tok.ink,
+                      color: p.ink,
                     ),
                   ),
-                  Icon(Icons.chevron_right, size: 13, color: Tok.ink2),
+                  Icon(Icons.chevron_right, size: 13, color: p.ink2),
                   Text(
                     '新手引导',
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
-                      color: Tok.brandDeep,
+                      color: p.brandDeep,
                     ),
                   ),
                 ],

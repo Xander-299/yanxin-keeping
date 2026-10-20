@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/features/calendar/application/calendar_aggregate.dart';
 import 'package:yanxin/features/calendar/presentation/widgets/month_grid.dart';
 
@@ -35,6 +35,7 @@ class _DateSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     // 只有当月才存在「灰显不可选」的格子（翻到历史月时整月都可选）
     final bool sameMonth =
         maxDate.year == initial.year && maxDate.month == initial.month;
@@ -54,7 +55,7 @@ class _DateSheet extends StatelessWidget {
                 height: 6,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Tok.ink,
+                  color: p.ink,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -64,12 +65,12 @@ class _DateSheet extends StatelessWidget {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               '上限为今天，不能记未来的账',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 12),
@@ -90,10 +91,10 @@ class _DateSheet extends StatelessWidget {
               Center(
                 child: Text(
                   '${maxDate.day} 日之后灰显不可选',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ),

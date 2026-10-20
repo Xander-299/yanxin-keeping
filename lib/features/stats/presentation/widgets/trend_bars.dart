@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/stats_aggregate.dart';
@@ -37,15 +37,18 @@ class TrendBars extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final max = points.fold<int>(0, (int m, MonthPoint p) {
-      final v = p.incomeCents > p.expenseCents ? p.incomeCents : p.expenseCents;
+    final ToonPalette p = context.toon;
+    final max = points.fold<int>(0, (int m, MonthPoint pt) {
+      final v = pt.incomeCents > pt.expenseCents
+          ? pt.incomeCents
+          : pt.expenseCents;
       return v > m ? v : m;
     });
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: <Widget>[
-        for (final p in points)
+        for (final MonthPoint pt in points)
           Expanded(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -59,16 +62,16 @@ class TrendBars extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: <Widget>[
                         _Bar(
-                          cents: p.expenseCents,
+                          cents: pt.expenseCents,
                           max: max,
-                          color: Tok.red,
+                          color: p.red,
                           tooltip: '支出',
                         ),
                         const SizedBox(width: 4),
                         _Bar(
-                          cents: p.incomeCents,
+                          cents: pt.incomeCents,
                           max: max,
-                          color: Tok.green,
+                          color: p.green,
                           tooltip: '收入',
                         ),
                       ],
@@ -76,10 +79,10 @@ class TrendBars extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    p.labelOf(anchorYear),
-                    style: const TextStyle(
+                    pt.labelOf(anchorYear),
+                    style: TextStyle(
                       fontSize: 11,
-                      color: Tok.ink2,
+                      color: p.ink2,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -107,6 +110,7 @@ class _Bar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final height = trendBarHeight(cents, max);
     // 无数据不画柱：留同宽空位，否则有数据的那几根会左右漂移
     if (height == null) return const SizedBox(width: kTrendBarWidth);
@@ -124,7 +128,7 @@ class _Bar extends StatelessWidget {
             bottomLeft: Radius.circular(3),
             bottomRight: Radius.circular(3),
           ),
-          border: Border.all(color: Tok.ink, width: 2),
+          border: Border.all(color: p.ink, width: 2),
         ),
       ),
     );

@@ -29,13 +29,14 @@ const String kJsonMime = 'application/json';
 
 /// 弹出「数据导出」弹层。
 Future<void> showExportSheet(BuildContext context, WidgetRef ref) {
+  final ToonPalette p = context.toon;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Tok.paper,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
-      side: BorderSide(color: Tok.ink, width: Tok.bw),
+    backgroundColor: p.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: p.ink, width: Tok.bw),
     ),
     builder: (BuildContext _) => const _ExportSheet(),
   );
@@ -174,6 +175,7 @@ class _ExportSheetState extends ConsumerState<_ExportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
@@ -188,7 +190,7 @@ class _ExportSheetState extends ConsumerState<_ExportSheet> {
                 height: 6,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Tok.ink,
+                  color: p.ink,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -198,26 +200,26 @@ class _ExportSheetState extends ConsumerState<_ExportSheet> {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               '导出的是当前账本，只读、不改动任何数据。',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 12),
             Container(
               clipBehavior: Clip.antiAlias,
-              decoration: Tok.cardDeco(),
+              decoration: p.cardDeco(),
               child: Column(
                 children: <Widget>[
                   _ExportRow(
                     icon: Icons.grid_on_rounded,
                     title: '导出流水 CSV',
                     sub: '全时间 · Excel 可直接打开',
-                    iconBg: Tok.greenTint,
-                    iconFg: Tok.green,
+                    iconBg: p.greenTint,
+                    iconFg: p.green,
                     enabled: !_busy,
                     onTap: _exportCsv,
                   ),
@@ -226,8 +228,8 @@ class _ExportSheetState extends ConsumerState<_ExportSheet> {
                     icon: Icons.inventory_2_outlined,
                     title: '导出备份 JSON',
                     sub: '账本 / 账户 / 分类 / 流水 / 预算',
-                    iconBg: Tok.blueTint,
-                    iconFg: Tok.blue,
+                    iconBg: p.blueTint,
+                    iconFg: p.blue,
                     enabled: !_busy,
                     onTap: _exportJson,
                   ),
@@ -246,22 +248,22 @@ class _ExportSheetState extends ConsumerState<_ExportSheet> {
                   const SizedBox(width: 8),
                   Text(
                     _busyLabel,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ],
               ),
             ],
             const SizedBox(height: 10),
-            const Text(
+            Text(
               'CSV 金额是「元」、不带正负号（方向看类型列）；备份 JSON 金额是整数「分」。',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 14),
@@ -299,6 +301,7 @@ class _ExportRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final Widget row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
@@ -309,7 +312,7 @@ class _ExportRow extends StatelessWidget {
             decoration: BoxDecoration(
               color: iconBg,
               borderRadius: BorderRadius.circular(Tok.rSm),
-              border: Border.all(color: Tok.ink, width: Tok.bw),
+              border: Border.all(color: p.ink, width: Tok.bw),
             ),
             child: Icon(icon, size: 19, color: iconFg),
           ),
@@ -328,16 +331,16 @@ class _ExportRow extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   sub,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, size: 18, color: Tok.ink2),
+          Icon(Icons.chevron_right, size: 18, color: p.ink2),
         ],
       ),
     );

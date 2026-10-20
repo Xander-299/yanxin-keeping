@@ -25,13 +25,14 @@ Future<void> showBudgetEditSheet(
   WidgetRef ref, {
   required BudgetView view,
 }) {
+  final ToonPalette p = context.toon;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Tok.paper,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
-      side: BorderSide(color: Tok.ink, width: Tok.bw),
+    backgroundColor: p.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: p.ink, width: Tok.bw),
     ),
     builder: (BuildContext _) => _BudgetEditSheet(
       initialCents: view.budgetCents,
@@ -172,6 +173,7 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final ({int year, int month}) ym = _month();
     final bool hasExisting = widget.initialCents > 0;
     final bool hasInput = _controller.text.trim().isNotEmpty;
@@ -196,7 +198,7 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                   height: 6,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Tok.ink,
+                    color: p.ink,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -209,12 +211,12 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                 ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 '用于在首页看到本月花销进度与剩余额度',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
               const SizedBox(height: 16),
@@ -222,18 +224,18 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
               Container(
                 padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
                 decoration: BoxDecoration(
-                  color: Tok.paper,
+                  color: p.paper,
                   borderRadius: BorderRadius.circular(Tok.rMd),
-                  border: Tok.inkBorder(),
+                  border: p.inkBorder(),
                 ),
                 child: Row(
                   children: <Widget>[
-                    const Text(
+                    Text(
                       '¥',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -283,10 +285,10 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     _error!,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Tok.red,
+                      color: p.red,
                     ),
                   ),
                 ),
@@ -296,10 +298,10 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                   child: Text(
                     '当前：¥${centsToYuan(widget.initialCents, group: true)}'
                     ' · 已消费 ¥${centsToYuan(widget.spentCents, group: true)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ),
@@ -327,8 +329,8 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                       dx: 1.5,
                       dy: 1.5,
                       onTap: _busy ? null : _clear,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 10,
                           vertical: 8,
                         ),
@@ -337,7 +339,7 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                           style: TextStyle(
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
-                            color: Tok.red,
+                            color: p.red,
                           ),
                         ),
                       ),
@@ -358,12 +360,12 @@ class _BudgetEditSheetState extends ConsumerState<_BudgetEditSheet> {
                 ],
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 '同一月份重复设置会走更新（部分唯一索引），不会产生两条记录。',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                   height: 1.6,
                 ),
               ),

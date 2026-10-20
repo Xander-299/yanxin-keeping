@@ -7,6 +7,7 @@ class WelcomeArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SizedBox(
       height: 172,
       child: Stack(
@@ -16,17 +17,17 @@ class WelcomeArt extends StatelessWidget {
             width: 134,
             height: 134,
             decoration: BoxDecoration(
-              color: Tok.brandTint,
+              color: p.brandTint,
               shape: BoxShape.circle,
-              border: Tok.inkBorder(),
+              border: p.inkBorder(),
             ),
           ),
           const PigMascot(size: 96, rotate: true),
           const Positioned(top: 10, right: 82, child: Sparkle(size: 26)),
-          const Positioned(
+          Positioned(
             bottom: 18,
             left: 78,
-            child: Sparkle(size: 17, fill: Tok.brandTint2),
+            child: Sparkle(size: 17, fill: p.brandTint2),
           ),
         ],
       ),
@@ -41,6 +42,7 @@ class MiniTabBarArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -49,9 +51,9 @@ class MiniTabBarArt extends StatelessWidget {
           child: Container(
             height: 54,
             decoration: BoxDecoration(
-              color: Tok.paper,
+              color: p.paper,
               borderRadius: BorderRadius.circular(Tok.rSm),
-              border: Tok.inkBorder(w: 2),
+              border: p.inkBorder(w: 2),
             ),
             child: const Row(
               children: <Widget>[
@@ -103,18 +105,19 @@ class _MiniTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        Icon(icon, size: 15, color: Tok.ink3),
+        Icon(icon, size: 15, color: p.ink3),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 8,
             height: 1,
             fontWeight: FontWeight.w700,
-            color: Tok.ink3,
+            color: p.ink3,
           ),
         ),
       ],
@@ -128,6 +131,7 @@ class _MiniAddSquare extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Transform.rotate(
       angle: -4 * 3.1415926535 / 180,
       child: Container(
@@ -135,11 +139,11 @@ class _MiniAddSquare extends StatelessWidget {
         height: 26,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Tok.brand,
+          color: p.brand,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Tok.ink, width: 1.8),
+          border: Border.all(color: p.ink, width: 1.8),
         ),
-        child: const Icon(Icons.add, size: 16, color: Tok.brandInk),
+        child: Icon(Icons.add, size: 16, color: p.onBrand),
       ),
     );
   }

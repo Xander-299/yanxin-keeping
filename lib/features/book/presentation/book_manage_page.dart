@@ -19,11 +19,12 @@ class BookManagePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ToonPalette p = context.toon;
     final booksAsync = ref.watch(bookListProvider);
     final activeId = ref.watch(activeBookIdProvider).value;
 
     return Scaffold(
-      backgroundColor: Tok.paper,
+      backgroundColor: p.paper,
       appBar: AppBar(
         title: const Text('账本管理'),
         actions: <Widget>[
@@ -65,8 +66,8 @@ class BookManagePage extends ConsumerWidget {
                 ),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Text(
                 '· 切换账本后，首页 / 日历 / 统计 / 资产的数据都按当前账本隔离\n'
                 '· 新建账本会自动带一个默认账户「现金」\n'
@@ -74,7 +75,7 @@ class BookManagePage extends ConsumerWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                   height: 1.7,
                 ),
               ),
@@ -111,6 +112,7 @@ class _BookRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 2,
       dy: 2,
@@ -118,13 +120,13 @@ class _BookRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: active ? Tok.brandTint : Colors.transparent,
+          color: active ? p.brandTint : Colors.transparent,
           borderRadius: BorderRadius.circular(Tok.rMd),
           border: Border.all(
-            color: active ? Tok.ink : Colors.transparent,
+            color: active ? p.ink : Colors.transparent,
             width: 2,
           ),
-          boxShadow: active ? Tok.hard(d: 2.5) : null,
+          boxShadow: active ? p.hard(d: 2.5) : null,
         ),
         child: Row(
           children: <Widget>[
@@ -149,17 +151,17 @@ class _BookRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${book.currency} · ${book.type}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ],
               ),
             ),
             if (active)
-              const Icon(Icons.check, size: 20, color: Tok.brandDeep),
+              Icon(Icons.check, size: 20, color: p.brandDeep),
           ],
         ),
       ),

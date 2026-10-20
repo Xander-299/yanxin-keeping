@@ -2,7 +2,7 @@ part of '../toon.dart';
 
 // ────────────────────────────── 卡片 ──────────────────────────────
 
-/// 白底 + 墨色描边 + 硬阴影的卡片。
+/// 卡片底 + 墨色描边 + 硬阴影的卡片。
 class ToonCard extends StatelessWidget {
   const ToonCard({
     super.key,
@@ -10,7 +10,7 @@ class ToonCard extends StatelessWidget {
     this.padding,
     this.margin,
     this.radius = Tok.rLg,
-    this.color = Tok.paper,
+    this.color,
     this.shadow = 4,
     this.onTap,
     this.clip = false,
@@ -20,7 +20,10 @@ class ToonCard extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry? margin;
   final double radius;
-  final Color color;
+
+  /// 卡片底色；`null` = 主题的卡片色（`p.paper`）。
+  final Color? color;
+
   final double shadow;
   final VoidCallback? onTap;
 
@@ -29,11 +32,16 @@ class ToonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     Widget box = Container(
       margin: margin,
       padding: padding,
       clipBehavior: clip ? Clip.antiAlias : Clip.none,
-      decoration: Tok.cardDeco(color: color, radius: radius, shadow: shadow),
+      decoration: p.cardDeco(
+        color: color ?? p.paper,
+        radius: radius,
+        depth: shadow,
+      ),
       child: child,
     );
     if (onTap != null) {

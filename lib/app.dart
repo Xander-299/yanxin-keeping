@@ -8,12 +8,15 @@
 ///
 /// 搜索不是路由：F7.5 起改为覆盖在首页之上的浮层（`showSearchOverlay`）。
 ///
-/// 主题对齐页面原型（F7.6）：卡通浅色 —— 暖白画布 + 白卡 + 2.5px 墨色描边 + 硬阴影。
+/// 主题对齐页面原型（F7.6）：卡通 —— 暖白画布 + 白卡 + 2.5px 墨色描边 + 硬阴影。
+/// F7.17 起再加一套「卡通夜灯」深色，`themeMode` 由「设置 → 外观」决定（默认跟随系统）。
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
+import 'package:yanxin/core/theme/palette.dart';
+import 'package:yanxin/core/theme/theme_mode.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/features/assets/presentation/assets_page.dart';
 import 'package:yanxin/features/autobook/presentation/auto_book_page.dart';
@@ -29,19 +32,26 @@ import 'package:yanxin/features/profile/presentation/profile_page.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/reports/presentation/reports_page.dart';
+import 'package:yanxin/features/settings/application/theme_controller.dart';
+import 'package:yanxin/features/settings/presentation/settings_page.dart';
 import 'package:yanxin/features/stats/presentation/stats_page.dart';
 
-/// 品牌琥珀（底栏中央按钮 / 选中态）。
-const Color kBrandOrange = Tok.brand;
-
-class YanxinApp extends StatefulWidget {
+/// 应用根。
+///
+/// 路由表在 State 里构建（每个 App 实例独立一份 GoRouter，测试互不串扰）：
+/// - 壳路由（底部导航 4 tab）：`/` `/calendar` `/assets` `/profile`
+/// - 全屏路由：`/record`（extra = 流水 id，`?date=` = 默认日期毫秒）、`/books`、
+///   `/categories`、`/import`、`/month-picker`（日历的月份选择子页）、`/stats`（统计）、
+///   `/reports`（报表，extra = [ReportsArgs]）、`/autobook`（自动记账）、
+///   `/settings`（设置，F7.17：外观三选一）
+class YanxinApp extends ConsumerStatefulWidget {
   const YanxinApp({super.key});
 
   @override
-  State<YanxinApp> createState() => _YanxinAppState();
+  ConsumerState<YanxinApp> createState() => _YanxinAppState();
 }
 
-class _YanxinAppState extends State<YanxinApp> {
+class _YanxinAppState extends ConsumerState<YanxinApp> {
   late final GoRouter _router = GoRouter(
     initialLocation: '/',
     routes: <RouteBase>[
@@ -104,14 +114,21 @@ class _YanxinAppState extends State<YanxinApp> {
       GoRoute(path: '/onboarding', builder: (_, _) => const OnboardingPage()),
       // 自动记账（F7.15）：权限状态 / 去开启 / 最近一批撤销，入口在「我的」
       GoRoute(path: '/autobook', builder: (_, _) => const AutoBookPage()),
+      // 设置（F7.17）：外观 = 浅色 / 深色 / 跟随系统（默认跟随系统）
+      GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
     ],
   );
 
   @override
   Widget build(BuildContext context) {
+    // 还没读出来时按默认「跟随系统」渲染（首帧前 main() 已预热，正常不会走到这里）
+    final ToonThemeMode mode =
+        ref.watch(themeModeProvider).value ?? ToonThemeMode.system;
     return MaterialApp.router(
       title: '颜芯记账',
-      theme: buildToonTheme(),
+      theme: buildToonTheme(ToonPalette.light, Brightness.light),
+      darkTheme: buildToonTheme(ToonPalette.dark, Brightness.dark),
+      themeMode: mode.materialMode,
       routerConfig: _router,
     );
   }

@@ -6,14 +6,20 @@ class _Arrow extends StatelessWidget {
   final bool up;
 
   @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: const Size(12, 14), painter: _ArrowPainter(up: up));
+  Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    return CustomPaint(
+      size: const Size(12, 14),
+      painter: _ArrowPainter(up: up, color: p.brand),
+    );
+  }
 }
 
 class _ArrowPainter extends CustomPainter {
-  const _ArrowPainter({required this.up});
+  const _ArrowPainter({required this.up, required this.color});
 
   final bool up;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -26,7 +32,7 @@ class _ArrowPainter extends CustomPainter {
       Offset(x, tailY),
       Offset(x, headY),
       Paint()
-        ..color = Tok.brand
+        ..color = color
         ..strokeWidth = 2
         ..strokeCap = StrokeCap.round
         ..style = PaintingStyle.stroke,
@@ -36,11 +42,11 @@ class _ArrowPainter extends CustomPainter {
       ..lineTo(x - 4.5, headY)
       ..lineTo(x + 4.5, headY)
       ..close();
-    canvas.drawPath(head, Paint()..color = Tok.brand);
+    canvas.drawPath(head, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(_ArrowPainter old) => old.up != up;
+  bool shouldRepaint(_ArrowPainter old) => old.up != up || old.color != color;
 }
 
 class _MiniRoundButton extends StatelessWidget {
@@ -50,22 +56,23 @@ class _MiniRoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       width: 18,
       height: 18,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         shape: BoxShape.circle,
-        border: Border.all(color: Tok.ink, width: 1.6),
+        border: Border.all(color: p.ink, width: 1.6),
       ),
       child: Text(
         glyph,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           height: 1,
           fontWeight: FontWeight.w900,
-          color: Tok.ink,
+          color: p.ink,
         ),
       ),
     );
@@ -80,24 +87,25 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Tok.line, width: 1.6),
+        border: Border.all(color: p.line, width: 1.6),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(icon, size: 13, color: Tok.ink2),
+          Icon(icon, size: 13, color: p.ink2),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: Tok.ink,
+              color: p.ink,
             ),
           ),
         ],

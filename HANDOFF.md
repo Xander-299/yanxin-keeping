@@ -7,7 +7,7 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.16 **全部交付**，最新 tag **`v0.7.16`**，无未收口批次 |
+| 交付状态 | F1–F7.17 **全部交付**，最新 tag **`v0.7.17`**，无未收口批次 |
 | 下一步 | 等新需求；新功能走「小 SPEC 签字 → 实现 → 门禁 → 文档」 |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 |
 | 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`） |
@@ -39,7 +39,10 @@ fx-qa                        # = flutter analyze && flutter test（去代理）
 4. **金额一律 `int` 分**，禁止浮点。
 5. **go_router 实例放在 App State**，不能是顶层 `final`；且 `context.push().then`
    在 `StatefulShellRoute` 壳下**不兑现** → 保存后刷新由被推页面自己在 pop 前做。
-6. **色值一律走 `Tok.*` 令牌**，产品代码里不出现裸 `Color(0x…)`。
+6. **色值一律走调色板 `context.toon`（`p.xxx`）**，产品代码里不出现裸 `Color(0x…)`。
+   F7.17 起 `Tok` **只剩几何量**（描边宽 / 圆角）；颜色是 `ThemeExtension<ToonPalette>` 的
+   **实例字段**，靠 `Theme.of` 建立依赖 —— 这样才能随浅/深主题切换重建。
+   **别把颜色改回 `const`**：`const` widget 会被 Element 判 `identical` 跳过重建，切主题不刷新。
 
 ## 最容易踩的坑（完整清单见 [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md)）
 
@@ -61,7 +64,8 @@ lib/
 ├── core/                    基础设施（不依赖任何 feature / data）
 │   ├── db/                  drift：tables / database / schema_v1 / schema_v2
 │   ├── providers/           data_epoch（写操作后的统一失效信号）
-│   ├── theme/               tokens.dart（设计令牌）+ toon.dart（卡通通用件）
+│   ├── theme/               palette.dart（调色板 · 浅/深两套）+ theme_mode.dart（外观三选一）
+│   │                        + tokens.dart（几何量 + buildToonTheme）+ toon.dart（卡通通用件）
 │   ├── utils/               money / id / fingerprint / date / highlight
 │   └── constants/           preset.dart
 ├── data/

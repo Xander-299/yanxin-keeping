@@ -28,13 +28,14 @@ Future<void> showAccountFormSheet(
   WidgetRef ref, {
   Account? account,
 }) {
+  final ToonPalette p = context.toon;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Tok.paper,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
-      side: BorderSide(color: Tok.ink, width: Tok.bw),
+    backgroundColor: p.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: p.ink, width: Tok.bw),
     ),
     builder: (BuildContext _) => _AccountFormSheet(account: account),
   );
@@ -235,6 +236,7 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final Account? a = widget.account;
     final AssetItem? item = a == null
         ? null
@@ -264,7 +266,7 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     height: 6,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                      color: Tok.ink,
+                      color: p.ink,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -277,12 +279,12 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                   ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
+                Text(
                   '初始余额不允许负数；有流水的账户不可删除',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -380,12 +382,12 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                 _BareInput(
                   child: Row(
                     children: <Widget>[
-                      const Text(
+                      Text(
                         '¥',
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -434,10 +436,10 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     padding: const EdgeInsets.only(top: 8),
                     child: Text(
                       '当前余额 ¥${centsToYuan(currentCents, group: true)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                     ),
                   ),
@@ -448,21 +450,21 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     margin: const EdgeInsets.only(top: 12),
                     padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
                     decoration: BoxDecoration(
-                      color: Tok.redTint,
+                      color: p.redTint,
                       borderRadius: BorderRadius.circular(Tok.rSm),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const Icon(Icons.info_outline, size: 18, color: Tok.red),
+                        Icon(Icons.info_outline, size: 18, color: p.red),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '该账户下有流水，需先把流水改绑到其它账户才能删除（还剩 $txCount 笔）',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Tok.redInk,
+                              color: p.redInk,
                               height: 1.5,
                             ),
                           ),
@@ -476,10 +478,10 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                     padding: const EdgeInsets.only(top: 10),
                     child: Text(
                       _error!,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Tok.red,
+                        color: p.red,
                       ),
                     ),
                   ),
@@ -492,8 +494,8 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                         dx: 1.5,
                         dy: 1.5,
                         onTap: _busy ? null : _delete,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 10,
                             vertical: 8,
                           ),
@@ -502,7 +504,7 @@ class _AccountFormSheetState extends ConsumerState<_AccountFormSheet> {
                             style: TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,
-                              color: Tok.red,
+                              color: p.red,
                             ),
                           ),
                         ),

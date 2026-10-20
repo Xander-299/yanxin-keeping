@@ -34,22 +34,23 @@ class AmountKeyboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       children: <Widget>[
         Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-          decoration: Tok.cardDeco(radius: Tok.rLg, shadow: 4),
+          decoration: p.cardDeco(radius: Tok.rLg, depth: 4),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: <Widget>[
-              const Text(
+              Text(
                 '¥',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
               const SizedBox(width: 8),
@@ -64,7 +65,7 @@ class AmountKeyboard extends StatelessWidget {
                     height: 1.1,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -1,
-                    color: value.isEmpty ? Tok.ink3 : Tok.ink,
+                    color: value.isEmpty ? p.ink3 : p.ink,
                   ),
                 ),
               ),
@@ -108,6 +109,7 @@ class _KeyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool del = label == null;
     return ToonPress(
       dx: 2.5,
@@ -117,13 +119,13 @@ class _KeyButton extends StatelessWidget {
         height: 54,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: del ? Tok.brandTint : Tok.paper,
+          color: del ? p.brandTint : p.paper,
           borderRadius: BorderRadius.circular(Tok.rMd),
-          border: Tok.inkBorder(),
-          boxShadow: Tok.hard(d: 2.5),
+          border: p.inkBorder(),
+          boxShadow: p.hard(d: 2.5),
         ),
         child: del
-            ? const Icon(Icons.backspace_outlined, size: 24, color: Tok.brandInk)
+            ? Icon(Icons.backspace_outlined, size: 24, color: p.brandInk)
             : Text(
                 label!,
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),

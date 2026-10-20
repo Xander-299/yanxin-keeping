@@ -216,17 +216,18 @@ class _SummaryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final int balance = state.summary.balanceCents;
     final Color balanceColor = balance < 0
-        ? kExpenseRed
+        ? p.red
         : balance > 0
-        ? kIncomeGreen
-        : Tok.ink;
+        ? p.green
+        : p.ink;
     return Container(
       // 原型 `.summary-bar { margin: 10px 16px; padding: 13px 16px }`
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-      decoration: Tok.cardDeco(),
+      decoration: p.cardDeco(),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
@@ -238,7 +239,7 @@ class _SummaryBar extends StatelessWidget {
           _SummaryItem(
             label: '日均支出',
             value: centsToYuan(state.dailyAvgExpenseCents),
-            valueColor: kExpenseRed,
+            valueColor: p.red,
           ),
         ],
       ),
@@ -319,6 +320,7 @@ class _SelectedDaySectionState extends State<_SelectedDaySection> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final CalendarState state = widget.state;
     final DateTime day = DateTime(state.year, state.month, state.selectedDay);
     final List<TxRow> items = state.selectedItems;
@@ -341,9 +343,9 @@ class _SelectedDaySectionState extends State<_SelectedDaySection> {
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
-                  color: kCalendarAccent,
+                  color: p.brand,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Tok.ink, width: 2),
+                  border: Border.all(color: p.ink, width: 2),
                 ),
               ),
               const SizedBox(width: 8),
@@ -357,10 +359,10 @@ class _SelectedDaySectionState extends State<_SelectedDaySection> {
               const Spacer(),
               Text(
                 '${items.length} 笔 · 支出 ¥${centsToYuan(dayExpenseCents)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
             ],
@@ -427,18 +429,19 @@ class _EmptyDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(26, 14, 26, 30),
       child: Column(
         children: <Widget>[
-          const ToonDashedBorder(
+          ToonDashedBorder(
             circle: true,
-            color: Tok.ink,
+            color: p.ink,
             thickness: Tok.bw,
             dash: 7,
             gap: 5,
-            background: Tok.brandTint,
-            child: SizedBox(
+            background: p.brandTint,
+            child: const SizedBox(
               width: 76,
               height: 76,
               child: Center(child: PigMascot(size: 52)),
@@ -451,13 +454,13 @@ class _EmptyDay extends StatelessWidget {
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             '长按日历里任意一天，也能直接记这一天的账',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
           const SizedBox(height: 16),

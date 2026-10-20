@@ -27,6 +27,63 @@
 | `v0.7.14` | F7.14 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹） | 本段所在提交 |
 | `v0.7.15` | F7.15 自动记账（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写） | 本段所在提交 |
 | `v0.7.16` | F7.16 自动记账三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · C 撤回通道 + 补抓守护层 | 本段所在提交 |
+| `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
+
+## [v0.7.17] — 2026-10-20 · 深色模式（外观三选一）+ 令牌体系改造
+
+> **门禁**：`flutter analyze` 等效 **全项目 `No issues found!`** ✅ ·
+> `flutter test` **511 passed / 6 skipped / 0 failed**（本批**新增 17 例**）✅ —— 2026-10-20 收口时复跑一致。
+> **不动 schema**（DB 仍 **v3**）· **零新 pub 依赖** · 外观存 `schema_meta` 的 `theme_mode` KV。
+> **回滚**：`git checkout v0.7.16`（看/跑旧版）。
+
+### 需求（用户 2026-10-20 直接下达）
+
+1. 三种选择：**浅色 / 深色 / 跟随系统**；2. **默认 = 跟随系统**；3. 入口放在**设置**里。
+
+### 根因：这不是「加个 `themeMode` 开关」
+
+F7.6 卡通改版把色值做成了 **`Tok` 的编译期常量**（`static const Color ink = …`），全仓 **613 处**引用 / **64 个文件**。
+`const Color` 不可能随主题变，而 Dart 的 `const` 表达式要求参数是常量 —— 于是：
+
+- 只改 `MaterialApp(themeMode:)` **不生效**：`TextStyle(color: Tok.ink)` 仍是浅色常量；
+- 把 `Tok.ink` 改成读全局变量的 getter **也不行**：`const` widget 实例被 Element 判 `identical` 直接跳过重建 → 切主题不刷新。
+
+→ 唯一正解是让颜色变成**随 `BuildContext` 解析的实例数据**（Flutter 标准做法 `ThemeExtension`），
+逐处把 `Tok.ink` 换成 `p.ink`。**本批主要工作量是令牌体系改造，不是设置页。**
+
+### 做了什么
+
+| 层 | 改动 |
+|---|---|
+| 令牌 | 新增 `lib/core/theme/palette.dart`：`ToonPalette extends ThemeExtension`（浅 / 深两套）+ `context.toon` + `hard()` / `inkBorder()` / `cardDeco()` / `inkOn()` 助手；`tokens.dart` **只留几何量** |
+| 模式 | 新增 `lib/core/theme/theme_mode.dart`：`ToonThemeMode`（`light/dark/system`）+ `parse`（脏数据一律回落 system） |
+| 状态 | 新增 `lib/features/settings/application/theme_controller.dart`：`themeModeProvider`（AsyncNotifier，点选**先切 UI 再写库**，写失败本次会话仍生效） |
+| 页面 | 新增 `/settings`（「我的 → 设置」从**占位灰条**变可点）；外观一节三行单选，选中态 = 品牌浅底 + 墨色描边 + 实心对勾 |
+| 启动 | `main()` 在 `runApp` 前 `await` 一次主题读取 → **冷启动不闪浅色** |
+| 其余 ~60 个文件 | `Tok.<颜色>` → `p.<颜色>`；自定义绘制（小猪 / 饼图 / 趋势柱 / 虚线）的画笔颜色改由**构造函数注入** |
+
+**默认值的实现细节**：`schema_meta` 里**没有** `theme_mode` 键时就是「跟随系统」，且**不写库**
+—— 这样老用户覆盖安装自然得到「跟随系统」，而不是被写死成浅色。
+
+**深色视觉方向（卡通夜灯）**：暖黑画布 `#17151D` + 暖白描边 `#F6F0E4` + **纯黑**硬阴影
+（深色主题描边是浅的，阴影若也用浅色会像「外发光」）；品牌琥珀**不变**（夜里唯一的「灯」）；
+语义色提亮一档、对应 tint 压暗；hero 主卡仍是琥珀。
+
+### 测试（新增 17 例）
+
+| 文件 | 覆盖 |
+|---|---|
+| `test/core/theme/theme_mode_test.dart`（6） | 解析（大小写 / 空白 / 脏值 / 未来枚举 → system）、落库值往返、`ThemeMode` 映射、三档文案互不相同 |
+| `test/core/theme/toon_theme_test.dart`（4 widget） | 浅 / 深各自解析到对应调色板；**跟随系统**随 `platformBrightness` 切换；裸 `MaterialApp` 回落浅色不炸 |
+| `test/features/settings/theme_controller_test.dart`（4） | 默认不写库、点选落库 + 冷启动读回、脏值回落、**读库失败不抛** |
+| `test/features/settings/settings_page_test.dart`（3 widget） | 三行都在且**只有一个**选中态、点「深色」选中态立刻切过去并落库、库里 `light` 则冷启动选中浅色 |
+
+> 设置页断言**靠行 `key`（`themeMode_<name>`）不靠文本**：标题「深色」是副标题「一直使用深色」的子串，按文本找会命中两处。
+
+### 验收遗留
+
+- 真机（Redmi K50）**深色逐页走查未做**（本批未出包）→ 下次装机时按
+  [`docs/dev/android-ui-smoke.md`](docs/dev/android-ui-smoke.md) 补：语义树 + 截图交叉验证。
 
 ## [v0.7.16] — 2026-10-20 · 自动记账三段修复（补抓 · `[N条]` 误杀 · 撤回通道 + 守护层）
 

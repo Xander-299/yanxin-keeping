@@ -4,7 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/features/assets/application/account_meta.dart';
 
 void main() {
@@ -70,13 +70,13 @@ void main() {
 
   group('accountAvatarColor', () {
     test('null / 空串 / 非法 → 类型默认底色 brandTint（老数据行为不变）', () {
-      expect(accountAvatarColor(null), Tok.brandTint);
-      expect(accountAvatarColor(''), Tok.brandTint);
-      expect(accountAvatarColor('oops'), Tok.brandTint);
+      expect(accountAvatarColor(null, ToonPalette.light), ToonPalette.light.brandTint);
+      expect(accountAvatarColor('', ToonPalette.light), ToonPalette.light.brandTint);
+      expect(accountAvatarColor('oops', ToonPalette.light), ToonPalette.light.brandTint);
     });
 
     test('合法 hex → 解析后的颜色', () {
-      expect(accountAvatarColor('#FF6B8A'), const Color(0xFFFF6B8A));
+      expect(accountAvatarColor('#FF6B8A', ToonPalette.dark), const Color(0xFFFF6B8A));
     });
   });
 }

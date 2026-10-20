@@ -130,10 +130,11 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
-      decoration: const BoxDecoration(
-        color: Tok.paper,
-        border: Border(top: BorderSide(color: Tok.ink, width: Tok.bw)),
+      decoration: BoxDecoration(
+        color: p.paper,
+        border: Border(top: BorderSide(color: p.ink, width: Tok.bw)),
       ),
       child: SafeArea(
         top: false,
@@ -179,7 +180,8 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color fg = selected ? Tok.brandInk : Tok.ink3;
+    final ToonPalette p = context.toon;
+    final Color fg = selected ? p.onBrand : p.ink3;
     return ToonPress(
       dx: 0,
       dy: 0,
@@ -191,10 +193,10 @@ class _NavItem extends StatelessWidget {
             padding: const EdgeInsets.all(3),
             decoration: selected
                 ? BoxDecoration(
-                    color: Tok.brand,
+                    color: p.brand,
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: Tok.ink, width: 2),
-                    boxShadow: Tok.hard(d: 2),
+                    border: Border.all(color: p.ink, width: 2),
+                    boxShadow: p.hard(d: 2),
                   )
                 : BoxDecoration(
                     borderRadius: BorderRadius.circular(11),
@@ -221,6 +223,7 @@ class _CenterAddButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Center(
       child: Tooltip(
         message: '记一笔',
@@ -233,12 +236,12 @@ class _CenterAddButton extends StatelessWidget {
               height: 48,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Tok.brand,
+                color: p.brand,
                 borderRadius: BorderRadius.circular(17),
-                border: Tok.inkBorder(),
-                boxShadow: Tok.hard(d: 4),
+                border: p.inkBorder(),
+                boxShadow: p.hard(d: 4),
               ),
-              child: const Icon(Icons.add, size: 27, color: Tok.brandInk),
+              child: Icon(Icons.add, size: 27, color: p.onBrand),
             ),
           ),
         ),

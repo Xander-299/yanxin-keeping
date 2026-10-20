@@ -12,7 +12,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/data/providers/database.dart';
@@ -154,6 +153,7 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final AsyncValue<bool> listener = ref.watch(autoBookListenerEnabledProvider);
     final AsyncValue<bool> notify = ref.watch(
       autoBookNotificationsAllowedProvider,
@@ -172,7 +172,7 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
     final bool listenerOn = listener.value ?? false;
 
     return Scaffold(
-      backgroundColor: Tok.paper,
+      backgroundColor: p.paper,
       appBar: AppBar(
         title: const Text('自动记账'),
         actions: <Widget>[
@@ -241,11 +241,11 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
                         ? '已开启：微信 / 支付宝的支付通知会被识别，打开 App 时自动入账。'
                         : '未开启时不会有任何后台行为 —— 不会监听、不会记账。'
                               '开启后本 App 只读「支付通知」的文案，数据只落本机。',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       height: 1.5,
                       fontWeight: FontWeight.w600,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ],
@@ -256,7 +256,7 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: ToonCard(
-              color: Tok.canvas2,
+              color: p.canvas2,
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
               child: _LatestBatchBlock(
                 batch: latest.value,
@@ -269,7 +269,7 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: ToonCard(
-              color: Tok.canvas2,
+              color: p.canvas2,
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: _DiagnosticsBlock(
                 listenerOn: listenerOn,
@@ -302,11 +302,11 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
             ),
           ),
           const ToonSectionTitle(title: '隐私'),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 0, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: ToonCard(
-              color: Tok.brandTint,
-              padding: EdgeInsets.fromLTRB(14, 12, 14, 12),
+              color: p.brandTint,
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
               child: Text(
                 '本 App 没有申请网络权限（Android 没有 INTERNET 权限就发不出任何数据）。'
                 '通知文案、账单、流水全部只存在这台手机上，不上传、不联网。',
@@ -314,14 +314,14 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
                   fontSize: 12,
                   height: 1.6,
                   fontWeight: FontWeight.w600,
-                  color: Tok.brandInk,
+                  color: p.brandInk,
                 ),
               ),
             ),
           ),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               '识别不准？自动记账的每一笔都能在首页提示条或上面这块「撤销」，'
               '也可以在流水里逐笔改分类。',
@@ -329,7 +329,7 @@ class _AutoBookPageState extends ConsumerState<AutoBookPage>
                 fontSize: 11.5,
                 height: 1.6,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink3,
+                color: p.ink3,
               ),
             ),
           ),

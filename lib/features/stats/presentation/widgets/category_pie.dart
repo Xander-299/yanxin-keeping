@@ -7,13 +7,15 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/utils/money.dart';
 
 import '../../application/stats_aggregate.dart';
 
 /// 分类配色（按顺序循环取用，取自原型 `PIE_COLORS`）。
-const List<Color> kCategoryColors = Tok.pie;
+///
+/// 深浅两套主题共用（高饱和色在两种底色上都可读），源常量在 [ToonPalette.pieColors]。
+const List<Color> kCategoryColors = ToonPalette.pieColors;
 
 /// 多瓣之间的缝隙（弧度）。
 const double kDonutGap = 0.02;
@@ -32,6 +34,7 @@ class CategoryPie extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final total = slices.fold<int>(0, (int a, CategorySlice s) => a + s.cents);
     return SizedBox(
       width: size,
@@ -41,7 +44,11 @@ class CategoryPie extends StatelessWidget {
         children: <Widget>[
           CustomPaint(
             size: Size(size, size),
-            painter: DonutPainter(slices: slices),
+            painter: DonutPainter(
+              slices: slices,
+              colors: p.pie,
+              track: p.track,
+            ),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -70,10 +77,19 @@ class CategoryPie extends StatelessWidget {
 }
 
 /// 圆环画笔（公开以便单测直接喂一个记录型 Canvas）。
+///
+/// 颜色由调用方注入（`p.pie` / `p.track`）：`paint()` 里没有 `BuildContext`，
+/// 不能在画笔内部读主题。
 class DonutPainter extends CustomPainter {
-  const DonutPainter({required this.slices});
+  const DonutPainter({
+    required this.slices,
+    required this.colors,
+    required this.track,
+  });
 
   final List<CategorySlice> slices;
+  final List<Color> colors;
+  final Color track;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -94,7 +110,7 @@ class DonutPainter extends CustomPainter {
         2 * math.pi,
         false,
         Paint()
-          ..color = Tok.track
+          ..color = track
           ..style = PaintingStyle.stroke
           ..strokeWidth = thickness,
       );
@@ -115,7 +131,7 @@ class DonutPainter extends CustomPainter {
         math.max(sweep - gap, 0.01),
         false,
         Paint()
-          ..color = categoryColor(i)
+          ..color = colors[i % colors.length]
           ..style = PaintingStyle.stroke
           ..strokeWidth = thickness,
       );
@@ -125,5 +141,7 @@ class DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant DonutPainter oldDelegate) =>
-      oldDelegate.slices != slices;
+      oldDelegate.slices != slices ||
+      oldDelegate.colors != colors ||
+      oldDelegate.track != track;
 }

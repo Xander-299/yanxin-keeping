@@ -7,7 +7,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:yanxin/core/db/database.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/category_providers.dart';
@@ -28,11 +27,12 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final categoriesAsync = ref.watch(categoriesProvider);
     final bookAsync = ref.watch(currentBookProvider);
 
     return Scaffold(
-      backgroundColor: Tok.paper,
+      backgroundColor: p.paper,
       appBar: AppBar(
         title: Text('分类管理 · ${bookAsync.value?.name ?? ''}'),
         actions: <Widget>[
@@ -90,14 +90,14 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
                         ),
                       ),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.fromLTRB(20, 14, 20, 0),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
                       child: Text(
                         '预置分类不可删除，可改名改图标；自定义分类可增 / 改 / 软删。',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ),
@@ -179,6 +179,7 @@ class _CatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool income = kind == 'income';
     final Widget row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -186,8 +187,8 @@ class _CatRow extends StatelessWidget {
         children: <Widget>[
           ToonAvatar(
             text: category.name.isEmpty ? '?' : category.name.substring(0, 1),
-            bg: income ? Tok.greenTint : Tok.redTint,
-            fg: income ? Tok.green : Tok.red,
+            bg: income ? p.greenTint : p.redTint,
+            fg: income ? p.green : p.red,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -199,12 +200,12 @@ class _CatRow extends StatelessWidget {
             ),
           ),
           if (category.isPreset == 1)
-            const Text(
+            Text(
               '预置 · 不可删',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink3,
+                color: p.ink3,
               ),
             )
           else

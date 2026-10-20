@@ -35,12 +35,13 @@ class MiniScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Center(
       child: Container(
         width: width,
         padding: padding,
         clipBehavior: Clip.antiAlias,
-        decoration: Tok.cardDeco(radius: Tok.rMd, shadow: 3),
+        decoration: p.cardDeco(radius: Tok.rMd, depth: 3),
         child: child,
       ),
     );
@@ -56,12 +57,13 @@ class HighlightBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: Tok.brandTint2.withValues(alpha: 0.45),
+        color: p.brandTint2.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Tok.brand, width: 2),
+        border: Border.all(color: p.brand, width: 2),
       ),
       child: child,
     );
@@ -77,19 +79,20 @@ class Callout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final Widget pill = Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: Tok.brandTint,
+        color: p.brandTint,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Tok.brand, width: 1.6),
+        border: Border.all(color: p.brand, width: 1.6),
       ),
       child: Text(
         label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w800,
-          color: Tok.brandInk,
+          color: p.brandInk,
         ),
       ),
     );

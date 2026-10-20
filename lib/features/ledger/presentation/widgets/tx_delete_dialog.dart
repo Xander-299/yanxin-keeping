@@ -5,11 +5,11 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 
 /// 弹出「删除这笔」确认框，返回用户是否确认。
 Future<bool> confirmDeleteTx(BuildContext context) async {
+  final ToonPalette p = context.toon;
   final bool? ok = await showDialog<bool>(
     context: context,
     builder: (BuildContext dialogContext) => Dialog(
@@ -25,12 +25,12 @@ Future<bool> confirmDeleteTx(BuildContext context) async {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               '删除后为软删除（deleted_at），不再出现在任何统计里，也不占回收站空间。',
               style: TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 18),

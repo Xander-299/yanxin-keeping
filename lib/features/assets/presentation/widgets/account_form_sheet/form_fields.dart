@@ -8,14 +8,15 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: Tok.ink2,
+          color: p.ink2,
         ),
       ),
     );
@@ -30,12 +31,13 @@ class _BareInput extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(Tok.rMd),
-        border: Tok.inkBorder(),
+        border: p.inkBorder(),
       ),
       child: child,
     );

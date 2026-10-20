@@ -18,11 +18,12 @@ class _StatusRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         children: <Widget>[
-          Icon(icon, size: 20, color: Tok.ink),
+          Icon(icon, size: 20, color: p.ink),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -33,16 +34,16 @@ class _StatusRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
             decoration: BoxDecoration(
-              color: ok ? Tok.greenTint : Tok.redTint,
+              color: ok ? p.greenTint : p.redTint,
               borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: Tok.ink, width: 2),
+              border: Border.all(color: p.ink, width: 2),
             ),
             child: Text(
               ok ? okText : badText,
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w800,
-                color: ok ? Tok.green : Tok.redInk,
+                color: ok ? p.green : p.redInk,
               ),
             ),
           ),

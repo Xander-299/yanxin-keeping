@@ -7,7 +7,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/autobook/application/auto_book_notice.dart';
@@ -19,17 +18,18 @@ class AutoBookBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ToonPalette p = context.toon;
     final AutoBookBatch? batch = ref.watch(autoBookNoticeProvider);
     if (batch == null) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
       child: ToonCard(
-        color: Tok.greenTint,
+        color: p.greenTint,
         padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
         child: Row(
           children: <Widget>[
-            const Icon(Icons.bolt_rounded, size: 24, color: Tok.green),
+            Icon(Icons.bolt_rounded, size: 24, color: p.green),
             const SizedBox(width: 8),
             Expanded(
               child: Column(
@@ -49,10 +49,10 @@ class AutoBookBanner extends ConsumerWidget {
                     '合计 ¥${centsToYuan(batch.totalCents)} · 可撤销',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ],
@@ -70,9 +70,9 @@ class AutoBookBanner extends ConsumerWidget {
               dx: 0,
               dy: 0,
               onTap: () => _undo(context, ref, batch),
-              child: const Padding(
-                padding: EdgeInsets.all(6),
-                child: Icon(Icons.close_rounded, size: 18, color: Tok.ink2),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(Icons.close_rounded, size: 18, color: p.ink2),
               ),
             ),
           ],

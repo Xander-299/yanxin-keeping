@@ -7,22 +7,25 @@ class ToonDashedLine extends StatelessWidget {
     this.height = 2,
     this.dash = 6,
     this.gap = 5,
-    this.color = Tok.dash,
+    this.color,
   });
 
   final double height;
   final double dash;
   final double gap;
-  final Color color;
+
+  /// 线条颜色；`null` = 主题的分隔线色（`p.dash`）。
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SizedBox(
       height: height,
       width: double.infinity,
       child: CustomPaint(
         painter: _DashPainter(
-          color: color,
+          color: color ?? p.dash,
           dash: dash,
           gap: gap,
           thickness: height,
@@ -79,7 +82,7 @@ class ToonDashedBorder extends StatelessWidget {
     required this.child,
     this.radius = 13,
     this.circle = false,
-    this.color = Tok.ink3,
+    this.color,
     this.thickness = 2,
     this.dash = 5,
     this.gap = 4,
@@ -89,7 +92,10 @@ class ToonDashedBorder extends StatelessWidget {
   final Widget child;
   final double radius;
   final bool circle;
-  final Color color;
+
+  /// 虚线颜色；`null` = 三级灰（`p.ink3`）。
+  final Color? color;
+
   final double thickness;
   final double dash;
   final double gap;
@@ -97,11 +103,12 @@ class ToonDashedBorder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return CustomPaint(
       painter: _DashedBorderPainter(
         radius: radius,
         circle: circle,
-        color: color,
+        color: color ?? p.ink3,
         thickness: thickness,
         dash: dash,
         gap: gap,

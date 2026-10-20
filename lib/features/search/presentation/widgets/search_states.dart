@@ -18,6 +18,7 @@ class _Intro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     // ⚠️ 这里**不能**用 SingleChildScrollView：Scrollable 会以 opaque 命中整块下方区域，
     // 点提示块以外的玻璃空白就关不掉浮层了（真机走查抓到的）。Align 只占内容高度，空白可穿透。
     // 内容约 180dp（带历史约 250dp），正常手机（逻辑高 ≥ 480）放得下，不需要滚动兜底。
@@ -36,13 +37,13 @@ class _Intro extends StatelessWidget {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 '分类名（餐饮 / 交通）· 账户名（招行 / 支付宝）· 备注（房租）\n'
                 '金额（88 命中 88.00、188.00）',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                   height: 1.8,
                 ),
               ),
@@ -63,12 +64,12 @@ class _Intro extends StatelessWidget {
                 const SizedBox(height: 12),
                 Row(
                   children: <Widget>[
-                    const Text(
+                    Text(
                       '最近搜过',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                     ),
                     const Spacer(),
@@ -97,13 +98,13 @@ class _Intro extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 '搜的是当前账本的全时间流水，最多显示 $kSearchResultLimit 条\n'
                 '顶上「时间」可只看本月 / 近 3 月',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                   height: 1.6,
                 ),
               ),
@@ -132,6 +133,7 @@ class _NoResult extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     // 同 _Intro：Align 只占内容高度，块外空白可穿透关闭（别用 Scrollable）
     return Align(
       alignment: Alignment.topCenter,
@@ -159,10 +161,10 @@ class _NoResult extends StatelessWidget {
                     ? '换个分类名、账户名、备注里的字，或金额里的数字试试'
                     : '当前只搜「${kRangeLabels[range]}」，换回「全部」或换个词试试',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
               const SizedBox(height: 12),

@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/features/stats/application/stats_aggregate.dart';
 import 'package:yanxin/features/stats/presentation/widgets/category_pie.dart';
 
@@ -76,7 +77,11 @@ List<double> _gaps(List<_ArcCall> arcs) {
 void main() {
   test('每一瓣都只描边、不连圆心（useCenter 恒为 false）', () {
     final canvas = _RecordingCanvas();
-    DonutPainter(slices: _slices(<int>[3100, 2700, 2600, 1200, 400]))
+    DonutPainter(
+      slices: _slices(<int>[3100, 2700, 2600, 1200, 400]),
+      colors: ToonPalette.pieColors,
+      track: ToonPalette.light.track,
+    )
         .paint(canvas, _kSize);
 
     expect(canvas.arcs, hasLength(5));
@@ -88,7 +93,11 @@ void main() {
 
   test('接缝均分：首尾相接处与其余接缝等宽', () {
     final canvas = _RecordingCanvas();
-    DonutPainter(slices: _slices(<int>[3100, 2700, 2600, 1200, 400]))
+    DonutPainter(
+      slices: _slices(<int>[3100, 2700, 2600, 1200, 400]),
+      colors: ToonPalette.pieColors,
+      track: ToonPalette.light.track,
+    )
         .paint(canvas, _kSize);
 
     final gaps = _gaps(canvas.arcs);
@@ -100,7 +109,11 @@ void main() {
 
   test('单瓣 100%：不留缝隙，整圆铺满', () {
     final canvas = _RecordingCanvas();
-    DonutPainter(slices: _slices(<int>[10000])).paint(canvas, _kSize);
+    DonutPainter(
+      slices: _slices(<int>[10000]),
+      colors: ToonPalette.pieColors,
+      track: ToonPalette.light.track,
+    ).paint(canvas, _kSize);
 
     expect(canvas.arcs, hasLength(1));
     expect(canvas.arcs.single.start, closeTo(-math.pi / 2, 1e-9));
@@ -109,14 +122,22 @@ void main() {
 
   test('占比为 0 的瓣不画', () {
     final canvas = _RecordingCanvas();
-    DonutPainter(slices: _slices(<int>[6000, 0, 4000])).paint(canvas, _kSize);
+    DonutPainter(
+      slices: _slices(<int>[6000, 0, 4000]),
+      colors: ToonPalette.pieColors,
+      track: ToonPalette.light.track,
+    ).paint(canvas, _kSize);
 
     expect(canvas.arcs, hasLength(2));
   });
 
   test('空数据：画一条底槽整圆，同样不连圆心', () {
     final canvas = _RecordingCanvas();
-    const DonutPainter(slices: <CategorySlice>[]).paint(canvas, _kSize);
+    DonutPainter(
+      slices: const <CategorySlice>[],
+      colors: ToonPalette.pieColors,
+      track: ToonPalette.light.track,
+    ).paint(canvas, _kSize);
 
     expect(canvas.arcs, hasLength(1));
     expect(canvas.arcs.single.useCenter, isFalse);

@@ -13,6 +13,7 @@ class MiniHeaderArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -20,7 +21,7 @@ class MiniHeaderArt extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
           child: Row(
             children: <Widget>[
-              const Expanded(
+              Expanded(
                 child: Text(
                   '默认账本',
                   maxLines: 1,
@@ -28,11 +29,11 @@ class MiniHeaderArt extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w900,
-                    color: Tok.ink,
+                    color: p.ink,
                   ),
                 ),
               ),
-              const Icon(Icons.expand_more, size: 15, color: Tok.ink),
+              Icon(Icons.expand_more, size: 15, color: p.ink),
               const SizedBox(width: 4),
               for (final IconData icon in _icons)
                 Padding(
@@ -69,15 +70,16 @@ class _MiniIconBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       width: 26,
       height: 26,
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Tok.ink, width: 1.6),
+        border: Border.all(color: p.ink, width: 1.6),
       ),
-      child: Icon(icon, size: 14, color: Tok.ink),
+      child: Icon(icon, size: 14, color: p.ink),
     );
   }
 }

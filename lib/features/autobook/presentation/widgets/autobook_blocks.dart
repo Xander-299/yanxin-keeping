@@ -14,18 +14,19 @@ class _LatestBatchBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     if (loading) {
-      return const Text(
+      return Text(
         '读取中…',
-        style: TextStyle(fontSize: 12, color: Tok.ink2),
+        style: TextStyle(fontSize: 12, color: p.ink2),
       );
     }
     final AutoBookBatch? b = batch;
     if (b == null) {
-      return const Row(
+      return Row(
         children: <Widget>[
-          Icon(Icons.inbox_outlined, size: 20, color: Tok.ink3),
-          SizedBox(width: 10),
+          Icon(Icons.inbox_outlined, size: 20, color: p.ink3),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               '还没有自动记过账。开启通知使用权后，下一次支付就会出现在这里。',
@@ -33,7 +34,7 @@ class _LatestBatchBlock extends StatelessWidget {
                 fontSize: 12,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ),
@@ -56,10 +57,10 @@ class _LatestBatchBlock extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 _stamp(b.atMs),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
             ],
@@ -103,11 +104,12 @@ class _DiagnosticsBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final AutoBookDiagnostics? d = diag;
     if (loading && d == null) {
-      return const Text(
+      return Text(
         '读取中…',
-        style: TextStyle(fontSize: 12, color: Tok.ink2),
+        style: TextStyle(fontSize: 12, color: p.ink2),
       );
     }
     return Column(
@@ -127,11 +129,11 @@ class _DiagnosticsBlock extends StatelessWidget {
         const SizedBox(height: 10),
         Text(
           _hint(d),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11.5,
             height: 1.6,
             fontWeight: FontWeight.w600,
-            color: Tok.ink2,
+            color: p.ink2,
           ),
         ),
       ],

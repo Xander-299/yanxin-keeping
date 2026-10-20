@@ -17,6 +17,7 @@ class _ImpRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool income = row.direction == 'income';
     final String estimate = categorizeRow(row).categoryName;
     return ToonPress(
@@ -25,7 +26,7 @@ class _ImpRow extends StatelessWidget {
       dy: 2,
       onTap: onToggle,
       child: Container(
-        color: cancelled ? Tok.canvas2 : Tok.paper,
+        color: cancelled ? p.canvas2 : p.paper,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: <Widget>[
@@ -43,7 +44,7 @@ class _ImpRow extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: cancelled ? Tok.ink3 : Tok.ink,
+                      color: cancelled ? p.ink3 : p.ink,
                       decoration: cancelled
                           ? TextDecoration.lineThrough
                           : TextDecoration.none,
@@ -52,10 +53,10 @@ class _ImpRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${_fmtTime(row.occurredAt)} · $estimate',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ],
@@ -67,7 +68,7 @@ class _ImpRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: cancelled ? Tok.ink3 : (income ? Tok.green : Tok.red),
+                color: cancelled ? p.ink3 : (income ? p.green : p.red),
               ),
             ),
           ],
@@ -85,17 +86,18 @@ class _CheckBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       width: 22,
       height: 22,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: on ? Tok.brand : Tok.paper,
+        color: on ? p.brand : p.paper,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Tok.ink, width: 2.5),
-        boxShadow: Tok.hard(d: 1.5),
+        border: Border.all(color: p.ink, width: 2.5),
+        boxShadow: p.hard(d: 1.5),
       ),
-      child: on ? const Icon(Icons.check, size: 14, color: Tok.brandInk) : null,
+      child: on ? Icon(Icons.check, size: 14, color: p.onBrand) : null,
     );
   }
 }
@@ -109,6 +111,7 @@ class _LinkButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 1.5,
       dy: 1.5,
@@ -117,10 +120,10 @@ class _LinkButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
-            color: Tok.brandDeep,
+            color: p.brandDeep,
             decoration: TextDecoration.underline,
             decorationThickness: 2,
           ),

@@ -224,9 +224,14 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
    + 账户图标 / 颜色（C 批）→ **当前无占位页**（`PlaceholderPage` 仍留在 `lib/features/nav/` 备用）。
    **已裁定不做**（别当 bug 报）：**D.5 拼音 / 首字母匹配**、**E.5 农历 / 节假日**、**报表页流水行长按删除**（只读行）。
    资产 tab 是真实资产页，不是占位。
-3b. **视觉规则（F7.6 起）**：全站**只有卡通浅色一套主题**（深色已删）；色值一律走 `Tok.xxx` 令牌，
-   **产品代码里禁止出现裸 `Color(0x…)`**（除 `lib/core/theme/` 内）；造型走 `ToonCard / ToonButton /
-   ToonPress / ToonSeg / ToonField …` 通用件，别自己拼描边阴影。
+3b. **视觉规则（F7.6 起，F7.17 更新）**：卡通语言（粗描边 + 硬阴影 + 圆胖形体）不变；
+   **F7.17 起有浅色 / 深色两套**（`ToonPalette.light` / `.dark`，深色叫「卡通夜灯」），
+   由「设置 → 外观」三选一决定，**默认跟随系统**（存 `schema_meta` 的 `theme_mode`，不存在 = system）。
+   色值一律走 **`context.toon`（`p.xxx`）** —— 它是 `ThemeExtension<ToonPalette>` 的**实例**字段，
+   经 `Theme.of` 解析才会随主题重建；`Tok` **只剩几何量**（`bw` / `rXl` / `rLg` / `rMd` / `rSm`）。
+   **产品代码里禁止出现裸 `Color(0x…)`**（除 `lib/core/theme/` 内）；
+   造型走 `ToonCard / ToonButton / ToonPress / ToonSeg / ToonField …` 通用件，别自己拼描边阴影。
+   ⚠️ **别把颜色写成 `const` / 静态常量**：`const` widget 被 Element 判 `identical` 会跳过重建 → 切主题不刷新。
 3c. **版本规则（2026-09-23 起）**：迁移期拿 F 阶段号当版本号 —— `tag = v0.7.<N>` ↔ `F7.<N>`，
    同阶段内的多批交付合并成一个版本。每次功能更新：CHANGELOG 加段落 → `git tag -a v0.7.N` → `git push --tags`。
    **回滚**：`git checkout v0.7.13` 看/跑旧版，`git revert <commit>` 在 master 上撤单次改动。tag 表在 `CHANGELOG.md` 顶部。

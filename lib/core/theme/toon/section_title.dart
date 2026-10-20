@@ -15,6 +15,7 @@ class ToonSectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: padding,
       child: Row(
@@ -23,9 +24,9 @@ class ToonSectionTitle extends StatelessWidget {
             width: 10,
             height: 10,
             decoration: BoxDecoration(
-              color: Tok.brand,
+              color: p.brand,
               shape: BoxShape.circle,
-              border: Border.all(color: Tok.ink, width: 2),
+              border: Border.all(color: p.ink, width: 2),
             ),
           ),
           const SizedBox(width: 7),

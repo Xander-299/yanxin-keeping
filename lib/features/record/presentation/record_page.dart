@@ -241,6 +241,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     // 首页加载时就已解析并缓存，push 首帧直接有数据；若真未就绪（冷启动直进
     // 编辑模式的极端情况），这一帧退化为轻量占位，provider 完成后自动重渲染
     final categories =
@@ -255,7 +256,7 @@ class _RecordPageState extends ConsumerState<RecordPage> {
       body: SafeArea(
         // 原型这一页的 pbody 用 `--surface`（纯白），不是全局暖白画布
         child: Container(
-          color: Tok.paper,
+          color: p.paper,
           child: Column(
             children: <Widget>[
               // 滚动区。吸底栏是它的**兄弟**节点 → 按钮不随内容滚走。
@@ -304,9 +305,9 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                                     : selected.name.substring(0, 1),
                                 small: true,
                                 bg: _type == 'income'
-                                    ? Tok.greenTint
-                                    : Tok.redTint,
-                                fg: _type == 'income' ? Tok.green : Tok.red,
+                                    ? p.greenTint
+                                    : p.redTint,
+                                fg: _type == 'income' ? p.green : p.red,
                               ),
                       ),
                       ToonField(
@@ -329,10 +330,10 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                           // 原型这里是裸 input（`style="border:0"`）：必须逐项关掉主题的
                           // 填充 + 描边，否则 `InputDecoration.collapsed` 仍会吃到
                           // `inputDecorationTheme.filled` 渲染出一个白框。
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             hintText: '选填',
                             hintStyle: TextStyle(
-                              color: Tok.ink3,
+                              color: p.ink3,
                               fontWeight: FontWeight.w600,
                             ),
                             filled: false,
@@ -363,12 +364,12 @@ class _RecordPageState extends ConsumerState<RecordPage> {
                               ),
                       ),
                       const SizedBox(height: 16),
-                      const Text(
+                      Text(
                         '保存后首页 / 日历 / 统计 / 资产同步刷新',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ],
@@ -378,10 +379,10 @@ class _RecordPageState extends ConsumerState<RecordPage> {
               // F7.9 吸底保存栏：全页唯一的保存入口，常驻视口底部。
               // 顶部墨色描边与 AppBar 底边对称（同一 `Tok.bw`）。
               Container(
-                decoration: const BoxDecoration(
-                  color: Tok.paper,
+                decoration: BoxDecoration(
+                  color: p.paper,
                   border: Border(
-                    top: BorderSide(color: Tok.ink, width: Tok.bw),
+                    top: BorderSide(color: p.ink, width: Tok.bw),
                   ),
                 ),
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),

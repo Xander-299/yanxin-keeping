@@ -12,16 +12,17 @@ class _StepBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       child: Row(
         children: <Widget>[
           for (int i = 0; i < _labels.length; i++) ...<Widget>[
             if (i > 0)
-              const Expanded(
+              Expanded(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6),
-                  child: ToonDashedLine(color: Tok.dash, dash: 5, gap: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: ToonDashedLine(color: p.dash, dash: 5, gap: 4),
                 ),
               ),
             _StepNode(
@@ -49,6 +50,7 @@ class _StepNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool done = state == _StepState.done;
     final bool on = state == _StepState.on;
     return Row(
@@ -59,20 +61,20 @@ class _StepNode extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             color: done
-                ? Tok.greenTint
-                : (on ? Tok.brand : Tok.paper),
+                ? p.greenTint
+                : (on ? p.brand : p.paper),
             shape: BoxShape.circle,
-            border: Border.all(color: Tok.ink, width: 2),
-            boxShadow: on ? Tok.hard(d: 2) : null,
+            border: Border.all(color: p.ink, width: 2),
+            boxShadow: on ? p.hard(d: 2) : null,
           ),
           child: done
-              ? const Icon(Icons.check, size: 14, color: Tok.green)
+              ? Icon(Icons.check, size: 14, color: p.green)
               : Text(
                   '$n',
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w800,
-                    color: on ? Tok.brandInk : Tok.ink2,
+                    color: on ? p.onBrand : p.ink2,
                   ),
                 ),
         ),
@@ -82,7 +84,7 @@ class _StepNode extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: on ? FontWeight.w900 : FontWeight.w700,
-            color: on ? Tok.ink : Tok.ink3,
+            color: on ? p.ink : p.ink3,
           ),
         ),
       ],

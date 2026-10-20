@@ -7,35 +7,41 @@ class ToonAvatar extends StatelessWidget {
   const ToonAvatar({
     super.key,
     required this.text,
-    this.bg = Tok.brandTint,
-    this.fg = Tok.brandDeep,
+    this.bg,
+    this.fg,
     this.small = false,
   });
 
   final String text;
-  final Color bg;
-  final Color fg;
+
+  /// 底色；`null` = 品牌浅底（`p.brandTint`）。
+  final Color? bg;
+
+  /// 文字色；`null` = 品牌深色（`p.brandDeep`）。
+  final Color? fg;
+
   final bool small;
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final double s = small ? 34 : 38;
     return Container(
       width: s,
       height: s,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: bg,
+        color: bg ?? p.brandTint,
         borderRadius: BorderRadius.circular(small ? 12 : 13),
-        border: Border.all(color: Tok.ink, width: 2),
-        boxShadow: Tok.hard(d: 2),
+        border: Border.all(color: p.ink, width: 2),
+        boxShadow: p.hard(d: 2),
       ),
       child: Text(
         text,
         style: TextStyle(
           fontSize: small ? 13.5 : 15,
           fontWeight: FontWeight.w800,
-          color: fg,
+          color: fg ?? p.brandDeep,
         ),
       ),
     );
@@ -59,6 +65,7 @@ class ToonRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SizedBox(
       width: size,
       height: size,
@@ -67,7 +74,12 @@ class ToonRing extends StatelessWidget {
         children: <Widget>[
           CustomPaint(
             size: Size(size - 4, size - 4),
-            painter: _RingPainter(progress: progress.clamp(0, 1), color: color),
+            painter: _RingPainter(
+              progress: progress.clamp(0, 1),
+              color: color,
+              ink: p.ink,
+              track: p.track,
+            ),
           ),
           Text(
             text,
@@ -84,10 +96,17 @@ class ToonRing extends StatelessWidget {
 }
 
 class _RingPainter extends CustomPainter {
-  const _RingPainter({required this.progress, required this.color});
+  const _RingPainter({
+    required this.progress,
+    required this.color,
+    required this.ink,
+    required this.track,
+  });
 
   final double progress;
   final Color color;
+  final Color ink;
+  final Color track;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -102,7 +121,7 @@ class _RingPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 8
-        ..color = Tok.ink,
+        ..color = ink,
     );
     // 2) 底槽
     canvas.drawCircle(
@@ -111,7 +130,7 @@ class _RingPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5
-        ..color = Tok.track,
+        ..color = track,
     );
     // 3) 进度弧
     if (progress > 0) {
@@ -131,5 +150,8 @@ class _RingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.color != color;
+      old.progress != progress ||
+      old.color != color ||
+      old.ink != ink ||
+      old.track != track;
 }

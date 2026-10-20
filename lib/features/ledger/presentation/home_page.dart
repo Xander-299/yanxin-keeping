@@ -11,7 +11,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/category_providers.dart';
@@ -131,6 +130,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 2, 8, 2),
       child: Row(
@@ -148,15 +148,15 @@ class _Header extends StatelessWidget {
                       bookName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.4,
-                        color: Tok.ink,
+                        color: p.ink,
                       ),
                     ),
                   ),
-                  const Icon(Icons.expand_more, size: 24, color: Tok.ink),
+                  Icon(Icons.expand_more, size: 24, color: p.ink),
                 ],
               ),
             ),
@@ -196,6 +196,7 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonSectionTitle(
       title: '本月账单',
       trailing: ToonPress(
@@ -208,19 +209,19 @@ class _SectionHeader extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: Tok.paper,
+            color: p.paper,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Tok.ink, width: 2),
-            boxShadow: Tok.hard(d: 2.5),
+            border: Border.all(color: p.ink, width: 2),
+            boxShadow: p.hard(d: 2.5),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(
+              const Text(
                 '全部账单',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
               ),
-              Icon(Icons.chevron_right, size: 15, color: Tok.ink),
+              Icon(Icons.chevron_right, size: 15, color: p.ink),
             ],
           ),
         ),
@@ -241,11 +242,12 @@ class _EmptyMonth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 6, 16, 16),
       child: Row(
         children: <Widget>[
-          const Icon(Icons.receipt_long_rounded, size: 22, color: Tok.ink),
+          Icon(Icons.receipt_long_rounded, size: 22, color: p.ink),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -256,12 +258,12 @@ class _EmptyMonth extends StatelessWidget {
                   style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 2),
-                const Text(
+                Text(
                   '已有微信 / 支付宝账单？到「我的 → 导入账单」一键导入',
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ],
@@ -272,7 +274,7 @@ class _EmptyMonth extends StatelessWidget {
             icon: const Icon(Icons.add, size: 15),
             label: const Text('记一笔'),
             style: TextButton.styleFrom(
-              foregroundColor: Tok.brandDeep,
+              foregroundColor: p.brandDeep,
               textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
               padding: const EdgeInsets.symmetric(horizontal: 8),
               minimumSize: Size.zero,

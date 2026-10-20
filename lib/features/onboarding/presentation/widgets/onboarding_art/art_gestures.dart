@@ -45,6 +45,7 @@ class _GestureRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return MiniScreen(
       padding: const EdgeInsets.all(9),
       child: Row(
@@ -57,19 +58,19 @@ class _GestureRow extends StatelessWidget {
               children: <Widget>[
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: Tok.ink,
+                    color: p.ink,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   text,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ],
@@ -87,6 +88,7 @@ class _DayCellArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SizedBox(
       height: 44,
       child: Stack(
@@ -97,20 +99,20 @@ class _DayCellArt extends StatelessWidget {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: Tok.paper,
+              color: p.paper,
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: Tok.ink, width: 1.8),
+              border: Border.all(color: p.ink, width: 1.8),
             ),
-            child: const Text(
+            child: Text(
               '15',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: Tok.ink,
+                color: p.ink,
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             right: 0,
             bottom: 0,
             child: HighlightBox(
@@ -118,7 +120,7 @@ class _DayCellArt extends StatelessWidget {
               child: Icon(
                 Icons.touch_app_rounded,
                 size: 13,
-                color: Tok.brandDeep,
+                color: p.brandDeep,
               ),
             ),
           ),
@@ -134,6 +136,7 @@ class _SwipeMonthArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SizedBox(
       height: 44,
       child: Stack(
@@ -148,15 +151,15 @@ class _SwipeMonthArt extends StatelessWidget {
                   width: 9,
                   height: 9,
                   decoration: BoxDecoration(
-                    color: i == 4 ? Tok.brandTint2 : Tok.line,
+                    color: i == 4 ? p.brandTint2 : p.line,
                     borderRadius: BorderRadius.circular(2.5),
                   ),
                 ),
             ],
           ),
-          const HighlightBox(
+          HighlightBox(
             radius: 8,
-            child: Icon(Icons.swap_horiz_rounded, size: 13, color: Tok.brandDeep),
+            child: Icon(Icons.swap_horiz_rounded, size: 13, color: p.brandDeep),
           ),
         ],
       ),
@@ -170,24 +173,25 @@ class _SwipeRowArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       height: 40,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: Tok.ink, width: 1.8),
+        border: Border.all(color: p.ink, width: 1.8),
       ),
       child: Row(
         children: <Widget>[
-          const Expanded(
+          Expanded(
             child: Center(
               child: Text(
                 '-28.00',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: Tok.red,
+                  color: p.red,
                 ),
               ),
             ),
@@ -195,11 +199,11 @@ class _SwipeRowArt extends StatelessWidget {
           Container(
             width: 22,
             alignment: Alignment.center,
-            color: Tok.red,
-            child: const Icon(
+            color: p.red,
+            child: Icon(
               Icons.delete_outline_rounded,
               size: 13,
-              color: Tok.paper,
+              color: p.paper,
             ),
           ),
         ],

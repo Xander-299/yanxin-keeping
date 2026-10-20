@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/palette.dart';
 
 /// 类型值 → 中文名。未知类型原样返回（不吞掉数据）。
 String accountTypeLabel(String type) => switch (type) {
@@ -45,7 +45,7 @@ const Map<String, IconData> kAccountIcons = <String, IconData>{
   'exchange': Icons.currency_exchange_rounded, // 汇兑
 };
 
-/// 自选颜色候选（`#RRGGBB`，取 [Tok.pie] 前 8 个；第 9 个是灰，不做候选）。
+/// 自选颜色候选（`#RRGGBB`，取 [p.pie] 前 8 个；第 9 个是灰，不做候选）。
 /// **空串 / 非法值 = 跟随类型默认底色**（见 [accountAvatarColor]）。
 const List<String> kAccountColors = <String>[
   '#FFB627',
@@ -86,7 +86,9 @@ String colorToHex(Color c) {
   return '#${rgb.toRadixString(16).padLeft(6, '0').toUpperCase()}';
 }
 
-/// 账户头像底色：[colorHex] 能解析 → 用它；否则回退类型默认的 `Tok.brandTint`
+/// 账户头像底色：[colorHex] 能解析 → 用它；否则回退 [p] 的 `brandTint`
 /// （与老数据空串行为完全一致，SPEC §C.1 兼容条款）。
-Color accountAvatarColor(String? colorHex) =>
-    parseHexColor(colorHex) ?? Tok.brandTint;
+///
+/// 回退色从主题取（F7.17）：深色主题的 `brandTint` 是暗琥珀，硬编码浅色会白一块。
+Color accountAvatarColor(String? colorHex, ToonPalette p) =>
+    parseHexColor(colorHex) ?? p.brandTint;

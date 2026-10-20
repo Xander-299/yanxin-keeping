@@ -14,6 +14,7 @@ class _FollowTypeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 2,
       dy: 2,
@@ -22,17 +23,17 @@ class _FollowTypeChip extends StatelessWidget {
         // 不设 alignment：Wrap 的宽松约束下 alignment 会把 Container 撑满整行。
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Tok.brand : Tok.paper,
+          color: selected ? p.brand : p.paper,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Tok.ink, width: 2),
-          boxShadow: Tok.hard(d: 2.5),
+          border: Border.all(color: p.ink, width: 2),
+          boxShadow: p.hard(d: 2.5),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
-            color: selected ? Tok.ink : Tok.ink2,
+            color: selected ? p.onBrand : p.ink2,
           ),
         ),
       ),
@@ -55,6 +56,7 @@ class _IconOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 1.5,
       dy: 1.5,
@@ -64,15 +66,15 @@ class _IconOption extends StatelessWidget {
         height: 40,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? Tok.brandTint : Tok.paper,
+          color: selected ? p.brandTint : p.paper,
           borderRadius: BorderRadius.circular(Tok.rMd),
-          border: Border.all(color: Tok.ink, width: 2),
-          boxShadow: Tok.hard(d: selected ? 3 : 2),
+          border: Border.all(color: p.ink, width: 2),
+          boxShadow: p.hard(d: selected ? 3 : 2),
         ),
         child: Icon(
           icon,
           size: 21,
-          color: selected ? Tok.brandDeep : Tok.ink2,
+          color: selected ? p.brandDeep : p.ink2,
         ),
       ),
     );
@@ -94,6 +96,7 @@ class _ColorOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 1.5,
       dy: 1.5,
@@ -106,13 +109,13 @@ class _ColorOption extends StatelessWidget {
           color: color,
           shape: BoxShape.circle,
           border: Border.all(
-            color: Tok.ink,
+            color: p.ink,
             width: selected ? 2.5 : 2,
           ),
-          boxShadow: Tok.hard(d: selected ? 3 : 2),
+          boxShadow: p.hard(d: selected ? 3 : 2),
         ),
         child: selected
-            ? const Icon(Icons.check_rounded, size: 18, color: Tok.ink)
+            ? Icon(Icons.check_rounded, size: 18, color: p.inkOn(color))
             : null,
       ),
     );

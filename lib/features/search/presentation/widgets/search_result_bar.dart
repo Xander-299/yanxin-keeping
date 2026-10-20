@@ -16,6 +16,7 @@ class _ResultBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
       child: ToonCard(
@@ -38,10 +39,10 @@ class _ResultBar extends StatelessWidget {
                     padding: const EdgeInsets.only(left: 6),
                     child: Text(
                       '· ${kRangeLabels[range]}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                     ),
                   ),
@@ -49,13 +50,13 @@ class _ResultBar extends StatelessWidget {
                 _AmountCell(
                   label: '支出',
                   value: summary.expenseYuan,
-                  color: Tok.red,
+                  color: p.red,
                 ),
                 const SizedBox(width: 12),
                 _AmountCell(
                   label: '收入',
                   value: summary.incomeYuan,
-                  color: Tok.green,
+                  color: p.green,
                 ),
               ],
             ),
@@ -64,10 +65,10 @@ class _ResultBar extends StatelessWidget {
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   '仅显示最近 $shown 笔，补充关键词可缩小范围',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ),
@@ -91,15 +92,16 @@ class _AmountCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         Text(
           '$label ',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Tok.ink2,
+            color: p.ink2,
           ),
         ),
         Text(

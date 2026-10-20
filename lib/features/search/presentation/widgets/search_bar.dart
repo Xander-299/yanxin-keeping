@@ -26,16 +26,17 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool hasInput = controller.text.trim().isNotEmpty;
     final String? active = plan.typeWord;
 
     return Material(
       // 不透明：盖住玻璃的上半部分
-      color: Tok.paper,
+      color: p.paper,
       child: Container(
         // 原型 `.search-ovl .bar`：底部一条墨色描边
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Tok.ink, width: Tok.bw)),
+        decoration: BoxDecoration(
+          border: Border(bottom: BorderSide(color: p.ink, width: Tok.bw)),
         ),
         child: SafeArea(
           bottom: false,
@@ -114,12 +115,12 @@ class _SearchBar extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
                 child: Row(
                   children: <Widget>[
-                    const Text(
+                    Text(
                       '时间',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                     ),
                     const SizedBox(width: 8),

@@ -8,7 +8,6 @@ library;
 import 'package:flutter/material.dart';
 
 import 'package:yanxin/core/db/database.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/date.dart';
 import 'package:yanxin/core/utils/money.dart';
@@ -48,6 +47,7 @@ class ReportDayList extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 24),
       itemCount: groups.length,
       itemBuilder: (BuildContext context, int index) {
+        final ToonPalette p = context.toon;
         final DayGroup<TxRow> group = groups[index];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,7 +63,7 @@ class ReportDayList extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               clipBehavior: Clip.antiAlias,
-              decoration: Tok.cardDeco(),
+              decoration: p.cardDeco(),
               child: Column(
                 children: <Widget>[
                   for (int i = 0; i < group.items.length; i++)
@@ -102,13 +102,14 @@ class _DayChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Tok.ink, width: 2),
-        boxShadow: Tok.hard(d: 2.5),
+        border: Border.all(color: p.ink, width: 2),
+        boxShadow: p.hard(d: 2.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -120,10 +121,10 @@ class _DayChip extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '· $count 笔 · 支出 ¥${centsToYuan(expenseCents)}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
         ],
@@ -147,10 +148,11 @@ class ReportTxCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       clipBehavior: Clip.antiAlias,
-      decoration: Tok.cardDeco(),
+      decoration: p.cardDeco(),
       child: Column(
         children: <Widget>[
           for (int i = 0; i < items.length; i++)
@@ -210,6 +212,7 @@ class _ReportGroupListState extends State<ReportGroupList> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -218,7 +221,7 @@ class _ReportGroupListState extends State<ReportGroupList> {
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
             child: Container(
               clipBehavior: Clip.antiAlias,
-              decoration: Tok.cardDeco(),
+              decoration: p.cardDeco(),
               child: Column(
                 children: <Widget>[
                   ToonPress(
@@ -239,7 +242,7 @@ class _ReportGroupListState extends State<ReportGroupList> {
                             expanded: _expanded.contains(group.key),
                           ),
                   ),
-                  if (_expanded.contains(group.key)) ..._detail(group),
+                  if (_expanded.contains(group.key)) ..._detail(group, p),
                 ],
               ),
             ),
@@ -249,7 +252,7 @@ class _ReportGroupListState extends State<ReportGroupList> {
   }
 
   /// 展开区：虚线分隔的只读流水行（超上限截断 + 尾注）。
-  List<Widget> _detail(ReportGroup group) {
+  List<Widget> _detail(ReportGroup group, ToonPalette p) {
     final List<TxRow> rows = group.items.length > kReportDetailLimit
         ? group.items.sublist(0, kReportDetailLimit)
         : group.items;
@@ -270,10 +273,10 @@ class _ReportGroupListState extends State<ReportGroupList> {
           padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
           child: Text(
             '仅显示前 ${rows.length} 笔（共 ${group.items.length} 笔），可到首页按天查看',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
         ),
@@ -297,9 +300,10 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool isIncome = type == kReportIncome;
-    final Color color = isIncome ? Tok.green : Tok.red;
-    final Color bg = isIncome ? Tok.greenTint : Tok.redTint;
+    final Color color = isIncome ? p.green : p.red;
+    final Color bg = isIncome ? p.greenTint : p.redTint;
     final String name = group.title;
     final double safeRatio = ratio.clamp(0, 1).toDouble();
 
@@ -334,10 +338,10 @@ class _CategoryRow extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       '${group.txCount} 笔',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                     ),
                   ],
@@ -352,10 +356,10 @@ class _CategoryRow extends StatelessWidget {
                       child: Text(
                         '${(safeRatio * 100).toStringAsFixed(1)}%',
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ),
@@ -389,6 +393,7 @@ class _AccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final String name = group.title;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
@@ -421,17 +426,17 @@ class _AccountRow extends StatelessWidget {
                     _MiniAmount(
                       label: '支出',
                       cents: group.expenseCents,
-                      color: Tok.red,
+                      color: p.red,
                     ),
                     _MiniAmount(
                       label: '收入',
                       cents: group.incomeCents,
-                      color: Tok.green,
+                      color: p.green,
                     ),
                     _MiniAmount(
                       label: '转账',
                       cents: group.transferCents,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ],
                 ),
@@ -441,10 +446,10 @@ class _AccountRow extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             '${group.txCount} 笔',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
           _ExpandIcon(expanded: expanded),
@@ -488,13 +493,14 @@ class _RatioBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
         height: 7,
         child: Stack(
           children: <Widget>[
-            const Positioned.fill(child: ColoredBox(color: Tok.track)),
+            Positioned.fill(child: ColoredBox(color: p.track)),
             // heightFactor 必须显式给 1：FractionallySizedBox 在松约束下会缩成
             // 子节点的自然高度（ColoredBox 无子节点 = 0），进度条就看不见了。
             if (ratio > 0)
@@ -518,6 +524,7 @@ class _ExpandIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.only(left: 2),
       child: Icon(
@@ -525,7 +532,7 @@ class _ExpandIcon extends StatelessWidget {
             ? Icons.keyboard_arrow_up_rounded
             : Icons.keyboard_arrow_down_rounded,
         size: 18,
-        color: Tok.ink2,
+        color: p.ink2,
       ),
     );
   }

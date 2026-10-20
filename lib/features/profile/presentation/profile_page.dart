@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/features/export/presentation/export_sheet.dart';
@@ -15,10 +14,11 @@ class ProfilePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ToonPalette p = context.toon;
     final bookAsync = ref.watch(currentBookProvider);
     return Scaffold(
       // 原型 `pbody` 用 --surface（纯白），不是全局暖白画布
-      backgroundColor: Tok.paper,
+      backgroundColor: p.paper,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.only(bottom: 24),
@@ -48,8 +48,8 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.bolt_rounded,
                       title: '自动记账',
                       sub: '微信 / 支付宝支付通知自动入账，可一键撤销',
-                      iconBg: Tok.greenTint,
-                      iconFg: Tok.green,
+                      iconBg: p.greenTint,
+                      iconFg: p.green,
                       dashedTop: true,
                       onTap: () => context.push('/autobook'),
                     ),
@@ -57,8 +57,8 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.description_outlined,
                       title: '导入账单',
                       sub: '微信 xlsx / 支付宝 CSV，重复导入不重复记账',
-                      iconBg: Tok.blueTint,
-                      iconFg: Tok.blue,
+                      iconBg: p.blueTint,
+                      iconFg: p.blue,
                       dashedTop: true,
                       onTap: () => context.push('/import'),
                     ),
@@ -66,18 +66,19 @@ class ProfilePage extends ConsumerWidget {
                       icon: Icons.download_outlined,
                       title: '数据导出',
                       sub: '导出 csv / 备份文件',
-                      iconBg: Tok.greenTint,
-                      iconFg: Tok.green,
+                      iconBg: p.greenTint,
+                      iconFg: p.green,
                       dashedTop: true,
                       onTap: () => showExportSheet(context, ref),
                     ),
-                    const _Entry(
+                    _Entry(
                       icon: Icons.tune_rounded,
                       title: '设置',
-                      sub: '主题、默认账户、货币单位',
-                      iconBg: Tok.purpleTint,
-                      iconFg: Tok.purple,
+                      sub: '外观主题：浅色 / 深色 / 跟随系统',
+                      iconBg: p.purpleTint,
+                      iconFg: p.purple,
                       dashedTop: true,
+                      onTap: () => context.push('/settings'),
                     ),
                   ],
                 ),
@@ -102,6 +103,7 @@ class _Head extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
       child: Row(
@@ -110,10 +112,10 @@ class _Head extends StatelessWidget {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: Tok.brand,
+              color: p.brand,
               borderRadius: BorderRadius.circular(22),
-              border: Tok.inkBorder(),
-              boxShadow: Tok.hard(),
+              border: p.inkBorder(),
+              boxShadow: p.hard(),
             ),
             child: const Center(child: PigMascot(size: 46)),
           ),
@@ -131,10 +133,10 @@ class _Head extends StatelessWidget {
                   '当前账本：$bookName · 离线存储',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ],
@@ -153,8 +155,8 @@ class _Entry extends StatelessWidget {
     required this.title,
     required this.sub,
     this.onTap,
-    this.iconBg = Tok.brandTint,
-    this.iconFg = Tok.brandDeep,
+    this.iconBg,
+    this.iconFg,
     this.dashedTop = false,
   });
 
@@ -162,12 +164,18 @@ class _Entry extends StatelessWidget {
   final String title;
   final String sub;
   final VoidCallback? onTap;
-  final Color iconBg;
-  final Color iconFg;
+
+  /// 图标底 / 图标色；`null` = 品牌浅底 / 品牌深色（`p.brandTint` / `p.brandDeep`）。
+  final Color? iconBg;
+  final Color? iconFg;
+
   final bool dashedTop;
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    final Color bg = iconBg ?? p.brandTint;
+    final Color fg = iconFg ?? p.brandDeep;
     final Widget row = Padding(
       padding: const EdgeInsets.symmetric(vertical: 13),
       child: Row(
@@ -176,12 +184,12 @@ class _Entry extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: iconBg,
+              color: bg,
               borderRadius: BorderRadius.circular(13),
-              border: Border.all(color: Tok.ink, width: 2),
-              boxShadow: Tok.hard(d: 2),
+              border: Border.all(color: p.ink, width: 2),
+              boxShadow: p.hard(d: 2),
             ),
-            child: Icon(icon, size: 20, color: iconFg),
+            child: Icon(icon, size: 20, color: fg),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -198,26 +206,26 @@ class _Entry extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   sub,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ],
             ),
           ),
           if (onTap == null)
-            const Text(
+            Text(
               '建设中',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: Tok.ink3,
+                color: p.ink3,
               ),
             )
           else
-            const Icon(Icons.chevron_right, size: 18, color: Tok.ink2),
+            Icon(Icons.chevron_right, size: 18, color: p.ink2),
         ],
       ),
     );
@@ -240,9 +248,10 @@ class _BrandTip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ToonCard(
-      color: Tok.brandTint,
-      padding: EdgeInsets.fromLTRB(16, 14, 16, 14),
+    final ToonPalette p = context.toon;
+    return ToonCard(
+      color: p.brandTint,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -253,27 +262,27 @@ class _BrandTip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: Tok.brandInk,
+                  color: p.brandInk,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               Text(
                 'v0.7.16',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  color: Tok.brandDeep,
+                  color: p.brandDeep,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 6),
+          const SizedBox(height: 6),
           Text(
             '已覆盖：记一笔 → 按月看账 → 导入账单 → 自动记账 → 统计 / 预算 / 资产 → 数据导出',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: Tok.brandInk,
+              color: p.brandInk,
             ),
           ),
         ],

@@ -21,13 +21,14 @@ Future<Category?> showCategoryPicker(
   String kind = 'expense',
   String? selectedId,
 }) {
+  final ToonPalette p = context.toon;
   return showModalBottomSheet<Category>(
     context: context,
     showDragHandle: false,
-    backgroundColor: Tok.paper,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
-      side: BorderSide(color: Tok.ink, width: Tok.bw),
+    backgroundColor: p.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: p.ink, width: Tok.bw),
     ),
     builder: (BuildContext context) => _CategoryGrid(
       categories: categories,
@@ -57,9 +58,10 @@ class _CategoryGridState extends State<_CategoryGrid> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool isIncome = _kind == 'income';
-    final Color avaBg = isIncome ? Tok.greenTint : Tok.redTint;
-    final Color avaFg = isIncome ? Tok.green : Tok.red;
+    final Color avaBg = isIncome ? p.greenTint : p.redTint;
+    final Color avaFg = isIncome ? p.green : p.red;
     final List<Category> list = widget.categories
         .where((Category c) => c.kind == _kind)
         .toList(growable: false);
@@ -80,7 +82,7 @@ class _CategoryGridState extends State<_CategoryGrid> {
                 height: 6,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Tok.ink,
+                  color: p.ink,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -125,12 +127,12 @@ class _CategoryGridState extends State<_CategoryGrid> {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               '预置分类不可删；到「我的 → 分类管理」可新增自定义分类。',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ],
@@ -157,6 +159,7 @@ class _CategoryCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 2,
       dy: 2,
@@ -171,17 +174,17 @@ class _CategoryCell extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 // 选中：整块换品牌琥珀 + 深棕字（原型 `button.on .c-ava`）
-                color: selected ? Tok.brand : bg,
+                color: selected ? p.brand : bg,
                 borderRadius: BorderRadius.circular(17),
-                border: Tok.inkBorder(),
-                boxShadow: Tok.hard(d: 2.5),
+                border: p.inkBorder(),
+                boxShadow: p.hard(d: 2.5),
               ),
               child: Text(
                 name.isEmpty ? '?' : name.substring(0, 1),
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w900,
-                  color: selected ? Tok.brandInk : fg,
+                  color: selected ? p.onBrand : fg,
                 ),
               ),
             ),

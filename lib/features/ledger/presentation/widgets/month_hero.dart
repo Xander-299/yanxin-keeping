@@ -14,9 +14,6 @@ import 'package:yanxin/core/theme/toon.dart';
 
 import '../../application/month_summary.dart';
 
-/// hero 卡深色文字基色（琥珀底上的深棕）。
-const Color kHeroInk = Tok.heroInk;
-
 /// 结余主卡。
 class MonthHero extends StatelessWidget {
   const MonthHero({
@@ -44,13 +41,14 @@ class MonthHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       decoration: BoxDecoration(
-        color: Tok.brand,
+        color: p.brand,
         borderRadius: BorderRadius.circular(Tok.rXl),
-        border: Border.all(color: Tok.ink, width: 3),
-        boxShadow: Tok.hard(d: 6),
+        border: Border.all(color: p.ink, width: 3),
+        boxShadow: p.hard(d: 6),
       ),
       clipBehavior: Clip.hardEdge,
       child: Stack(
@@ -64,8 +62,8 @@ class MonthHero extends StatelessWidget {
               height: 210,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Tok.paper.withValues(alpha: 0.32),
-                border: Border.all(color: Tok.ink.withValues(alpha: 0.16), width: 3),
+                color: p.paper.withValues(alpha: 0.32),
+                border: Border.all(color: p.ink.withValues(alpha: 0.16), width: 3),
               ),
             ),
           ),
@@ -92,7 +90,7 @@ class MonthHero extends StatelessWidget {
                     Text(
                       '$month月 · 支出',
                       style: TextStyle(
-                        color: kHeroInk.withValues(alpha: 0.78),
+                        color: p.heroInk.withValues(alpha: 0.78),
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                       ),
@@ -112,10 +110,10 @@ class MonthHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: <Widget>[
-                    const Text(
+                    Text(
                       '¥',
                       style: TextStyle(
-                        color: kHeroInk,
+                        color: p.heroInk,
                         fontSize: 23,
                         fontWeight: FontWeight.w900,
                       ),
@@ -126,16 +124,17 @@ class MonthHero extends StatelessWidget {
                         summary.expenseYuan,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: kHeroInk,
+                        style: TextStyle(
+                          color: p.heroInk,
                           fontSize: 40,
                           height: 1.1,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -1,
                           shadows: <Shadow>[
+                            // 非 const：`p` 来自 Theme，色值不是编译期常量
                             Shadow(
-                              color: Color(0xD9FFFFFF),
-                              offset: Offset(2.5, 2.5),
+                              color: p.veil.withValues(alpha: 0.85),
+                              offset: const Offset(2.5, 2.5),
                             ),
                           ],
                         ),
@@ -174,6 +173,7 @@ class _RoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 2,
       dy: 2,
@@ -183,21 +183,21 @@ class _RoundButton extends StatelessWidget {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: enabled ? Tok.paper : Tok.paper.withValues(alpha: 0.45),
+          color: enabled ? p.paper : p.paper.withValues(alpha: 0.45),
           shape: BoxShape.circle,
           border: Border.all(
-            color: enabled ? Tok.ink : Tok.ink.withValues(alpha: 0.3),
+            color: enabled ? p.ink : p.ink.withValues(alpha: 0.3),
             width: 2.5,
           ),
-          boxShadow: Tok.hard(
+          boxShadow: p.hard(
             d: 2.5,
-            color: enabled ? Tok.ink : Tok.ink.withValues(alpha: 0.3),
+            color: enabled ? p.ink : p.ink.withValues(alpha: 0.3),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: enabled ? Tok.ink : Tok.ink.withValues(alpha: 0.35),
+            color: enabled ? p.ink : p.ink.withValues(alpha: 0.35),
             fontSize: 17,
             height: 1,
             fontWeight: FontWeight.w900,
@@ -217,12 +217,13 @@ class _HeroCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
       decoration: BoxDecoration(
-        color: Tok.paper.withValues(alpha: 0.55),
+        color: p.paper.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Tok.ink.withValues(alpha: 0.55), width: 2),
+        border: Border.all(color: p.ink.withValues(alpha: 0.55), width: 2),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -232,7 +233,7 @@ class _HeroCell extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: kHeroInk.withValues(alpha: 0.8),
+              color: p.heroInk.withValues(alpha: 0.8),
               fontSize: 11.5,
               fontWeight: FontWeight.w700,
             ),
@@ -243,8 +244,8 @@ class _HeroCell extends StatelessWidget {
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: kHeroInk,
+              style: TextStyle(
+                color: p.heroInk,
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),

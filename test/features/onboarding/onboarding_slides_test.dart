@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/features/onboarding/application/onboarding_keys.dart';
 import 'package:yanxin/features/onboarding/presentation/widgets/onboarding_slides.dart';
 
@@ -80,8 +81,8 @@ void main() {
     test('emphasisSpans 与 parseEmphasis 段数一致，且粗体段带样式', () {
       const String text = '**粗**细';
       final List<({String text, bool strong})> parts = parseEmphasis(text);
-      expect(emphasisSpans(text), hasLength(parts.length));
-      expect(emphasisSpans(text).last.style?.fontWeight, isNull);
+      expect(emphasisSpans(text, ToonPalette.light), hasLength(parts.length));
+      expect(emphasisSpans(text, ToonPalette.light).last.style?.fontWeight, isNull);
     });
   });
 }

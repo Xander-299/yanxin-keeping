@@ -15,7 +15,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 
@@ -23,18 +22,6 @@ import '../../application/budget_controller.dart';
 import '../../application/budget_metrics.dart';
 import '../../application/ledger_controller.dart';
 import 'budget_edit_sheet.dart';
-
-/// 正常（未超支）时的强调色。
-const Color kBudgetOk = Tok.green;
-
-/// 超支时的警示色。
-const Color kBudgetOver = Tok.red;
-
-/// 日均消费的圆点色（品牌琥珀）。
-const Color kDotAmber = Tok.brand;
-
-/// 剩余可消费的圆点色。
-const Color kDotPurple = Tok.purple;
 
 /// 预算卡。
 class BudgetCard extends ConsumerWidget {
@@ -107,7 +94,8 @@ class _FilledBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent = view.overspent ? kBudgetOver : kBudgetOk;
+    final ToonPalette p = context.toon;
+    final Color accent = view.overspent ? p.red : p.green;
     return Column(
       children: <Widget>[
         _TitleRow(
@@ -138,19 +126,19 @@ class _FilledBody extends StatelessWidget {
           child: ToonDashedLine(),
         ),
         _DayRow(
-          dotColor: kDotAmber,
+          dotColor: p.brand,
           label: '本月日均消费',
           value: centsToYuan(view.dailyAvgCents),
         ),
         const SizedBox(height: 9),
         _DayRow(
-          dotColor: kDotPurple,
+          dotColor: p.purple,
           label: '剩余每日可消费',
           // 历史月没有「剩余天数」，显示「—」而不是 0（0 会被误读成「今天不能花了」）
           value: view.dailyRemainingCents == null
               ? '—'
               : centsToYuan(view.dailyRemainingCents!),
-          valueColor: view.overspent ? kBudgetOver : kBudgetOk,
+          valueColor: view.overspent ? p.red : p.green,
         ),
       ],
     );
@@ -171,19 +159,20 @@ class _EmptyBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Column(
       children: <Widget>[
-        _TitleRow(budgetYuan: '未设置', budgetColor: Tok.ink3, onEdit: onEdit),
+        _TitleRow(budgetYuan: '未设置', budgetColor: p.ink3, onEdit: onEdit),
         const SizedBox(height: 10),
         Row(
           children: <Widget>[
-            const Expanded(
+            Expanded(
               child: Text(
                 '设一个月度预算，随时看到花销进度',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
             ),
@@ -201,14 +190,14 @@ class _EmptyBody extends StatelessWidget {
           child: ToonDashedLine(),
         ),
         _DayRow(
-          dotColor: kDotAmber,
+          dotColor: p.brand,
           label: '本月日均消费',
           value: centsToYuan(view.dailyAvgCents),
         ),
         // 原型无条件渲染这两行：没设预算时「剩余每日可消费」显示「—」，
         // 少一行会让卡片高度在有/无预算之间跳动。
         const SizedBox(height: 9),
-        const _DayRow(dotColor: kDotPurple, label: '剩余每日可消费', value: '—'),
+        _DayRow(dotColor: p.purple, label: '剩余每日可消费', value: '—'),
       ],
     );
   }
@@ -230,6 +219,7 @@ class _TitleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 0,
       dy: 0,
@@ -247,16 +237,16 @@ class _TitleRow extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Tok.redTint,
+                  color: p.redTint,
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: Tok.ink, width: 2),
+                  border: Border.all(color: p.ink, width: 2),
                 ),
-                child: const Text(
+                child: Text(
                   '已超支',
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
-                    color: Tok.red,
+                    color: p.red,
                   ),
                 ),
               ),
@@ -267,11 +257,11 @@ class _TitleRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: budgetColor ?? Tok.ink2,
+                color: budgetColor ?? p.ink2,
               ),
             ),
             const SizedBox(width: 6),
-            const Icon(Icons.edit_outlined, size: 17, color: Tok.ink2),
+            Icon(Icons.edit_outlined, size: 17, color: p.ink2),
           ],
         ),
       ),
@@ -288,6 +278,7 @@ class _Metric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,17 +291,17 @@ class _Metric extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
-                color: valueColor ?? Tok.ink,
+                color: valueColor ?? p.ink,
               ),
             ),
           ),
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
         ],
@@ -334,6 +325,7 @@ class _DayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Row(
       children: <Widget>[
         Container(
@@ -342,16 +334,16 @@ class _DayRow extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: dotColor,
-            border: Border.all(color: Tok.ink, width: 2),
+            border: Border.all(color: p.ink, width: 2),
           ),
         ),
         const SizedBox(width: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: Tok.ink2,
+            color: p.ink2,
           ),
         ),
         const Spacer(),
@@ -360,7 +352,7 @@ class _DayRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w900,
-            color: valueColor ?? Tok.ink,
+            color: valueColor ?? p.ink,
           ),
         ),
       ],
@@ -399,6 +391,7 @@ class _ErrorBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Row(
       children: <Widget>[
         const Text(
@@ -406,19 +399,19 @@ class _ErrorBody extends StatelessWidget {
           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
         const SizedBox(width: 8),
-        const Text(
+        Text(
           '读取失败',
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Tok.ink2,
+            color: p.ink2,
           ),
         ),
         const Spacer(),
         TextButton(
           onPressed: onRetry,
           style: TextButton.styleFrom(
-            foregroundColor: Tok.brandDeep,
+            foregroundColor: p.brandDeep,
             padding: const EdgeInsets.symmetric(horizontal: 8),
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,

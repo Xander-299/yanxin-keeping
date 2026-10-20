@@ -13,7 +13,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
@@ -91,9 +90,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool isLast = _index == _lastIndex;
     return Scaffold(
-      backgroundColor: Tok.canvas,
+      backgroundColor: p.canvas,
       body: SafeArea(
         child: Column(
           children: <Widget>[
@@ -136,6 +136,7 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 12, 2),
       child: Row(
@@ -161,14 +162,14 @@ class _TopBar extends StatelessWidget {
                 dx: 1.5,
                 dy: 1.5,
                 onTap: onSkip,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                   child: Text(
                     '跳过',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w800,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ),
@@ -189,6 +190,7 @@ class _Dot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 0,
       dy: 0,
@@ -200,9 +202,9 @@ class _Dot extends StatelessWidget {
           width: active ? 18 : 8,
           height: 8,
           decoration: BoxDecoration(
-            color: active ? Tok.brand : Tok.line,
+            color: active ? p.brand : p.line,
             borderRadius: BorderRadius.circular(999),
-            border: active ? Border.all(color: Tok.ink, width: 1.8) : null,
+            border: active ? Border.all(color: p.ink, width: 1.8) : null,
           ),
         ),
       ),
@@ -218,6 +220,7 @@ class _SlideView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
       child: Column(
@@ -227,22 +230,22 @@ class _SlideView extends StatelessWidget {
           const SizedBox(height: 20),
           Text(
             slide.title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 22,
               height: 1.25,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.4,
-              color: Tok.ink,
+              color: p.ink,
             ),
           ),
           const SizedBox(height: 8),
           Text.rich(
-            TextSpan(children: emphasisSpans(slide.body)),
-            style: const TextStyle(
+            TextSpan(children: emphasisSpans(slide.body, p)),
+            style: TextStyle(
               fontSize: 13.5,
               height: 1.6,
               fontWeight: FontWeight.w600,
-              color: Tok.ink2,
+              color: p.ink2,
             ),
           ),
         ],

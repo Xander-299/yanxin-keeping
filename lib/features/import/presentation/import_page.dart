@@ -183,8 +183,9 @@ class _ImportPageState extends ConsumerState<ImportPage> {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Scaffold(
-      backgroundColor: Tok.paper,
+      backgroundColor: p.paper,
       appBar: AppBar(
         title: const Text('导入账单'),
         leading: BackButton(onPressed: _back),
@@ -209,6 +210,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   // ────────────────────────────── 第 2 步：预览 ──────────────────────────────
 
   Widget _buildPreviewBody(BuildContext context, BillParseResult parsed) {
+    final ToonPalette p = context.toon;
     final stats = parsed.stats;
     final int activeCount = _cancelled.where((bool c) => !c).length;
     final bool allSelected = activeCount == _cancelled.length;
@@ -234,10 +236,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ),
@@ -266,27 +268,27 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                       child: Text(
                         '已跳过 ${stats.skipped} 笔（退款 / 不计收支）'
                         '${stats.malformed > 0 ? ' · 坏行 ${stats.malformed}' : ''}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Row(
+                Row(
                   children: <Widget>[
-                    Icon(Icons.check_box_outlined, size: 16, color: Tok.ink2),
-                    SizedBox(width: 6),
+                    Icon(Icons.check_box_outlined, size: 16, color: p.ink2),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         '勾选的条目会导入，点条目可取消它',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ),
@@ -302,10 +304,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
             children: <Widget>[
               Text(
                 '已选 $activeCount / ${_cancelled.length} 条',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
               const Spacer(),
@@ -365,12 +367,12 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   '单事务写入 + 指纹去重，失败整批回滚',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ],
@@ -384,6 +386,7 @@ class _ImportPageState extends ConsumerState<ImportPage> {
   // ────────────────────────────── 第 3 步：报告 ──────────────────────────────
 
   Widget _buildReportBody(BuildContext context) {
+    final ToonPalette p = context.toon;
     final BillParseResult parsed = _parsed!;
     final ImportReport report = _report!;
     final bool hasNew = _hasNew;
@@ -422,15 +425,15 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                       height: 44,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: hasNew ? Tok.greenTint : Tok.track,
+                        color: hasNew ? p.greenTint : p.track,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Tok.ink, width: 2),
-                        boxShadow: Tok.hard(d: 2),
+                        border: Border.all(color: p.ink, width: 2),
+                        boxShadow: p.hard(d: 2),
                       ),
                       child: Icon(
                         Icons.check,
                         size: 24,
-                        color: hasNew ? Tok.green : Tok.ink3,
+                        color: hasNew ? p.green : p.ink3,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -452,10 +455,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                                       '${target == null ? '' : ' · ${_fmtMonth(target)}'}'
                                       ' · 成功导入 ${report.imported} 笔'
                                 : '这 $_activeRows 笔之前已经导入过了，没有重复记账',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: Tok.ink2,
+                              color: p.ink2,
                             ),
                           ),
                         ],
@@ -472,20 +475,20 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                       children: <Widget>[
                         Text(
                           '${report.imported}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 42,
                             fontWeight: FontWeight.w900,
-                            color: Tok.green,
+                            color: p.green,
                             letterSpacing: -1.5,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           '笔新增',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Tok.ink2,
+                            color: p.ink2,
                           ),
                         ),
                       ],
@@ -505,10 +508,10 @@ class _ImportPageState extends ConsumerState<ImportPage> {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
             child: Text(
               '其中 $_activeRows 笔属于 ${_fmtMonth(target)}，点「去看账单」直接翻到该月',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
                 height: 1.7,
               ),
             ),
@@ -532,13 +535,13 @@ class _ImportPageState extends ConsumerState<ImportPage> {
                 onPressed: _resetToPick,
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 '导入后自动跳到数据所在月份；重复导入不会产生任何重复流水',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Tok.ink2,
+                  color: p.ink2,
                   height: 1.7,
                 ),
               ),

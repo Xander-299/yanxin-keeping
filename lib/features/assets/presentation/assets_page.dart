@@ -22,6 +22,7 @@ class AssetsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ToonPalette p = context.toon;
     final AsyncValue<AssetSummary> async = ref.watch(assetsProvider);
 
     return Scaffold(
@@ -52,10 +53,10 @@ class AssetsPage extends ConsumerWidget {
                 Text(
                   '$e',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -81,14 +82,14 @@ class AssetsPage extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _AccountTile(item: item, ref: ref),
                 ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(4, 6, 4, 0),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 6, 4, 0),
                 child: Text(
                   '余额 = 初始余额 + Σ收入 − Σ支出（转账不计入）',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Tok.ink2,
+                    color: p.ink2,
                   ),
                 ),
               ),
@@ -108,21 +109,22 @@ class _NetWorthCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool negative = summary.netCents < 0;
-    final Color color = negative ? Tok.red : Tok.brandDeep;
+    final Color color = negative ? p.red : p.brandDeep;
     return Card(
-      color: Tok.brandTint,
+      color: p.brandTint,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Text(
+            Text(
               '净资产',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 6),
@@ -139,10 +141,10 @@ class _NetWorthCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '${summary.count} 个账户 · 全时间累计',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w700,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ],
@@ -161,13 +163,18 @@ class _AccountTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool negative = item.balanceCents < 0;
     // 正余额用墨色（此前误用深色主题的 #E8E8E8，白卡上等于隐形）
-    final Color balanceColor = negative ? Tok.red : Tok.ink;
+    final Color balanceColor = negative ? p.red : p.ink;
+    // 自选颜色是**用户数据**（不受主题影响），所以前景色按底色亮度选，
+    // 不能直接用 p.ink —— 深色主题下 p.ink 是暖白，铺在亮粉/亮蓝上读不清。
+    final Color avatarBg = accountAvatarColor(item.account.color, p);
+    final Color avatarFg = p.inkOn(avatarBg);
 
     return Container(
       clipBehavior: Clip.antiAlias,
-      decoration: Tok.cardDeco(),
+      decoration: p.cardDeco(),
       child: ToonPress(
         dx: 2,
         dy: 2,
@@ -183,15 +190,15 @@ class _AccountTile extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   // 自选颜色优先；空串 / 非法值 = 类型默认底色（老数据行为不变）
-                  color: accountAvatarColor(item.account.color),
+                  color: avatarBg,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Tok.ink, width: 2),
-                  boxShadow: Tok.hard(d: 2),
+                  border: Border.all(color: p.ink, width: 2),
+                  boxShadow: p.hard(d: 2),
                 ),
                 child: Icon(
                   accountIcon(item.account.icon, item.account.type),
                   size: 21,
-                  color: Tok.ink,
+                  color: avatarFg,
                 ),
               ),
               const SizedBox(width: 12),
@@ -213,10 +220,10 @@ class _AccountTile extends StatelessWidget {
                       '${accountTypeLabel(item.account.type)} · '
                       '收 ${centsToYuan(item.incomeCents)} / '
                       '支 ${centsToYuan(item.expenseCents)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Tok.ink2,
+                        color: p.ink2,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -249,6 +256,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     // F7.6 P3：与日历空态统一成卡通空态（虚线圆 + 小猪 + 胶囊按钮），
     // 不再用 Material 图标 + FilledButton。
     return Center(
@@ -257,14 +265,14 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const ToonDashedBorder(
+            ToonDashedBorder(
               circle: true,
-              color: Tok.ink,
+              color: p.ink,
               thickness: Tok.bw,
               dash: 7,
               gap: 5,
-              background: Tok.brandTint,
-              child: SizedBox(
+              background: p.brandTint,
+              child: const SizedBox(
                 width: 76,
                 height: 76,
                 child: Center(child: PigMascot(size: 52)),
@@ -277,13 +285,13 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               '建一个账户（现金 / 储蓄卡 / 支付宝…），就能看到净资产分布',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
             const SizedBox(height: 16),

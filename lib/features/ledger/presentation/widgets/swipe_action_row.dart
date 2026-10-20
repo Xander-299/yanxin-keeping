@@ -11,7 +11,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/toon.dart';
 
 /// 动作区宽度：够放「垃圾桶图标 + 删除」两字。
@@ -163,6 +162,7 @@ class _SwipeActionRowState extends State<SwipeActionRow>
       child: AnimatedBuilder(
         animation: _anim,
         builder: (BuildContext context, Widget? child) {
+          final ToonPalette p = context.toon;
           final bool open = _anim.value > 0.001;
           return Stack(
             children: <Widget>[
@@ -186,7 +186,7 @@ class _SwipeActionRowState extends State<SwipeActionRow>
                   // 行必须自带**不透明**底：`TxTile` 本身没有背景色（白是外层卡片给的），
                   // 否则 Stack 底层的红色动作区会「透」过行露出来 —— 未滑开就能看到一条红。
                   // 真机走查抓到（第一版漏了这层，见 `docs/acceptance-F7.8-swipe-delete.md`）。
-                  child: ColoredBox(color: Tok.paper, child: child),
+                  child: ColoredBox(color: p.paper, child: child),
                 ),
               ),
             ],
@@ -212,22 +212,23 @@ class _ActionPane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 0,
       dy: 0,
       onTap: onTap,
       child: ColoredBox(
-        color: Tok.red,
+        color: p.red,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(icon, size: 18, color: Tok.paper),
+              Icon(icon, size: 18, color: p.veil),
               const SizedBox(height: 2),
               Text(
                 label,
-                style: const TextStyle(
-                  color: Tok.paper,
+                style: TextStyle(
+                  color: p.veil,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),

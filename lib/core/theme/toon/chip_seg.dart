@@ -17,6 +17,7 @@ class ToonChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return ToonPress(
       dx: 2,
       dy: 2,
@@ -24,17 +25,17 @@ class ToonChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Tok.brand : Tok.paper,
+          color: selected ? p.brand : p.paper,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Tok.ink, width: 2),
-          boxShadow: Tok.hard(d: 2.5),
+          border: Border.all(color: p.ink, width: 2),
+          boxShadow: p.hard(d: 2.5),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w800,
-            color: selected ? Tok.brandInk : Tok.ink,
+            color: selected ? p.onBrand : p.ink,
           ),
         ),
       ),
@@ -42,7 +43,7 @@ class ToonChip extends StatelessWidget {
   }
 }
 
-/// 分段控件（原型 `.seg`）：白底描边胶囊 + 选中项填品牌色。
+/// 分段控件（原型 `.seg`）：卡片底描边胶囊 + 选中项填品牌色。
 class ToonSeg extends StatelessWidget {
   const ToonSeg({
     super.key,
@@ -59,13 +60,14 @@ class ToonSeg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(999),
-        border: Tok.inkBorder(),
-        boxShadow: Tok.hard(d: 2.5),
+        border: p.inkBorder(),
+        boxShadow: p.hard(d: 2.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -83,10 +85,10 @@ class ToonSeg extends StatelessWidget {
                     vertical: small ? 5 : 7,
                   ),
                   decoration: BoxDecoration(
-                    color: i == index ? Tok.brand : Colors.transparent,
+                    color: i == index ? p.brand : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
                     border: Border.all(
-                      color: i == index ? Tok.ink : Colors.transparent,
+                      color: i == index ? p.ink : Colors.transparent,
                       width: 2,
                     ),
                   ),
@@ -95,7 +97,7 @@ class ToonSeg extends StatelessWidget {
                     style: TextStyle(
                       fontSize: small ? 12 : 13.5,
                       fontWeight: FontWeight.w800,
-                      color: i == index ? Tok.brandInk : Tok.ink2,
+                      color: i == index ? p.onBrand : p.ink2,
                     ),
                   ),
                 ),

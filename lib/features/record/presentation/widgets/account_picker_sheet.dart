@@ -17,13 +17,14 @@ Future<Account?> showAccountPicker(
   required List<Account> accounts,
   String? selectedId,
 }) {
+  final ToonPalette p = context.toon;
   return showModalBottomSheet<Account>(
     context: context,
     showDragHandle: false,
-    backgroundColor: Tok.paper,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
-      side: BorderSide(color: Tok.ink, width: Tok.bw),
+    backgroundColor: p.paper,
+    shape: RoundedRectangleBorder(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      side: BorderSide(color: p.ink, width: Tok.bw),
     ),
     builder: (BuildContext context) => _AccountList(
       accounts: accounts,
@@ -40,6 +41,7 @@ class _AccountList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 22),
@@ -54,7 +56,7 @@ class _AccountList extends StatelessWidget {
                 height: 6,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Tok.ink,
+                  color: p.ink,
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
@@ -68,7 +70,7 @@ class _AccountList extends StatelessWidget {
               child: SingleChildScrollView(
                 child: Container(
                   clipBehavior: Clip.antiAlias,
-                  decoration: Tok.cardDeco(),
+                  decoration: p.cardDeco(),
                   child: Column(
                     children: <Widget>[
                       for (int i = 0; i < accounts.length; i++)
@@ -89,12 +91,12 @@ class _AccountList extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            const Text(
+            Text(
               '记一笔默认用列表第一个账户；到「资产 → 新增账户」可加更多。',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ],
@@ -117,6 +119,7 @@ class _AccountRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final String name = account.name;
     return ToonPress(
       dx: 0,
@@ -147,17 +150,17 @@ class _AccountRow extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     accountTypeLabel(account.type),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
-                      color: Tok.ink2,
+                      color: p.ink2,
                     ),
                   ),
                 ],
               ),
             ),
             if (selected)
-              const Icon(Icons.check_rounded, size: 20, color: Tok.brandDeep),
+              Icon(Icons.check_rounded, size: 20, color: p.brandDeep),
           ],
         ),
       ),

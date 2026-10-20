@@ -9,6 +9,7 @@ class _InfoLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 11),
       child: Row(
@@ -18,21 +19,21 @@ class _InfoLine extends StatelessWidget {
             width: 74,
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w800,
-                color: Tok.ink,
+                color: p.ink,
               ),
             ),
           ),
           Expanded(
             child: Text(
               body,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 height: 1.5,
                 fontWeight: FontWeight.w600,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ),

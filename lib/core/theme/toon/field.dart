@@ -25,6 +25,7 @@ class ToonField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final Widget row = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 13),
       child: Row(
@@ -33,10 +34,10 @@ class ToonField extends StatelessWidget {
             width: 52,
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ),
@@ -50,7 +51,7 @@ class ToonField extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
-                    color: valueColor ?? (placeholder ? Tok.ink3 : Tok.ink),
+                    color: valueColor ?? (placeholder ? p.ink3 : p.ink),
                   ),
                 ),
           ),
@@ -58,7 +59,7 @@ class ToonField extends StatelessWidget {
             trailing!,
             const SizedBox(width: 6),
           ],
-          const Icon(Icons.chevron_right, size: 18, color: Tok.ink2),
+          Icon(Icons.chevron_right, size: 18, color: p.ink2),
         ],
       ),
     );

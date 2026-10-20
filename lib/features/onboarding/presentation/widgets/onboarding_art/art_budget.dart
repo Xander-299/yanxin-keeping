@@ -7,15 +7,16 @@ class MonthBudgetArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final ToonPalette p = context.toon;
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         MiniScreen(
-          padding: EdgeInsets.fromLTRB(12, 12, 12, 14),
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Align(
+              const Align(
                 alignment: Alignment.centerRight,
                 child: HighlightBox(
                   radius: 10,
@@ -29,32 +30,32 @@ class MonthBudgetArt extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
                 '本月支出',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
-                  color: Tok.ink2,
+                  color: p.ink2,
                 ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
                 '1,286.00',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
-                  color: Tok.ink,
+                  color: p.ink,
                 ),
               ),
             ],
           ),
         ),
-        SizedBox(height: 6),
-        Callout(label: '换月份（不能翻到未来）'),
-        SizedBox(height: 14),
+        const SizedBox(height: 6),
+        const Callout(label: '换月份（不能翻到未来）'),
+        const SizedBox(height: 14),
         MiniScreen(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
           child: Row(
             children: <Widget>[
               Text(
@@ -62,28 +63,28 @@ class MonthBudgetArt extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
-                  color: Tok.ink,
+                  color: p.ink,
                 ),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
                 '¥2000.00',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: Tok.brandDeep,
+                  color: p.brandDeep,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               HighlightBox(
                 radius: 9,
-                child: Icon(Icons.edit_outlined, size: 15, color: Tok.ink),
+                child: Icon(Icons.edit_outlined, size: 15, color: p.ink),
               ),
             ],
           ),
         ),
-        SizedBox(height: 6),
-        Callout(label: '点这里改预算'),
+        const SizedBox(height: 6),
+        const Callout(label: '点这里改预算'),
       ],
     );
   }

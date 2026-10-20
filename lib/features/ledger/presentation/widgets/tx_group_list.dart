@@ -4,7 +4,7 @@
 /// 列表是白卡描边 + 硬阴影，组内条目之间用虚线分隔。
 ///
 /// F7.7 D 批追加 [highlightQuery]（可选）：搜索浮层传入关键词后，
-/// 命中子串（分类名 / 备注 / 金额）标 `Tok.brandTint2` 底色；
+/// 命中子串（分类名 / 备注 / 金额）标 `p.brandTint2` 底色；
 /// 其余页面不传 → 渲染与原来完全一致。
 ///
 /// F7.8 起删除入口 = **左滑露出按钮**（[SwipeActionRow]），长按删除已移除。
@@ -13,21 +13,18 @@ library;
 import 'package:flutter/material.dart';
 
 import '../../../../core/db/database.dart';
-import '../../../../core/theme/tokens.dart';
 import '../../../../core/theme/toon.dart';
 import '../../../../core/utils/date.dart';
 import '../../../../core/utils/highlight.dart';
 import '../../../../core/utils/money.dart';
 import 'swipe_action_row.dart';
 
-/// 命中子串的底色（浅琥珀）。只覆盖背景，字色 / 字重全部继承外层样式。
-const TextStyle _hitStyle = TextStyle(backgroundColor: Tok.brandTint2);
-
 /// 把 [text] 按 [query] 的命中区间切成 spans；无命中时返回单段（等价普通文本）。
 ///
 /// 始终返回 `Text.rich`：`find.text` 走 `textSpan.toPlainText()`，断言串不受影响。
 Text _highlightText(
-  String text, {
+  String text,
+  ToonPalette p, {
   required TextStyle style,
   String? query,
   int? maxLines,
@@ -39,13 +36,15 @@ Text _highlightText(
   if (hits.isEmpty) {
     return Text(text, style: style, maxLines: maxLines, overflow: overflow);
   }
+  // 命中子串的底色（浅琥珀 / 深色的暗琥珀）。只覆盖背景，字色 / 字重全部继承外层样式。
+  final TextStyle hitStyle = TextStyle(backgroundColor: p.brandTint2);
   final List<InlineSpan> spans = <InlineSpan>[];
   var cursor = 0;
   for (final MatchRange r in hits) {
     if (r.start > cursor) {
       spans.add(TextSpan(text: text.substring(cursor, r.start)));
     }
-    spans.add(TextSpan(text: text.substring(r.start, r.end), style: _hitStyle));
+    spans.add(TextSpan(text: text.substring(r.start, r.end), style: hitStyle));
     cursor = r.end;
   }
   if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
@@ -111,6 +110,7 @@ class _TxGroupListState extends State<TxGroupList> {
           : null,
       itemCount: groups.length,
       itemBuilder: (BuildContext context, int index) {
+        final ToonPalette p = context.toon;
         final group = groups[index];
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,7 +122,7 @@ class _TxGroupListState extends State<TxGroupList> {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               clipBehavior: Clip.antiAlias,
-              decoration: Tok.cardDeco(),
+              decoration: p.cardDeco(),
               child: Column(
                 children: <Widget>[
                   for (int i = 0; i < group.items.length; i++)
@@ -164,13 +164,14 @@ class _GroupChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       decoration: BoxDecoration(
-        color: Tok.paper,
+        color: p.paper,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Tok.ink, width: 2),
-        boxShadow: Tok.hard(d: 2.5),
+        border: Border.all(color: p.ink, width: 2),
+        boxShadow: p.hard(d: 2.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -183,10 +184,10 @@ class _GroupChip extends StatelessWidget {
             const SizedBox(width: 4),
             Text(
               '· $count 笔',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: Tok.ink2,
+                color: p.ink2,
               ),
             ),
           ],
@@ -222,12 +223,13 @@ class TxTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
     final bool isIncome = tx.type == 'income';
     final String initial = categoryName.isEmpty ? '?' : categoryName.substring(0, 1);
     // 中国习惯：支出红 / 收入绿（糖果色，对齐原型）
     final Color amountColor = neutral
-        ? Tok.ink2
-        : (isIncome ? Tok.green : Tok.red);
+        ? p.ink2
+        : (isIncome ? p.green : p.red);
     final String sign = neutral ? '' : (isIncome ? '+' : '-');
     final String amountText = '$sign${centsToYuan(tx.amountCents)}';
     return ToonPress(
@@ -241,8 +243,8 @@ class TxTile extends StatelessWidget {
             ToonAvatar(
               text: initial,
               bg: neutral
-                  ? Tok.track
-                  : (isIncome ? Tok.greenTint : Tok.redTint),
+                  ? p.track
+                  : (isIncome ? p.greenTint : p.redTint),
               fg: amountColor,
             ),
             const SizedBox(width: 12),
@@ -255,6 +257,7 @@ class TxTile extends StatelessWidget {
                   Flexible(
                     child: _highlightText(
                       categoryName,
+                      p,
                       query: highlightQuery,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -267,13 +270,14 @@ class TxTile extends StatelessWidget {
                       flex: 2,
                       child: _highlightText(
                         tx.note,
+                        p,
                         query: highlightQuery,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Tok.ink2,
+                          color: p.ink2,
                         ),
                       ),
                     ),
@@ -284,6 +288,7 @@ class TxTile extends StatelessWidget {
             const SizedBox(width: 8),
             _highlightText(
               amountText,
+              p,
               query: highlightQuery,
               style: TextStyle(
                 color: amountColor,

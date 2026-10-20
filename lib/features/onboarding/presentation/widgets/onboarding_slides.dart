@@ -6,7 +6,7 @@ library;
 
 import 'package:flutter/material.dart';
 
-import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/features/onboarding/presentation/widgets/onboarding_art.dart';
 
 /// 一页引导。
@@ -52,12 +52,12 @@ List<({String text, bool strong})> parseEmphasis(String text) {
 }
 
 /// 正文 → `TextSpan` 序列（粗体 = `brandInk` + w900）。
-List<TextSpan> emphasisSpans(String text) => <TextSpan>[
+List<TextSpan> emphasisSpans(String text, ToonPalette p) => <TextSpan>[
   for (final ({String text, bool strong}) part in parseEmphasis(text))
     TextSpan(
       text: part.text,
       style: part.strong
-          ? const TextStyle(fontWeight: FontWeight.w900, color: Tok.brandInk)
+          ? TextStyle(fontWeight: FontWeight.w900, color: p.brandInk)
           : null,
     ),
 ];
