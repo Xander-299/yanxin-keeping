@@ -15,6 +15,13 @@
 > → **F7.16 零代码改动转正**，本项目**无未收口批次**。
 >
 > **⏭️ 下一步**：**等用户排新需求**（F7 阶段已全部交付并打 tag）。
+>
+> **📦 2026-10-20 追加交付：release 版本可下载体验** —— `flutter build apk --release` 已跑通
+> （**本机 Dart 的 231 命名管道故障已消失**，`Process.runSync` 恢复 → 走标准路径即可，
+> 不再需要 `tool/build_kernel_fallback.py`）。GitHub Release `v0.7.16` 已发布
+> （通用包 64 MB + arm64 单独包 22 MB，正式签名 `CN=yanxin`），
+> 新增 `tool/publish_release.py`（走 REST API，令牌从 git credential manager 现场取、不落盘）。
+> README 已重写为「功能地图 + 项目结构 + 部署教程」，简历向内容拆到 `docs/RESUME.md`。
 > 若将来要做「绕过微信/支付宝的支付渠道」（白条 / 月付 / 云闪付 NFC）单独记账，
 > **必须先做跨应用去重**（见 CHANGELOG `v0.7.16` 的 D 段与 `MEMORY.md`）。
 >
@@ -1423,6 +1430,8 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
   预算铅笔 / 三个隐藏手势 / 资产页与报表页）；「我的 → 新手引导」可随时重看；**老用户不弹**
   （判定 = 无标记 **且** `ActiveBookIdController.isFreshInstall`）。新增 `lib/features/onboarding/` 5 文件。
 - **下一步**：**F7 阶段 16 个版本全部交付并已打 tag，无未收口批次**；等用户排新需求。
+- 📦 **release 已可下载**：`https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/tag/v0.7.16`
+  （通用包 64 MB / arm64 包 22 MB，正式签名）；发布工具 `tool/publish_release.py`。
   ⚠️ 若将来要做「绕过微信/支付宝的支付渠道」单独记账，**必须先做跨应用去重**（见 CHANGELOG `v0.7.16` D 段）。
   F7.9 + 启动图标 + F7.14 新手引导 + F7.15 自动记账 + F7.16 三段**均已落地，别重写**。
 - 📌 **2026-10-17（今天）只做了文档，功能代码 8 天零改动**：
