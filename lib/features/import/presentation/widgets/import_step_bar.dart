@@ -64,7 +64,10 @@ class _StepNode extends StatelessWidget {
                 ? p.greenTint
                 : (on ? p.brand : p.paper),
             shape: BoxShape.circle,
-            border: Border.all(color: p.ink, width: 2),
+            border: p.inkBorder(
+              w: 2,
+              on: done ? p.greenTint : (on ? p.brand : p.paper),
+            ),
             boxShadow: on ? p.hard(d: 2) : null,
           ),
           child: done

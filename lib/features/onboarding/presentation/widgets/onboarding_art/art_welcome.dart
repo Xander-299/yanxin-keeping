@@ -141,7 +141,7 @@ class _MiniAddSquare extends StatelessWidget {
         decoration: BoxDecoration(
           color: p.brand,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: p.ink, width: 1.8),
+          border: p.inkBorder(w: 1.8, on: p.brand),
         ),
         child: Icon(Icons.add, size: 16, color: p.onBrand),
       ),

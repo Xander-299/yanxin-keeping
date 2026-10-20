@@ -176,7 +176,8 @@ class _CategoryCell extends StatelessWidget {
                 // 选中：整块换品牌琥珀 + 深棕字（原型 `button.on .c-ava`）
                 color: selected ? p.brand : bg,
                 borderRadius: BorderRadius.circular(17),
-                border: p.inkBorder(),
+                // 描边跟着底色走：选中=琥珀（亮）→ decorInk；未选中=用户自选色 → 按亮度定
+                border: p.inkBorder(on: selected ? p.brand : bg),
                 boxShadow: p.hard(d: 2.5),
               ),
               child: Text(

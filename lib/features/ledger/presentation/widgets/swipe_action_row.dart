@@ -223,12 +223,12 @@ class _ActionPane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(icon, size: 18, color: p.veil),
+              Icon(icon, size: 18, color: p.onRed),
               const SizedBox(height: 2),
               Text(
                 label,
                 style: TextStyle(
-                  color: p.veil,
+                  color: p.onRed,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),

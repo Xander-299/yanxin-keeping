@@ -51,7 +51,8 @@ class ToonButton extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: p.inkBorder(),
+        // 描边跟着**底色**走：primary 是琥珀底 → decorInk；其余底色的 ink 描边不变
+        border: p.inkBorder(on: kind == ToonButtonKind.primary ? p.brand : null),
         boxShadow: p.hard(d: d),
       ),
       child: Row(

@@ -39,6 +39,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     required this.red,
     required this.redTint,
     required this.redInk,
+    required this.onRed,
     required this.green,
     required this.greenTint,
     required this.blue,
@@ -93,6 +94,12 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   /// 红底提示条上的深红字（[red] 铺在 [redTint] 上对比不足，单列）。
   final Color redInk;
 
+  /// **实心 [red] 底上的字 / 图标**（左滑删除的动作区）。
+  ///
+  /// 不能直接用 [veil]（白）：[red] 在暗底上要够亮才能当金额色，亮度被顶到 0.30 上下，
+  /// 白字压上去只有 ~2.8:1（深色）/ ~3.0:1（浅色）。用深暖黑才够 4.5:1。
+  final Color onRed;
+
   final Color green;
   final Color greenTint;
   final Color blue;
@@ -144,8 +151,15 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     BoxShadow(color: color ?? shadow, offset: Offset(d, d), blurRadius: 0),
   ];
 
-  /// 墨色描边。
-  Border inkBorder({double w = Tok.bw}) => Border.all(color: ink, width: w);
+  /// 墨色描边（默认用于纸底 / 画布底）。
+  ///
+  /// **[on] 传「描边所在的那块底色」**：亮底（琥珀 / 品牌浅底 / 用户自选色）自动改用
+  /// 恒深的 [decorInk]，暗底用随主题反色的 [ink]。不传 = 纸底（等同于旧行为）。
+  ///
+  /// 为什么必须有这个参数：深色主题下 [ink] 是暖白，白描边压在琥珀上只有 ~1.3:1
+  /// —— 主按钮 / 选中 tab / 选中的分类格 / hero 的描边会**整条消失**（F7.17 对比度修复）。
+  Border inkBorder({double w = Tok.bw, Color? on}) =>
+      Border.all(color: on == null ? ink : inkOn(on), width: w);
 
   /// 任意底色上的前景色：**亮底用深墨、暗底用白**。
   ///
@@ -186,6 +200,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     red: Color(0xFFFF5D5D),
     redTint: Color(0xFFFFE5E5),
     redInk: Color(0xFFA8321F),
+    onRed: Color(0xFF4A0F0A),
     green: Color(0xFF2FC98A),
     greenTint: Color(0xFFD9F7E9),
     blue: Color(0xFF4DA8FF),
@@ -210,7 +225,10 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   static const ToonPalette dark = ToonPalette(
     ink: Color(0xFFF6F0E4),
     ink2: Color(0xFFBDB6C7),
-    ink3: Color(0xFF857F91),
+    // 三级灰：#857F91 在深色纸底上只有 3.96:1，而它承担了底栏标签(10~11px)、
+    // 输入框 hint、8px 月历辅助字 —— 提亮到 #A098AE 后 paper 5.52 / canvas2 6.09 /
+    // track 4.73，全部过 AA；仍明显暗于 ink2(#BDB6C7, 7.76)，层级不丢。
+    ink3: Color(0xFFA098AE),
     paper: Color(0xFF26242F),
     canvas: Color(0xFF17151D),
     canvas2: Color(0xFF1E1C25),
@@ -223,6 +241,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     red: Color(0xFFFF6B6B),
     redTint: Color(0xFF3B2024),
     redInk: Color(0xFFFF9F9F),
+    onRed: Color(0xFF2A1210),
     green: Color(0xFF3FD79A),
     greenTint: Color(0xFF143227),
     blue: Color(0xFF6BB6FF),
@@ -278,6 +297,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     Color? red,
     Color? redTint,
     Color? redInk,
+    Color? onRed,
     Color? green,
     Color? greenTint,
     Color? blue,
@@ -312,6 +332,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     red: red ?? this.red,
     redTint: redTint ?? this.redTint,
     redInk: redInk ?? this.redInk,
+    onRed: onRed ?? this.onRed,
     green: green ?? this.green,
     greenTint: greenTint ?? this.greenTint,
     blue: blue ?? this.blue,
@@ -351,6 +372,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
       red: Color.lerp(red, other.red, t)!,
       redTint: Color.lerp(redTint, other.redTint, t)!,
       redInk: Color.lerp(redInk, other.redInk, t)!,
+      onRed: Color.lerp(onRed, other.onRed, t)!,
       green: Color.lerp(green, other.green, t)!,
       greenTint: Color.lerp(greenTint, other.greenTint, t)!,
       blue: Color.lerp(blue, other.blue, t)!,

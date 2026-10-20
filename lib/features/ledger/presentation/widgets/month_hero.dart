@@ -47,7 +47,9 @@ class MonthHero extends StatelessWidget {
       decoration: BoxDecoration(
         color: p.brand,
         borderRadius: BorderRadius.circular(Tok.rXl),
-        border: Border.all(color: p.ink, width: 3),
+        // hero 恒为琥珀底：**描边必须走 decorInk（恒深）** —— 深色主题下 p.ink 是暖白，
+        // 压在琥珀上只有 ~1.3:1，描边会整条消失。
+        border: p.inkBorder(w: 3, on: p.brand),
         boxShadow: p.hard(d: 6),
       ),
       clipBehavior: Clip.hardEdge,
@@ -62,8 +64,10 @@ class MonthHero extends StatelessWidget {
               height: 210,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: p.paper.withValues(alpha: 0.32),
-                border: Border.all(color: p.ink.withValues(alpha: 0.16), width: 3),
+                // 同上：hero 上的「减淡层」只能是 veil（白），不能是 paper ——
+                // 深色主题下 paper 是近黑，叠上去会变成个「洞」。
+                color: p.veil.withValues(alpha: 0.32),
+                border: Border.all(color: p.decorInk.withValues(alpha: 0.16), width: 3),
               ),
             ),
           ),
@@ -183,21 +187,24 @@ class _RoundButton extends StatelessWidget {
         height: 32,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: enabled ? p.paper : p.paper.withValues(alpha: 0.45),
+          color: enabled ? p.paper : p.veil.withValues(alpha: 0.55),
           shape: BoxShape.circle,
           border: Border.all(
-            color: enabled ? p.ink : p.ink.withValues(alpha: 0.3),
+            color: enabled
+                ? p.inkOn(p.brand)
+                : p.inkOn(p.brand).withValues(alpha: 0.4),
             width: 2.5,
           ),
           boxShadow: p.hard(
             d: 2.5,
-            color: enabled ? p.ink : p.ink.withValues(alpha: 0.3),
+            color: enabled ? p.decorInk : p.decorInk.withValues(alpha: 0.4),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: enabled ? p.ink : p.ink.withValues(alpha: 0.35),
+            // 禁用态：钮底是浅琥珀（veil 叠出来的），字必须走 decorInk 才够 3:1
+            color: enabled ? p.ink : p.decorInk.withValues(alpha: 0.75),
             fontSize: 17,
             height: 1,
             fontWeight: FontWeight.w900,
@@ -221,9 +228,15 @@ class _HeroCell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
       decoration: BoxDecoration(
-        color: p.paper.withValues(alpha: 0.55),
+        // 气泡底 = veil 叠在琥珀上（两套主题下都是「浅琥珀」），配 heroInk 深棕字 ≈6:1。
+        // 原来是 paper@0.55：深色主题下 paper 近黑 → 气泡被压成 #88662B，
+        // 而 heroInk 恒为深棕 → **2.12:1**（浅色 6.00），这就是「深色下看不清」的主因。
+        color: p.veil.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: p.ink.withValues(alpha: 0.55), width: 2),
+        border: Border.all(
+          color: p.inkOn(p.brand).withValues(alpha: 0.55),
+          width: 2,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,

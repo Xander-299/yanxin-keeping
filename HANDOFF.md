@@ -54,6 +54,14 @@ android.overridePathCheck=true
    F7.17 起 `Tok` **只剩几何量**（描边宽 / 圆角）；颜色是 `ThemeExtension<ToonPalette>` 的
    **实例字段**，靠 `Theme.of` 建立依赖 —— 这样才能随浅/深主题切换重建。
    **别把颜色改回 `const`**：`const` widget 会被 Element 判 `identical` 跳过重建，切主题不刷新。
+7. **对比度三条硬规则（F7.17 起，护护栏 `test/core/theme/palette_contrast_test.dart`）**
+   - **hero（恒琥珀底）只能用 hero 家族色**：减淡层 `veil@α`、描边 `inkOn(brand)`、字 `heroInk`。
+     用 `paper@α` 当减淡层会在深色下把气泡压暗（实测 2.12:1）。
+   - **描边跟着底色走**：`p.inkBorder(on: <底色>)`，亮底自动取 `decorInk`。
+     直接在琥珀底上写 `p.ink` 描边 → 深色下 `ink` 是暖白，描边整条消失（1.26:1）。
+   - **前景必须配对的底**：`onBrand`→`brand`、`brandInk`→浅底、`onRed`→实心红、`redInk`→`redTint`。
+     放错底（如 `onBrand` 放纸底）浅色看不出来，深色下直接看不见。
+   门槛：正文小字 **4.5:1**、描边/图形 **3.0:1**。
 
 ## 最容易踩的坑（完整清单见 [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md)）
 

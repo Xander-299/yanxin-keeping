@@ -114,7 +114,7 @@ class _Head extends StatelessWidget {
             decoration: BoxDecoration(
               color: p.brand,
               borderRadius: BorderRadius.circular(22),
-              border: p.inkBorder(),
+              border: p.inkBorder(on: p.brand),
               boxShadow: p.hard(),
             ),
             child: const Center(child: PigMascot(size: 46)),

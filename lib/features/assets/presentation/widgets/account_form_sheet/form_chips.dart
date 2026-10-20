@@ -25,7 +25,7 @@ class _FollowTypeChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? p.brand : p.paper,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: p.ink, width: 2),
+          border: p.inkBorder(w: 2, on: selected ? p.brand : p.paper),
           boxShadow: p.hard(d: 2.5),
         ),
         child: Text(

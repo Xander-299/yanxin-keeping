@@ -94,7 +94,7 @@ class _CheckBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: on ? p.brand : p.paper,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: p.ink, width: 2.5),
+        border: p.inkBorder(w: 2.5, on: on ? p.brand : p.paper),
         boxShadow: p.hard(d: 1.5),
       ),
       child: on ? Icon(Icons.check, size: 14, color: p.onBrand) : null,

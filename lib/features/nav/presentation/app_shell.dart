@@ -181,7 +181,11 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    final Color fg = selected ? p.onBrand : p.ink3;
+    // 图标画在**琥珀块**上 → onBrand（两套主题都是深棕）；
+    // 但标签画在**纸底**上 —— 深色主题下纸底是近黑，用 onBrand 等于深棕压深黑（~1.1:1，看不见）。
+    // 标签改用 brandInk：浅色下与 onBrand 同值（视觉不变），深色下是亮琥珀。
+    final Color iconColor = selected ? p.onBrand : p.ink3;
+    final Color labelColor = selected ? p.brandInk : p.ink3;
     return ToonPress(
       dx: 0,
       dy: 0,
@@ -195,19 +199,25 @@ class _NavItem extends StatelessWidget {
                 ? BoxDecoration(
                     color: p.brand,
                     borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: p.ink, width: 2),
+                    // 琥珀底 → 描边跟着底色走（深色下 p.ink 是暖白，会整条消失）
+                    border: p.inkBorder(w: 2, on: p.brand),
                     boxShadow: p.hard(d: 2),
                   )
                 : BoxDecoration(
                     borderRadius: BorderRadius.circular(11),
                     border: Border.all(color: Colors.transparent, width: 2),
                   ),
-            child: Icon(icon, size: 22, color: fg),
+            child: Icon(icon, size: 22, color: iconColor),
           ),
           const SizedBox(height: 3),
           Text(
             label,
-            style: TextStyle(fontSize: 11, height: 1, fontWeight: FontWeight.w700, color: fg),
+            style: TextStyle(
+              fontSize: 11,
+              height: 1,
+              fontWeight: FontWeight.w700,
+              color: labelColor,
+            ),
           ),
         ],
       ),
@@ -238,7 +248,8 @@ class _CenterAddButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: p.brand,
                 borderRadius: BorderRadius.circular(17),
-                border: p.inkBorder(),
+                // 同上：brand 底 → 描边跟着底色走
+                border: p.inkBorder(on: p.brand),
                 boxShadow: p.hard(d: 4),
               ),
               child: Icon(Icons.add, size: 27, color: p.onBrand),

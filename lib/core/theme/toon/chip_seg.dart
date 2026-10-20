@@ -27,7 +27,7 @@ class ToonChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? p.brand : p.paper,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: p.ink, width: 2),
+          border: p.inkBorder(w: 2, on: selected ? p.brand : p.paper),
           boxShadow: p.hard(d: 2.5),
         ),
         child: Text(
@@ -87,8 +87,9 @@ class ToonSeg extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: i == index ? p.brand : Colors.transparent,
                     borderRadius: BorderRadius.circular(999),
+                    // 选中项铺琥珀 → 描边跟着底色走（深色下白描边会消失）
                     border: Border.all(
-                      color: i == index ? p.ink : Colors.transparent,
+                      color: i == index ? p.inkOn(p.brand) : Colors.transparent,
                       width: 2,
                     ),
                   ),

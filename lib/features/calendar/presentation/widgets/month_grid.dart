@@ -178,7 +178,8 @@ class MonthGrid extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: p.brand,
                             shape: BoxShape.circle,
-                            border: Border.all(color: p.ink, width: 2),
+                            // 同上：brand 底 → 描边跟着底色走
+                            border: p.inkBorder(w: 2, on: p.brand),
                           ),
                           child: _dayNumber(date, p, isToday: true),
                         )
