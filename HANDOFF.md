@@ -28,6 +28,17 @@ fx-qa                        # = flutter analyze && flutter test（去代理）
 改了 `lib/core/db/tables.dart` 必须重跑 `dart run build_runner build --delete-conflicting-outputs`
 并提交 `database.g.dart` —— CI 有一条硬检查会因此失败。
 
+**出 APK（2026-10-21 起可直接用 flutter 命令）**：本仓库在**中文路径**下，AGP 会直接拒绝构建
+（`Your project path contains non-ASCII characters`）。前置一步，写在**不入库**的
+`$GRADLE_USER_HOME/gradle.properties`（本仓库 `GRADLE_USER_HOME=.gradle-home`）：
+
+```
+android.overridePathCheck=true
+```
+
+然后 `flutter build apk --debug` 即可（本机实测约 8 分钟首构、增量 1.5 分钟）。
+装机后**必跑** `python tool/verify_apk_kernel.py <本次新增字符串>` 核验包是新码。
+
 ## 必须守住的不变量
 
 这几条每条都有回归测试兜着，改动前先看测试为什么这么写：
@@ -48,6 +59,11 @@ fx-qa                        # = flutter analyze && flutter test（去代理）
 
 - `flutter test` 必须**去代理**（`http_proxy` 会劫持 flutter_tester 的本地 WebSocket）；
   `flutter build` 相反要走镜像。
+- **`flutter build` 会隐式跑 `pub get`，把 `pubspec.lock` 里的 transitive 版本升上去**
+  （实测一次 `flutter build apk` 就把 `pubspec.lock` 改了 157 行、4 个包升版本，还顺手把
+  registry 从 `pub.flutter-io.cn` 改成 `pub.dev`）。提交前**必看 `git diff pubspec.lock`**；
+  变了就 `git checkout -- pubspec.lock` → `flutter pub get`（带 `PUB_HOSTED_URL` 镜像）→
+  确认 diff 为空，再用 `flutter build apk --no-pub` 重出包。依赖是**锁死**的，别顺手提交。
 - widget 测试里写库是真实异步，`pumpAndSettle` 会早退 → 用轮询等待；
   800×600 视口很矮，断言长页面靠下的元素前先滚动。
 - 改了 UI 入口后，**全仓无上限地** grep 旧断言（`保存` / `ensureVisible` /

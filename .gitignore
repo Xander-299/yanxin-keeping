@@ -62,6 +62,9 @@ key.properties
 # Gradle 缓存（放在工作区内，避免写用户目录下的 .gradle）
 /.gradle-home/
 
+# 真机走查截图（本地留证，不入库；报告见 docs/acceptance-*.md）
+/shots/
+
 # 构建产物（android/ 根级 build 目录）
 /android/build/
 
