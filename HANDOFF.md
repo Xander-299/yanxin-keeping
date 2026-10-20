@@ -41,7 +41,7 @@ fx-qa                        # = flutter analyze && flutter test（去代理）
    在 `StatefulShellRoute` 壳下**不兑现** → 保存后刷新由被推页面自己在 pop 前做。
 6. **色值一律走 `Tok.*` 令牌**，产品代码里不出现裸 `Color(0x…)`。
 
-## 最容易踩的坑（完整清单见 `docs/handoff/reference.md`）
+## 最容易踩的坑（完整清单见 [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md)）
 
 - `flutter test` 必须**去代理**（`http_proxy` 会劫持 flutter_tester 的本地 WebSocket）；
   `flutter build` 相反要走镜像。
@@ -79,8 +79,12 @@ lib/
 
 | 文档 | 内容 |
 |---|---|
-| [`docs/handoff/reference.md`](docs/handoff/reference.md) | 环境事实 / 架构决策 / 已完成与已放弃的方案 / 未解决问题 / 盲区防护清单 / 接手指南 |
-| [`docs/handoff/session-log.md`](docs/handoff/session-log.md) | 逐轮会话记录（根因、取证、验证过程）——**历史，不是现状** |
+| [`docs/handoff/reference.md`](docs/handoff/reference.md) | **开工前读**：环境事实 / 架构决策 / 关键资料 / 接手指南 |
+| [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md) | 盲区防护清单：踩过的坑与判据 |
+| [`docs/handoff/open-issues.md`](docs/handoff/open-issues.md) | 未解决问题、待确认事项 |
+| [`docs/handoff/history.md`](docs/handoff/history.md) | 已完成的工作、已尝试但放弃的方案（**别重复做**） |
+| [`docs/handoff/status-log.md`](docs/handoff/status-log.md) | 逐版本状态流水 + 极简版摘要（历史，不是现状） |
+| [`docs/handoff/session-log.md`](docs/handoff/session-log.md) | 逐轮会话记录（根因、取证、验证过程） |
 | [`CHANGELOG.md`](CHANGELOG.md) | 版本变更 + tag 表 |
 | [`docs/RESUME.md`](docs/RESUME.md) | 简历用项目介绍（规模 / 难点 / 迭代记录） |
 | [`docs/spec/`](docs/spec/) | 各阶段签字的 SPEC |
