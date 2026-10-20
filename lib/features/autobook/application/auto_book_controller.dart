@@ -11,10 +11,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import 'package:yanxin/core/providers/book_providers.dart';
-import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/core/utils/money.dart';
+import 'package:yanxin/data/providers/book_providers.dart';
+import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/features/autobook/application/auto_book_accounts.dart';
 import 'package:yanxin/features/autobook/application/auto_book_notice.dart';
 import 'package:yanxin/features/autobook/data/auto_book_batches.dart';

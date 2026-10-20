@@ -5,13 +5,13 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/repositories/account_repository.dart';
-import '../../data/repositories/app_meta_repository.dart';
-import '../../data/repositories/book_repository.dart';
-import '../../data/repositories/budget_repository.dart';
-import '../../data/repositories/category_repository.dart';
-import '../../data/repositories/transaction_repository.dart';
-import '../db/database.dart';
+import '../../core/db/database.dart';
+import '../repositories/account_repository.dart';
+import '../repositories/app_meta_repository.dart';
+import '../repositories/book_repository.dart';
+import '../repositories/budget_repository.dart';
+import '../repositories/category_repository.dart';
+import '../repositories/transaction_repository.dart';
 
 /// 应用数据库（进程内单例，App 退出时关闭）。
 final appDatabaseProvider = Provider<AppDatabase>((ref) {

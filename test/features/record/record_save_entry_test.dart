@@ -17,9 +17,8 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 
 import '../../helpers/test_database.dart';

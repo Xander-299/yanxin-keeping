@@ -6,11 +6,10 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:yanxin/core/db/database.dart';
-import 'package:yanxin/core/providers/book_providers.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/data/providers/book_providers.dart';
 
 /// 账本抽屉。
 class BookDrawer extends ConsumerWidget {

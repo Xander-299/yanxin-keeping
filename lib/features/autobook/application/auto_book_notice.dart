@@ -9,7 +9,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/providers/data_epoch.dart';
-import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';

@@ -10,7 +10,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/database.dart';
+import '../../../data/providers/database.dart';
 import 'ledger_controller.dart';
 
 /// 当前首页月份（账本 + 年月）的预算金额（分）；未设置为 null。

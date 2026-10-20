@@ -3,7 +3,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../db/database.dart';
+import '../../core/db/database.dart';
 import 'book_providers.dart';
 import 'database.dart';
 

@@ -13,7 +13,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/providers/database.dart';
+import '../../../data/providers/database.dart';
 
 /// 历史上限（SPEC §D.1.3：最近 10 条）。
 const int kSearchHistoryMax = 10;

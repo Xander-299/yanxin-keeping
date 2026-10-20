@@ -14,7 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
-import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';

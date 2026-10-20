@@ -5,12 +5,12 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:yanxin/core/db/database.dart';
-import 'package:yanxin/core/providers/book_providers.dart';
-import 'package:yanxin/core/providers/database.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/data/providers/book_providers.dart';
+import 'package:yanxin/data/providers/database.dart';
+
 import '../../shared/name_dialog.dart';
 
 /// 账本管理页。返回 true 表示切换过账本（首页需要刷新）。

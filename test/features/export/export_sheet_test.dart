@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/features/export/presentation/export_sheet.dart';
 
 import '../../helpers/pump_app.dart';

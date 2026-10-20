@@ -9,13 +9,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'package:yanxin/core/db/database.dart';
-import 'package:yanxin/core/providers/book_providers.dart';
-import 'package:yanxin/core/providers/category_providers.dart';
 import 'package:yanxin/core/providers/data_epoch.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/data/providers/book_providers.dart';
+import 'package:yanxin/data/providers/category_providers.dart';
 import 'package:yanxin/features/autobook/presentation/widgets/auto_book_banner.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';

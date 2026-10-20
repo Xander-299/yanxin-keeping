@@ -13,7 +13,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:yanxin/core/providers/database.dart';
+import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
 
 /// KV 键名（与 `active_book_id` / `search_history` / `onboarding_done` 同表）。

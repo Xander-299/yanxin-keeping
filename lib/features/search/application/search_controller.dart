@@ -8,9 +8,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/database.dart';
-import '../../../core/providers/book_providers.dart';
 import '../../../core/providers/data_epoch.dart';
-import '../../../core/providers/database.dart';
+import '../../../data/providers/book_providers.dart';
+import '../../../data/providers/database.dart';
 
 /// 搜索页数据快照。
 class SearchState {

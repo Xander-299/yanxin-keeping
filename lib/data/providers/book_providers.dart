@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../db/database.dart';
+import '../../core/db/database.dart';
 import 'database.dart';
 
 /// 当前账本 id。首次启动没有值时建默认账本并落库。
