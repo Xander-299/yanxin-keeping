@@ -82,44 +82,25 @@
   .facts{display:flex; flex-wrap:wrap; gap:8px; font-size:12.5px; color:var(--ink2); font-weight:700}
   .facts span{background:var(--canvas2); border:2px solid var(--line); border-radius:999px; padding:3px 11px}
 
-  /* ── 手机示意（按 Tok 绘制，不是截图）── */
+  /* ── 实机截图（真机截图，非示意图）── */
   .phone-wrap{display:flex; flex-direction:column; align-items:center; gap:10px}
   .phone{
-    width:250px; background:var(--canvas2); border:3px solid var(--ink); border-radius:30px;
-    box-shadow:0 9px 0 var(--ink); padding:13px 11px; display:flex; flex-direction:column; gap:9px;
+    width:206px; background:var(--ink); border:3px solid var(--ink); border-radius:26px;
+    box-shadow:0 8px 0 var(--ink); padding:5px; overflow:hidden;
   }
-  .p-top{display:flex; align-items:center; font-size:12.5px; font-weight:800}
-  .p-top .dots{margin-left:auto; display:flex; gap:6px}
-  .p-top .dots i{width:15px;height:15px;border:2px solid var(--ink);border-radius:5px;display:block;background:var(--paper)}
-  .p-hero{
-    background:linear-gradient(135deg,#FFDB98,#FFC152); border:var(--bw) solid var(--ink);
-    border-radius:15px; padding:11px 12px; box-shadow:0 3px 0 var(--ink);
-  }
-  .p-hero .k{font-size:10.5px; font-weight:800; color:var(--brand-ink); opacity:.8}
-  .p-hero .v{font-size:29px; font-weight:900; color:var(--heroInk,#3F2B06); line-height:1.15; letter-spacing:-1px}
-  .p-hero .sub{display:flex; gap:14px; font-size:10.5px; font-weight:700; color:var(--brand-ink); margin-top:2px}
-  .p-budget{
-    background:var(--paper); border:var(--bw) solid var(--ink); border-radius:15px;
-    padding:9px 11px; display:flex; align-items:center; gap:10px; box-shadow:0 3px 0 var(--ink);
-  }
-  .ring{
-    width:44px;height:44px;border-radius:50%; flex:none;
-    background:conic-gradient(var(--green) 0 10.2%, #EFE9DC 10.2% 100%);
-    display:grid;place-items:center; border:2px solid var(--ink);
-  }
-  .ring b{width:30px;height:30px;border-radius:50%;background:var(--paper);display:grid;place-items:center;font-size:9.5px}
-  .p-budget .t{font-size:11px; font-weight:800; line-height:1.35}
-  .p-budget .t em{display:block; font-style:normal; color:var(--ink3); font-weight:700; font-size:9.5px}
-  .p-budget .n{margin-left:auto; text-align:right; font-size:12.5px; font-weight:900}
-  .p-budget .n em{display:block;font-style:normal;color:var(--ink3);font-size:9px;font-weight:700}
-  .p-row{display:flex; align-items:center; gap:8px; font-size:11.5px; font-weight:700; padding:6px 4px; border-bottom:2px dashed rgba(42,42,53,.16)}
-  .p-row:last-of-type{border-bottom:none}
-  .p-row .ico{width:22px;height:22px;border-radius:7px;border:2px solid var(--ink);display:grid;place-items:center;font-size:10px;background:var(--brand-tint)}
-  .p-row .n{margin-left:auto; font-weight:900}
-  .p-row .n.out{color:var(--red)}
-  .p-nav{display:flex; align-items:center; justify-content:space-around; margin-top:2px; padding-top:7px; border-top:var(--bw) solid var(--ink); font-size:9px; font-weight:800; color:var(--ink3)}
-  .p-nav .add{width:30px;height:26px;border-radius:9px;background:var(--brand);border:2px solid var(--ink);display:grid;place-items:center;font-size:15px;color:var(--brand-ink);transform:rotate(-4deg)}
+  .phone img{display:block; width:100%; height:auto; border-radius:21px}
   .phone-cap{font-size:11.5px; color:var(--ink3); font-weight:700}
+
+  /* ── 截图画廊 ── */
+  .shots{display:grid; grid-template-columns:repeat(3,1fr); gap:20px}
+  @media (max-width:760px){ .shots{grid-template-columns:1fr} }
+  .shots figure{margin:0; display:flex; flex-direction:column; align-items:center; gap:10px}
+  .shots img{
+    width:100%; max-width:250px; height:auto; display:block; border:var(--bw) solid var(--ink);
+    border-radius:20px; box-shadow:var(--shadow);
+  }
+  .shots figcaption{font-size:12.5px; color:var(--ink2); font-weight:700; text-align:center; line-height:1.5}
+  .shots figcaption b{color:var(--ink)}
 
   /* ── 通用区块 ── */
   section{padding:52px 0}
@@ -172,6 +153,7 @@
     <div class="logo"><span class="mark">¥</span> 颜芯记账</div>
     <nav>
       <a href="#features">功能</a>
+      <a href="#shots">截图</a>
       <a href="#tech">技术</a>
       <a href="#scale">规模</a>
       <a href="#start">开始</a>
@@ -203,23 +185,10 @@
 
       <div class="phone-wrap">
         <div class="phone">
-          <div class="p-top">日常生活 <span class="dots"><i></i><i></i><i></i></span></div>
-          <div class="p-hero">
-            <div class="k">9 月 · 支出</div>
-            <div class="v">101.52</div>
-            <div class="sub"><span>收入 0.00</span><span>结余 -101.52</span></div>
-          </div>
-          <div class="p-budget">
-            <div class="ring"><b>10.2%</b></div>
-            <div class="t">本月预算<em>已消费 101.52</em></div>
-            <div class="n">898.48<em>剩余额度</em></div>
-          </div>
-          <div class="p-row"><span class="ico">🍜</span> 餐饮 <span class="n out">-12.00</span></div>
-          <div class="p-row"><span class="ico">🚌</span> 交通 <span class="n out">-4.50</span></div>
-          <div class="p-row"><span class="ico">💰</span> 工资 <span class="n">+8,000.00</span></div>
-          <div class="p-nav"><span>首页</span><span>日历</span><span class="add">+</span><span>资产</span><span>我的</span></div>
+          <!-- 真机截图（Redmi K50），已缩到 540 宽 -->
+          <img src="shots/home.jpg" width="540" height="1200" alt="颜芯记账首页：9 月支出 2040.80，本月预算与账单分组" loading="eager">
         </div>
-        <div class="phone-cap">界面示意 · 按 <code class="inl">Tok</code> 设计令牌绘制（非截图）</div>
+        <div class="phone-cap">Redmi K50 实机截图</div>
       </div>
     </div>
   </div>
@@ -272,6 +241,30 @@
           <h3>自动记账</h3>
           <p>监听支付通知自动入账，三层采集兜底，可一键撤销，附活性诊断页。</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 截图 ── -->
+  <section id="shots">
+    <div class="wrap">
+      <div class="sec-head">
+        <h2>实际界面</h2>
+        <p>Redmi K50 实机截图，卡通浅色主题；粗描边与硬阴影都是代码画的，不引任何图片资源。</p>
+      </div>
+      <div class="shots">
+        <figure>
+          <img src="shots/home.jpg" width="540" height="1200" alt="首页：月度支出 hero、本月预算、按天分组的本月账单" loading="lazy">
+          <figcaption><b>首页</b><br>月度支出 hero · 预算卡 · 按天分组流水</figcaption>
+        </figure>
+        <figure>
+          <img src="shots/calendar.jpg" width="540" height="1200" alt="日历：月历每日标注收支、月结余与日均、选中日账单" loading="lazy">
+          <figcaption><b>日历</b><br>每日收支标注 · 长按记那一天 · 选中日账单</figcaption>
+        </figure>
+        <figure>
+          <img src="shots/stats.jpg" width="540" height="1200" alt="统计：分类占比圆环与近 6 个月趋势柱" loading="lazy">
+          <figcaption><b>统计</b><br>分类占比圆环 · 近 6 月趋势（全部自绘）</figcaption>
+        </figure>
       </div>
     </div>
   </section>

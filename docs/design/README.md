@@ -14,5 +14,5 @@
 [`lib/core/theme/toon/`](../../lib/core/theme/toon/)（通用件）。
 产品代码里不出现裸 `Color(0x…)`。
 
-**想补真实截图**：装 debug 包后在目标页截图，命名 `<页面>-<日期>.png` 放进本目录，
-并在 README 的「项目预览」一节引用；网页版（`docs/index.html`）也预留了同一位置。
+**真实截图**已经放在 [`docs/shots/`](../shots/)（首页 / 日历 / 统计，540 宽 JPEG）。
+补新截图时同样命名 `<页面>.jpg` 放进去，README 与 `docs/index.html` 都已接好。

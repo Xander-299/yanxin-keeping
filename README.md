@@ -32,6 +32,29 @@
 
 ---
 
+## 📱 项目预览
+
+实机截图（Redmi K50 · 卡通浅色主题）。粗描边与硬阴影都是代码画的，不引任何图片资源。
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/shots/home.jpg" width="250" alt="首页：月度支出 hero、本月预算、按天分组流水"><br>
+      <sub><b>首页</b><br>月度支出 hero · 预算卡 · 按天分组流水</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/shots/calendar.jpg" width="250" alt="日历：每日收支标注、月结余与日均、选中日账单"><br>
+      <sub><b>日历</b><br>每日收支标注 · 长按记那一天 · 选中日账单</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/shots/stats.jpg" width="250" alt="统计：分类占比圆环与近 6 个月趋势柱"><br>
+      <sub><b>统计</b><br>分类占比圆环 · 近 6 月趋势（全部自绘）</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## 📲 快速体验
 
 不用装开发环境，直接装 APK：
