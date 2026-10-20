@@ -16,7 +16,14 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.1.0+1
+# ⚠️ 版本号三来源（务必分清，见 README「版本号」一节）：
+#   - 本文件 `version:` = **新克隆仓库的默认值** → versionCode = 2001
+#   - `android/local.properties` 的 `flutter.versionCode` = **实际装机用的值**（不入版本控制，
+#     且**会被 flutter 工具改写** —— 跑一次 `flutter build` 就按本文件重写）
+#   - git tag / 「我的页」角标 = 人看的版本号（`tag = v0.7.<N>` ↔ `F7.<N>`）
+# versionCode 固定 2001（不随小版本递增）：走查机已装 2001 的正式签名包，
+# 改小会撞 `INSTALL_FAILED_VERSION_DOWNGRADE`。
+version: 0.7.16+2001
 
 environment:
   sdk: ^3.13.2

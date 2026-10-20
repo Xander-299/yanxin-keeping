@@ -1,337 +1,272 @@
 # 颜芯记账（Flutter 版）
 
-本地优先的个人记账 App。Flutter 3.47.2 / Dart 3.13.2，当前目标平台 **Android**。
+本地优先的个人记账 App。Flutter 3.47.2 / Dart 3.13.2，目标平台 **Android**。
 
-> 这是 uni-app 版的**重写**。旧仓库 `Tea-Codeman/yanxin-bookkeeping`（uni-app Vue3 + Vite）已归档为只读，不再开发。
->
-> 📅 **本文状态核对于 2026-10-17**（基线 `4480fc0`）—— 版本号取自本机 Flutter SDK 的
->   
-> `bin/cache/flutter.version.json`，阶段状态逐条比对 `CHANGELOG.md` tag 表与 `tasks/todo-flutter.md`。
->   
-> 若久未更新，**以 CHANGELOG 为准**。
+**数据全部留在手机本地** —— 无账号、无服务器、无网络请求、无广告、无埋点。
 
-## 项目简介
+---
 
-**一句话**：本地优先的个人记账 App（Flutter / Android），从 uni-app 版**完整重写**；
-  
-技术难点集中在**自研账单解析**（GBK / xlsx 精度）与**Android 通知监听自动记账**
-  
-（在国产 ROM 事件投递不可靠的限制下，用三层采集把「支付通知只活 26 秒」的丢账率压到可接受）。
+## 📲 快速体验（不用装任何开发环境）
 
-### 项目规模（2026-10-20 实测）
+直接下载 **release APK** 装到手机即可：
 
-| 维度   | 数据                                                    |
-| ---- | ----------------------------------------------------- |
-| 代码量  | Dart **98 文件 / 25,361 行** · Kotlin **8 文件 / 1,507 行** |
-| 测试   | **52 个测试文件** · 485 个用例（静态计数，另有 18 处数据驱动循环展开）          |
-| 迭代   | **140 次提交** · **16 个版本 tag**（`v0.7.1`–`v0.7.16`）      |
-| 周期   | 2026-09-09 → 2026-10-20（约 6 周，单人 + AI 结对）             |
-| 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查）    |
+| 版本 | 适用设备 | 大小 | 下载 |
+|---|---|---|---|
+| **通用包**（推荐） | 绝大多数手机（arm64 / armv7 / x86_64 全含） | 64 MB | [下载](https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/download/v0.7.16/yanxin-v0.7.16-universal-release.apk) |
+| **arm64 单独包** | 只想给现代 arm64 机（体积小 2/3） | 22 MB | [下载](https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/download/v0.7.16/yanxin-v0.7.16-arm64-release.apk) |
 
-### 技术栈
+- Release 页：<https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/tag/v0.7.16>
+- 版本 **0.7.16**（versionCode 2001）· 最低 **Android 7.0** · 正式签名（`CN=yanxin`）
+- 安装说明与自动记账配置见 👉 **[部署与体验教程](#-部署与体验教程)**
 
-Flutter 3.47.2 / Dart 3.13.2 · Riverpod 3 · go_router 18 · drift 2.31.0 + sqlite3 2.9.4 ·
-  
-`crypto`（SHA-1 入账指纹）· `file_picker`（Android SAF）· `archive` + `gbk_codec` ·
-  
-Android `NotificationListenerService` + `MethodChannel`（Kotlin 原生，**零新增 pub 依赖**）。
+---
 
-### 技术难点与解决方案
+## 🧭 功能地图
 
-| # | 难点                                                                                                                  | 方案                                                                                                                                                                                                                               | 实测证据                                                                        |
-| - | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| 1 | **国产 ROM 不投递通知回调**：实测 `onNotificationPosted` 在 Redmi K50 上**一条都不投递**（进程健康 / 绑定在 / 补抓通道全通），且 `disallow→allow` 重绑也救不了 | 改为**主动拉取为主**：`AlarmManager` 60s 周期 + **每次醒来续期**（刻意不用 `setRepeating` —— doze 里被静默丢弃后会**永久停摆**）                                                                                                                                    | 守护层**每 ~53 秒准点触发**（12 轮）；`tickCatchUpTotal` 落盘可观测                           |
-| 2 | **支付通知只活 26 秒**：用户点进「支付成功」页，微信即 `cancel()` 通知，此后 `getActiveNotifications()` 也捞不到                                    | 补 **`onNotificationRemoved` 第三层** —— AOSP 保证撤回时只丢 `contentView`/`largeIcon`，解析金额依赖的 `extras` 全部保留；三层共用 `AutoBookSeen` 持久指纹去重                                                                                                     | `20:05:31` 那笔由 **`removed → CAPTURED` 独立救回**（发生在通知已被撤回、补抓已捞不到之后），DB 163→164 |
-| 3 | **MIUI `[N条]` 折叠前缀被误判成组摘要**：`[3条]微信支付: 已支付¥0.03` 被静默丢弃，微信支付一笔都记不上                                                   | 用 `dumpsys notification --noredact` 取证（`Group summaries:` 段**无** `com.tencent.mm`、`flags=0x11` 不含 `FLAG_GROUP_SUMMARY`、`groupKey` 等于自身 key）→ 判定为**显示层前缀**，改为「**剥前缀再解析**」；`combined`/`externalId` 均用归一化文本，避免折条数 `[2条]→[3条]` 被当成两笔 | 真机原文注入队列 → 成功入账（`cents=3 / occurred_at=23:31:35`）                           |
-| 4 | **xlsx 数值过 `double` 丢 31 位单号精度**                                                                                    | 解析器**全程按字符串走**，手写正则；明确不用 `excel` 包                                                                                                                                                                                               | `real_bills_test` 用真实账单回归                                                   |
-| 5 | **GBK 编码账单解析**（无成熟纯 Dart 方案）                                                                                        | 自研**逐字符状态机** + `gbk_codec` 纯 Dart 映射表 + **回环校验**判坏件                                                                                                                                                                              | `decodeBillBytes([0xd6,0xd0,0xce,0xc4])` → `encoding=gbk`、`text=中文`         |
-| 6 | **主机级 Dart 工具链故障**：Windows 命名管道只读打开被拒（`CreateFile failed 231`），`flutter analyze/test/build` 全废，极易误判成「代码坏了」          | 用 **Python 托管同一个 `analysis_server` snapshot** + Dart 原生协议（行分隔 JSON、无 `jsonrpc` 字段、id 为 String）**完整复刻 `flutter analyze` 含 lint**，全项目 19s；另做 test / kernel / APK 核验兜底                                                              | 上线前跑**校准探针**（塞必然报 lint 的文件）排除「0 issue 只是 lint 没生效」的假绿                       |
-| 7 | **装机签名冲突但不能卸载**：`assembleDebug` 用 debug keystore，设备上是正式签名包 → `INSTALL_FAILED_UPDATE_INCOMPATIBLE`；卸载会丢走查机 160+ 笔账本  | `zipalign -f 4` + `apksigner sign` **用正式 keystore 重签**，装前 `verify --print-certs` 比对指纹须与设备已装包**完全一致**                                                                                                                             | 覆盖安装后 **DB 196,608 B / `integrity_check ok` / 数据零丢失**                       |
-| 8 | **依赖版本被编译链锁死**                                                                                                      | sqlite3 3.x 起带 native-assets（需本机 MSVC，无 VS 会失败）→ 锁 `drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4`；`build_runner` 2.16+ 要求 analyzer ≥13 与 `drift_dev 2.31` 冲突 → 锁 `2.15.1`                                                  | 决策依据写入 README 技术选型，避免后人误升                                                   |
+### 核心记账
 
-### 版本迭代记录
+| 模块 | 路由 | 做什么 |
+|---|---|---|
+| **首页流水** | `/` | 按天分组的流水列表、月份切换（‹ ›）、月度收支 hero、预算卡；**左滑露出红色「删除」** |
+| **记一笔** | `/record` | 自绘金额键盘 + 分类宫格 + 备注 + **日期选择** + **账户选择**；底部主按钮吸底常驻（随键盘上移） |
+| **搜索** | 浮层（**不是路由**） | 覆盖首页的毛玻璃浮层；命中 **分类名 / 账户名 / 备注 / 金额「元.分」文本**；支持「仅支出/仅收入/转账」类型指令 + 时间区间（全部/本月/近3月）+ 命中高亮 + 搜索历史 |
+| **日历** | `/calendar` | 月历标注（支出红 / 收入绿）、日汇总、选中日账单；**长按格子 → 记这一天的账**、**左右滑翻月** |
+| **统计** | `/stats` | 分类占比圆环（自绘 `CustomPainter`，不引图表库）、近 6 月趋势双柱、当月汇总 |
+| **报表** | `/reports` | 三档切换：明细清单 / 分类汇总 / 账户汇总；每组最多 200 行 |
+| **预算** | 首页卡 | 月度预算设定、环形进度、日均支出、**剩余每日可消费**；超支预警 |
+| **资产** | `/assets` | 净资产卡 + 账户列表（类型图标 / 名称 / 余额）；账户增改删（**有流水的账户禁删**） |
 
-| tag       | 日期        | 交付内容                                                                             |
-| --------- | --------- | -------------------------------------------------------------------------------- |
-| `v0.7.1`  | 09-11     | 日历页（月历标注 + 日账单 + 月份选择子页）                                                         |
-| `v0.7.2`  | 09-12     | 统计 · 报表页（分类占比圆环 + 近 6 月趋势）                                                       |
-| `v0.7.3`  | 09-12     | 月度预算实装（schema v2）+ 移除示例数据                                                        |
-| `v0.7.4`  | 09-12     | 流水搜索（分类 / 备注 / 金额 + 一键清空）                                                        |
-| `v0.7.5`  | 09-17     | 搜索浮层化（覆盖首页，非路由）+ 资产页（净资产 + 账户 CRUD）                                              |
-| `v0.7.6`  | 09-23     | 卡通浅色视觉改版（P1 底座/首页/记一笔 · P2 日历/统计/资产 · P3 我的/账本/分类/导入/弹层/搜索）                      |
-| `v0.7.7`  | 09-23     | F7.7 A 批：报表明细清单 `/reports` + 记一笔选账户 + 首次使用验收 F1 阻断修复                             |
-| `v0.7.8`  | 09-23     | F7.7 B 批：数据导出（流水 CSV + 备份 JSON，SAF 免权限）                                          |
-| `v0.7.9`  | 09-24     | F7.7 C 批：账户图标 / 颜色选择（schema v3）                                                  |
-| `v0.7.10` | 09-25     | F7.7 D 批：搜索增强（高亮 / 账户名 / 历史 / 时间区间）+ E 批：日历增强（长按记账 / 左右滑翻月）                      |
-| `v0.7.11` | 09-25     | F7.8：流水左滑删除（首页 / 日历日账单 / 搜索结果 3 处）                                               |
-| `v0.7.12` | 09-25     | F7.9：记一笔保存入口吸底常驻 + 启动图标 adaptive icon + `signingConfigs` 构建阻塞修复                  |
-| `v0.7.13` | 09-25     | 统计页图表两处绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱）                                      |
-| `v0.7.14` | 09-25     | F7.14：新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹）                                             |
-| `v0.7.15` | 10-08     | **F7.15 自动记账**（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写）         |
-| `v0.7.16` | 10-20     | F7.16 三段修复：**A 补抓**（服务未连接期间的通知不再永久丢失）· **B `[N条]` 折叠前缀误杀**（微信支付一笔都记不上）· **C 撤回通道 + 补抓守护层**（通知只活 26 秒的兜底） |
+### 数据进出
 
-### 工程实践（可展开讲的点）
+| 模块 | 做什么 |
+|---|---|
+| **账单导入** | 微信（旧版 CSV / 2025+ xlsx）、支付宝（旧版 CSV / 新版 GBK 回单）；**解析五层** + 指纹幂等入账 + 试算报告 |
+| **数据导出** | 流水 CSV + 完整备份 JSON；走 **SAF 系统文件选择器**（免存储权限） |
+| **账本 / 分类 / 账户** | 多账本切换与管理、分类增删改、账户图标与颜色 |
 
-- **测试驱动 + 真机取证**：测试先抓边界 bug（如 `postedChannelUnavailable` 漏 `lastConnectedAtMs <= 0` 守卫，会让「从未绑定过」被误判成「推送不可用」）；每个结论都要求**真机证据**而非推演。
-- **诊断先行**：自动记账全链路埋 `AutoBookDiagnostics` 落盘计数 + `/autobook` 页「采集通道」一行，把「哪一层丢了」变成可读数字，而不是让用户只看到「没记上」。
-- **不隐瞒边界**：ROM 限制导致的后台失效，产品侧**明确告知**「支付后请打开本 App 一次」，不假装后台在记。
-- **踩坑沉淀**：所有「差点误判成环境坏了」的坑（`adb install -r` 会清闹钟、`posted pkg= 为 0` 不代表回调没来、`run-as cat` 会截断二进制）均写入 `.workbuddy/memory/`，供后续会话直接复用。
+### 自动记账（可选）
 
-## 为什么要重写
+| 模块 | 做什么 |
+|---|---|
+| **通知监听自动入账** | 监听**微信 / 支付宝**的支付通知 → 自动解析金额方向 → 静默入账 → 发「已自动记账 N 笔」回执通知（可**一键撤销**）；三层采集 + 活性诊断页 |
+| **分享记账** | 零权限兜底：在微信/支付宝里「分享」账单文本到本 App → 同样自动入账 |
 
-| 旧栈痛点                                          | Flutter 后                                                       |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| `plus.android` 桥接地狱（运行时 Java 实例须 `invoke` 直调） | `file_picker` 插件一行拿字节                                           |
-| `plus.sqlite` **无参数绑定**，所有值手工转义（旧 ADR-5）      | drift 编译期生成参数绑定                                                 |
-| HBuilderX 手工打包，无 CI                           | `flutter build apk` + CI 自动化                                    |
-| x86_64 模拟器必然白屏，只能真机                           | 官方模拟器可用（含 MuMu 等第三方模拟器）                                         |
-| 自研 `xlsx.js`（fflate + 手写解码）                   | `archive` 解压 + 手写正则解析器（**不用 `excel` 包**：数值过 double 会丢 31 位单号精度） |
+### 其它
 
-## 技术选型
+- **新手引导**：首次安装弹 7 页全屏导览（可从「我的 → 新手引导」重看）
+- **主题**：全站**卡通浅色**一套设计令牌（`Tok.*`），产品代码零裸色值
 
-| 关注点       | 选型                                                                                    |
-| --------- | ------------------------------------------------------------------------------------- |
-| 数据库       | **drift 2.31.0** + `drift_flutter 0.2.8` + `sqlite3 2.9.4`（编译期参数绑定，类型安全）              |
-| 状态管理      | Riverpod 3                                                                            |
-| 路由        | go_router 18（`StatefulShellRoute.indexedStack` 壳 + 底栏 4 tab）                          |
-| 金额        | `int` 分（ADR-2）                                                                        |
-| 主键        | UUID v4，客户端发号（ADR-1）                                                                  |
-| 入账指纹      | `crypto 3.0.7` SHA-1（纯 Dart，无 native 钩子）                                              |
-| 文件选择      | `file_picker 12`（Android SAF，免存储权限）                                                   |
-| xlsx 读取   | `archive`（ZIP 解压）+ `bill_xlsx.dart` 手写正则解析器                                           |
-| CSV / GBK | 自研逐字符状态机 + `gbk_codec`（纯 Dart 映射表，回环校验判坏件）                                            |
-| 自动记账      | **零新 pub 依赖** —— Android `NotificationListenerService` + `MethodChannel`（仅 Kotlin 原生） |
+---
 
-> ⚠️ **drift/sqlite3 版本锁死的理由**：sqlite3 3.x 起带 C 构建钩子（native-assets），Windows 上 `flutter test` 需要本机 MSVC 编译器，本机无 VS 会失败。因此锁 `drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4 / build_runner 2.15.1`（build_runner 2.16+ 要求 analyzer >=13，与 drift_dev 2.31 冲突）。装了 VS Build Tools 后可整体升级。
+## 🔔 自动记账是怎么工作的
 
-## 目录结构
+```
+系统绑定 NotificationListenerService
+  → Kotlin 只做「包名过滤 + 取文案 + 落盘 JSONL」（不解析、不碰库）
+  → Dart drain() → 纯函数解析（金额 / 方向 / 商户）→ importRows()（drift 唯一 DB writer）
+  → 记批次 → 首页提示条 + 「已自动记账 N 笔」回执通知（可一键撤销）
+```
+
+**三层采集**（因为支付通知在国产 ROM 上极不可靠）：
+
+| 层 | 通道 | 触发 | 实测（Redmi K50） |
+|---|---|---|---|
+| 1 | `onNotificationPosted` | 通知发布 | ⚠️ 该机型**完全不投递** → 降级为可选加速 |
+| 2 | `AutoBookGuard` 补抓守护 | `AlarmManager` 60s 周期 + 醒来续期 | ✅ 每 ~53 秒准点 |
+| 3 | `onNotificationRemoved` | 通知被撤回那一刻 | ✅ 实测**独立救回过 1 笔** |
+
+三层**共用同一条判定链 + 持久指纹集** → 同一笔不会记两遍。
+
+> 为什么需要第 3 层：支付通知**只活 26 秒**（点进「支付成功」页微信就 `cancel()`），
+> 撤回后连 `getActiveNotifications()` 都捞不到 → 撤回那一刻是**唯一**的救援窗口
+> （Android 保证此时 `extras` 仍完整，只丢 `contentView` / `largeIcon`）。
+
+**诊断**：App 内「我的 → 自动记账」有诊断页，逐层显示「服务有没有绑上 / 最近捕获 / 待入账 / 上次检查结果」，
+出问题时先看它，能直接定位是哪一层断了。
+
+---
+
+## 🏗️ 项目结构
 
 ```
 lib/
-  core/
-    db/          drift database / tables / migrations
-    providers/   data_epoch（写操作后 bump，常驻 Notifier 借它感知变化）
-    theme/       卡通浅色设计 token
-    utils/       money / id / fingerprint / date
-    constants/   preset_categories
-  data/
-    repositories/
-  features/
-    ledger/  record/  category/  book/  import/  export/
-    calendar/  stats/  reports/  search/  assets/
-    onboarding/  profile/  nav/  shared/
-    autobook/    自动记账（Dart 侧：解析规则 / 队列 / 诊断 / 页面）
-  app.dart  main.dart
+├── app.dart                     路由表（go_router：壳路由 + 全屏页）
+├── main.dart                    入口（ProviderScope + drift 初始化）
+├── core/                        基础设施（不依赖任何 feature）
+│   ├── db/                      drift 数据库：tables / database / schema_v1 / schema_v2
+│   ├── providers/               Riverpod 注入：database / book / category / account / data_epoch
+│   ├── theme/                   tokens.dart（设计令牌）+ toon.dart（卡通通用件）
+│   ├── utils/                   money / id / fingerprint / date / highlight
+│   └── constants/               preset.dart（预置分类、账户类型、默认账本名）
+├── data/
+│   └── repositories/            6 个仓储：book / account / category / transaction / budget / app_meta
+└── features/                    按业务垂直切分，每个模块 application（逻辑）+ presentation（UI）
+    ├── nav/                     AppShell：抽屉 + 底栏 4 tab + 壳路由
+    ├── ledger/                  首页：LedgerController / MonthHero / BudgetCard / TxGroupList / SwipeActionRow
+    ├── record/                  记一笔：金额键盘 / 分类宫格 / 日期选择 / 账户选择
+    ├── calendar/                日历：CalendarController / MonthGrid / MonthPickerPage
+    ├── stats/                   统计：stats_aggregate / CategoryPie / TrendBars
+    ├── reports/                 报表：report_aggregate / ReportsController / ReportGroupList
+    ├── search/                  搜索：search_query（命中口径）/ SearchOverlay / 搜索历史
+    ├── assets/                  资产：asset_aggregate / account_meta / AccountFormSheet
+    ├── import/                  导入：解析五层（bill_decode / bill_xlsx / bill_csv / bill_parse / bill_profiles）
+    ├── export/                  导出：csv_export / ExportSheet
+    ├── autobook/                自动记账（Dart 侧）：rules（解析规则）/ bridge / batches / diagnostics / controller / page
+    ├── onboarding/              新手引导：7 页导览 + 矢量插画
+    ├── book/ category/ profile/ 账本管理 / 分类管理 / 我的
+    └── shared/                  跨模块共用小部件（命名弹窗）
 
-android/app/src/main/kotlin/.../autobook/    自动记账原生侧（7 个文件）
-tool/                                        Python 兜底工具链 + 图标生成 + 通知取证
-test/
+android/app/src/main/kotlin/com/teacodeman/yanxin/
+├── MainActivity.kt              MethodChannel 接线
+└── autobook/                    自动记账原生侧（7 文件）
+    ├── AutoBookListenerService.kt   通知监听 + 三层采集判定链
+    ├── AutoBookGuard.kt             AlarmManager 补抓守护层
+    ├── AutoBookQueue.kt             JSONL 落盘队列（取走即清空 + 失败回写）
+    ├── AutoBookSeen.kt              持久指纹集（补抓去重）
+    ├── AutoBookDiagnostics.kt       跨进程诊断落盘
+    ├── AutoBookNotifier.kt          回执通知（撤销 / 查看）
+    └── AutoBookChannel.kt           平台通道
+
+tool/                            Python 工具链：门禁等效 / APK 核验 / Release 发布 / 通知取证
+test/                            52 个测试文件 · 485 个用例
+docs/                            SPEC、验收报告、Release 说明
 ```
 
-> ⚠️ **自动记账的原生/Dart 边界**：Kotlin 侧**只做「包名过滤 + 取文案 + 落盘队列」**，
->   
-> **不做金额解析、不碰数据库**；解析与入账全在 Dart，drift 是唯一 DB writer。
->   
-> 这条边界是 F7.15 定的，破坏它会让「记错账」无法在 Dart 单测里覆盖。
+### 分层约定
 
-## 本地开发
+```
+presentation（UI）→ application（Controller / 纯函数）→ data（仓储 / 规则）→ core（基础设施）
+```
 
-每次开终端先加载环境（Windows / Git Bash），它把本机所有踩坑配置都收拢了：
+- **drift 是唯一 DB writer** —— Kotlin 侧只落盘，不碰数据库。
+- **纯函数优先** —— 解析规则、金额计算、命中口径、聚合统计全部是无副作用纯函数，`test()` 直接覆盖。
+- **常驻 provider 必须 `ref.watch(dataEpochProvider)`** —— 否则「刚记一笔后搜索搜不到」这类过期快照 bug 会回来。
+
+---
+
+## 🛠 部署与体验教程
+
+### 方式一：装 APK 体验（推荐给非开发者）
+
+1. **下载** —— 用上面表格里的链接，或打开 [Release 页](https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/tag/v0.7.16) 点资产。
+2. **传到手机** —— 数据线 / 微信「文件传输助手」/ 网盘都行。
+3. **安装** —— 用文件管理器点 APK 安装。系统提示「未知来源」时，允许**当前这个文件管理器**安装即可。
+4. **启动** —— 桌面出现黄色「记账」图标。首次会弹 7 页新手引导，滑完即可用。
+
+> ⚠️ **不要从应用商店找** —— 本项目未上架应用商店。
+> ⚠️ 卸载即删除全部数据（无云端）。想留档请先「我的 → 数据导出」。
+
+### 方式二：开启自动记账（可选）
+
+手动记账开箱即用。想让 App **自动从微信/支付宝通知里记账**，需要两步授权：
+
+**第 1 步 · 授予「通知使用权」**
+
+| 品牌 | 路径 |
+|---|---|
+| 小米 / Redmi | 设置 → 通知与控制中心 → 通知使用权 → 找到「颜芯记账」→ 打开 |
+| 华为 / 荣耀 | 设置 → 应用和功能 → 应用管理 → 颜芯记账 → 通知使用权 → 打开 |
+| OPPO / vivo / 小米 | 设置 → 通知管理 → 通知使用权（各机型叫法略有差异） |
+
+**第 2 步 · 允许发通知**：系统设置 → 应用 → 颜芯记账 → 通知 → 打开。
+
+**第 3 步 · 验证**：去微信/支付宝付一笔钱（任意金额），然后**打开一次本 App** —— 流水应自动出现，首页顶部显示「已自动记账 1 笔 · 合计 ¥x」。
+
+> ⚠️ **国产 ROM 必读**（小米/Redmi 实测踩过的坑）：
+> - **强行停止 App 或覆盖安装后，系统会自动解绑通知监听服务**（但设置里仍显示「已开启」）。
+>   → 遇到「自动记账不生效」，**把通知使用权关掉再打开一次**即可恢复。
+> - 支付通知在部分 ROM 上**只存活约 26 秒**（点进「支付成功」页就被撤回）。
+>   → **付完款后尽快打开一次本 App**，它会主动回捞通知栏里还存在的记录。
+> - App 内「我的 → 自动记账」有**诊断页**，逐层显示「服务有没有绑上 / 最近捕获 / 待入账 / 上次检查结果」，
+>   出问题时先看那一页，能直接定位是哪一层断了。
+
+### 方式三：从源码构建
+
+**环境要求**：Flutter 3.47.2（Dart 3.13.2）· JDK 17 · Android SDK（platform 36 + build-tools 36）· Git。
 
 ```bash
-source env.sh
+git clone git@github.com:Xander-299/yanxin-bookkeeping-flutter.git
+cd yanxin-bookkeeping-flutter
+
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs   # 生成 drift 代码（改表结构后必须重跑）
+
+flutter test          # 门禁
+flutter analyze
+
+# 出包（release）
+flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+# 产物：build/app/outputs/flutter-apk/app-release.apk
 ```
 
-常用命令（**在 B 机 / Dart 工具链正常的机器上**）：
+> ⚠️ **依赖版本是锁死的，别随手升级**：
+> `drift 2.31.0` / `sqlite3 2.9.4` / `build_runner 2.15.1` / `flutter_riverpod ^3.4.3` / `go_router ^18.0.1`。
+> sqlite3 3.x 起带 native-assets 构建钩子（需本机 MSVC），build_runner 2.16+ 要求 analyzer ≥13 与 drift_dev 冲突。
+
+> ⚠️ **release 签名**：`android/key.properties`（**不入版本控制**）四键齐全时用正式签名，
+> 缺失时自动回退 debug 签名 —— 所以 clone 仓库的机器也能出包。
+> ⚠️ `android/local.properties` 也**不入版本控制**，且**会被 flutter 工具改写**（跑一次 `flutter build` 就重写）。
+> 装机前用 `aapt dump badging <apk> | head -1` 确认 versionCode。
+
+### 方式四：发一个 Release
 
 ```bash
-flutter pub get                                              # 走 env.sh 里的 7890 代理
-dart run build_runner build --delete-conflicting-outputs     # drift 代码生成
-fx-qa                                                        # analyze + test（自动去代理/补 VS 环境变量）
-fx-test                                                      # 只跑单测
-flutter build apk --debug
+# 1. 构建（产物在 build/app/outputs/flutter-apk/）
+flutter build apk --release --target-platform android-arm,android-arm64,android-x64
+
+# 2. 发布到 GitHub Release（令牌从 git credential manager 现场取，不落盘）
+python tool/publish_release.py --tag v0.7.16 \
+    --name "颜芯记账 v0.7.16" \
+    --notes-file docs/release-notes-v0.7.16.md \
+    --apk build/app/outputs/flutter-apk/app-release.apk
 ```
 
-> ⚠️ **A 机（panda / D:）上上面这些直连命令全部跑不了** —— 见下一节「本机 Dart 工具链不可用时的兜底」。
->   
-> `env.sh` 会自动识别机器（看哪个 Flutter SDK 目录存在），无需手工改路径。
+---
 
-> ⚠️ **`flutter test` 直接跑会踩两个坑**（env.sh 已处理）：
->   
-> ① 沙箱吞掉了 `PROGRAMFILES(X86)`，VS 探测直接抛错 → 需手动注入；
->   
-> ② 代理会劫持测试进程的 WebSocket（`Invalid WebSocket upgrade request`）→ 跑测试必须去代理。
+## 🔧 技术选型
 
-### ⚠️ 本机 Dart 工具链不可用时的兜底（**必读**）
+| 关注点 | 选型 | 理由 |
+|---|---|---|
+| 数据库 | **drift 2.31.0** + sqlite3 2.9.4 | 编译期参数绑定（根治旧栈手写 SQL 拼接）；**零迁移**演进到 schema v3 |
+| 状态管理 | **Riverpod 3** | 常驻 provider + `dataEpoch` 版本号，替代逐个手工 refresh |
+| 路由 | **go_router 18** | `StatefulShellRoute` 壳路由（底栏 4 tab 保留各自页面栈） |
+| 金额 | **`int` 分** | 全程整数，**禁止浮点**（0.1 + 0.2 问题不存在） |
+| 主键 | UUID v4 | 客户端发号，离线可用 |
+| 入账指纹 | `crypto` SHA-1 | 纯 Dart，无 native 钩子 |
+| 文件选择 | `file_picker` | Android SAF，免存储权限 |
+| xlsx 读取 | `archive` + 手写正则 | **不用 `excel` 包**：数值过 double 会丢 31 位单号精度 |
+| CSV / GBK | 自研逐字符状态机 + `gbk_codec` | 无成熟纯 Dart 方案；回环校验判坏件 |
+| 自动记账 | **Kotlin 原生**（`NotificationListenerService` + `MethodChannel`） | **零新增 pub 依赖**；Dart 侧只做纯函数解析，drift 单写者 |
 
-本机（A 机）Dart 在 Windows 上**起不了需要管道 stdio 的子进程**
-  
-（`ProcessException: 所有的管道范例都在使用中 (CreateFile failed 231)`，
-  
-`runtime/bin/process_win.cc:744`）→ `flutter analyze` / `flutter test` /
-  
-`flutter pub get` / `build_runner` / `flutter build apk` **直连全废**。
-  
-**这是主机级问题，与项目代码无关** —— 别怀疑代码、别换 Dart 版本。
+---
 
-| 想做的事      | 直连命令（不可用）           | 兜底                                                                                                             |
-| --------- | ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| analyze   | `flutter analyze`   | `python tool/dart_analyze_fallback.py`（≡ analyze，**含 lint**，全项目约 19s）                                          |
-| 单测        | `flutter test`      | `python tool/dart_test_fallback.py <路径>`（只覆盖 `test()`，**`testWidgets` 跑不了 → 需你在终端跑**）                          |
-| 构建 APK    | `flutter build apk` | `python tool/build_kernel_fallback.py` → `(cd android && ./gradlew assembleDebug -x compileFlutterBuildDebug)` |
-| 核验装的是不是新包 | —                   | `python tool/verify_apk_kernel.py "文案1" "文案2"`                                                                 |
+## 📚 文档索引
 
-⚠️ **`source env.sh` 不能省**：不 source 则 `GRADLE_USER_HOME` 未注入 → Gradle 退回
-  
-**拒删**的 `<USER_HOME>\.gradle` → `journal-1.lock (拒绝访问。)`，**2 秒即 BUILD FAILED** ——
-  
-表现像「链路坏了」，实为环境变量没注入。
+| 文档 | 内容 |
+|---|---|
+| [`CHANGELOG.md`](CHANGELOG.md) | 版本变更记录 + tag 表 |
+| [`HANDOFF.md`](HANDOFF.md) | 交接文档：当前状态、决策依据、踩坑记录 |
+| [`SPEC-flutter-migration.md`](SPEC-flutter-migration.md) | 迁移总 SPEC（已签字） |
+| [`docs/PRD-yanxin-flutter.md`](docs/PRD-yanxin-flutter.md) | 功能需求汇总（FR 编号 + 状态） |
+| [`docs/SPEC-F7.15-auto-bookkeeping.md`](docs/SPEC-F7.15-auto-bookkeeping.md) | 自动记账 SPEC（架构 / 忽略规则 / Android 硬约束） |
+| [`docs/acceptance-*.md`](docs/) | 各阶段真机走查验收报告 |
+| [`tasks/todo-flutter.md`](tasks/todo-flutter.md) | 迁移任务清单 |
+| [`docs/release-notes-v0.7.16.md`](docs/release-notes-v0.7.16.md) | v0.7.16 Release 说明（安装 + 权限 + 隐私） |
+| [`docs/RESUME.md`](docs/RESUME.md) | **简历用项目介绍**（规模 / 技术难点 / 迭代记录 / 为什么要重写） |
 
-⚠️ **后台命令 ~15 分钟上限**：全量 test（40 文件）实测 15m03s 被掐断，输出停在中间
-  
-且**没有汇总行**（状态仍报 completed，极易误判跑完）→ **分批跑**。
-  
-并行跑 `dart_test_fallback.py` 必须用 `FX_TEST_WORK_SUFFIX=<后缀>` 隔离产物目录。
+---
 
-> **版本号有三个来源，装机前必须分清**（本项目踩过 `INSTALL_FAILED_VERSION_DOWNGRADE`）：
->
-> | 来源                                               | 当前值        | 入版本控制？            | 用途                                                                       |
-> | ------------------------------------------------ | ---------- | ----------------- | ------------------------------------------------------------------------ |
-> | `pubspec.yaml` `version:`                        | `0.1.0+1`  | ✅                 | **新克隆的默认值** → versionCode=**1**                                          |
-> | `android/local.properties` `flutter.versionCode` | **`2001`** | ❌ `.gitignore` 忽略 | **实际装机用的值**（`build.gradle.kts:38` → `versionCode = flutter.versionCode`） |
-> | git tag / 「我的页」角标                                | `v0.7.16`  | ✅ tag             | 人看的版本号（`tag = v0.7.<N>` ↔ `F7.<N>`）                                      |
->
-> ⚠️ `local.properties` **不入版本控制**，且 `2001` 是**手工设的、不是从 tag 推导的** →
->   
-> **新克隆 / 新机器上 versionCode 一定是 1**，直接 `install -r` 到走查机必报降级失败。
->   
-> **装机前先把它改成设备上已装包的值**。
->   
-> ⚠️ 该文件**还会被 flutter 工具改写**：跑一次 `flutter build apk --release` 就会写入
->   
-> `buildMode=release` + `versionCode=1` → 之后 `assembleDebug` 出的包也变 1，同样降级失败。
->   
-> 验证成品：`aapt dump badging <apk> | head -1`。
+## 📊 项目规模
 
-## 迁移进度
+| 维度 | 数据 |
+|---|---|
+| 代码量 | Dart **98 文件 / 25,361 行** · Kotlin **8 文件 / 1,507 行** |
+| 测试 | **52 个测试文件** · 485 个用例（静态计数，另有 18 处数据驱动循环展开） |
+| 迭代 | **140 次提交** · **16 个版本 tag**（`v0.7.1`–`v0.7.16`） |
+| 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查） |
 
-见 [`SPEC-flutter-migration.md`](SPEC-flutter-migration.md) 与 [`tasks/todo-flutter.md`](tasks/todo-flutter.md)。
+---
 
-| 阶段      | 内容                                                                | 状态                                 |
-| ------- | ----------------------------------------------------------------- | ---------------------------------- |
-| F0      | 环境搭建                                                              | ✅                                  |
-| F1      | 空壳 + 依赖                                                           | ✅                                  |
-| F2      | core/utils                                                        | ✅                                  |
-| F3      | 数据层（drift schema v1 + repositories）                               | ✅                                  |
-| F4      | UI 基础（M1 等价）                                                      | ✅ 真机验收通过                           |
-| F4.5    | 首页改版 + 底部导航                                                       | ✅                                  |
-| F5      | 账单导入（M2 等价）                                                       | ✅ 代码 + MuMu 走查通过                   |
-| F6      | 真机验收 + 文档收尾                                                       | ✅                                  |
-| F7.1    | 日历页（月历标注 + 日账单 + 月份选择子页）                                          | ✅                                  |
-| F7.2    | 统计·报表页（分类占比圆环 + 近 6 月趋势）                                          | ✅                                  |
-| F7.3    | 月度预算实装（schema v2 + 真实预算卡）                                         | ✅                                  |
-| F7.4    | 流水搜索（分类 / 备注 / 金额 + 一键清空）                                         | ✅                                  |
-| F7.5    | 搜索浮层化（覆盖首页，非路由）+ 资产页（净资产 + 账户 CRUD）                               | ✅ 真机走查通过                           |
-| F7.6    | 卡通浅色视觉改版（全站硬替换，P1 底座/首页/记一笔 · P2 日历/统计/资产 · P3 我的/账本/分类/导入/弹层/搜索） | ✅ 三批全部走查通过                         |
-| F7.7    | A 报表明细清单 · B 数据导出 · C 账户图标/颜色（schema v3）· D 搜索增强 · E 日历增强         | ✅ 五批全部（`v0.7.7`–`v0.7.10`）         |
-| F7.8    | 流水左滑删除（首页 / 日历日账单 / 搜索结果 3 处）                                     | ✅ `v0.7.11`                        |
-| F7.9    | 记一笔保存入口吸底常驻 + 启动图标 adaptive icon                                  | ✅ `v0.7.12`                        |
-| F7.14   | 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹）                                    | ✅ `v0.7.14`                        |
-| F7.15   | **自动记账**（通知使用权为主 + 零权限兜底）+ 真机走查收口                                 | ✅ `v0.7.15`                        |
-| F7.16   | 自动记账三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · **C 撤回通道 + 补抓守护层**              | ✅ `v0.7.16`                        |
-| —       | 统计页图表两处绘制修复                                                       | ✅ `v0.7.13`                        |
-| F7.5-剩余 | 分类预算                                                              | ⬜ 待排期（属新功能，须先出小 SPEC 签字）           |
+## 📄 License
 
-
-> ✅ **F7.16「扩展内置监听应用清单」已裁定不做**（2026-10-20 用户拍板）：
-> **其它平台的支付最终都是银行卡支出** —— 京东 / 拼多多 / 抖音的普通支付资金流经微信或支付宝，
-> 现有两个来源**已经覆盖**这笔支出；再监听电商 App 只会拿到同一笔的第二条通知。
-> 而现指纹 `externalId = sha1(pkg|title|text|postTime)` **含 pkg，跨来源必然不重** ——
-> 要支持扩展必须**先做跨应用去重**，那是「引入重复记账风险」换「已被覆盖的信号」，收益为负。
-> **结论**：保持「仅微信 + 支付宝」的最窄监听范围，**零代码改动**。
-> ⚠️ 若将来出现**绕过微信/支付宝的支付渠道**（白条 / 月付 / 云闪付 NFC）确需单独记账，
-> 届时**必须先做跨应用去重**，否则一定会重复记账。
-
-**版本与回滚**：迁移期版本号直接取 F 阶段号 —— `tag = v0.7.<N>` ↔ `F7.<N>`，同阶段多批交付合一个版本。
-  
-回滚用 `git checkout v0.7.5`（看旧版）或 `git revert <commit>`（在 master 上撤单次改动）。
-  
-tag 表与规则见 [`CHANGELOG.md`](CHANGELOG.md) 顶部。
-
-**验收基线**：M1/M2 首次使用验收报告 → [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)（MuMu 12 隔离环境实走）。
-
-**变更历史**：见 [`CHANGELOG.md`](CHANGELOG.md)。
-
-## 自动记账（F7.15 交付 / F7.16 加固）
-
-链路：系统绑定 `NotificationListenerService` → Kotlin 抓通知（**只做包名过滤 + 落盘**）
-  
-→ `autobook_queue.jsonl` → Dart `drain()` → 纯函数解析 → `importRows()` 复用导入链路。
-
-**三层采集**（F7.16 真机实证后确立，见 `docs/SPEC-F7.15-auto-bookkeeping.md` §10）：
-
-| 层 | 通道                      | 触发                             | 实测                     |
-| - | ----------------------- | ------------------------------ | ---------------------- |
-| 1 | `onNotificationPosted`  | 通知发布                           | ⚠️ 时通时不通 → **降级为可选加速** |
-| 2 | `AutoBookGuard` 补抓守护    | `AlarmManager` 60s 周期 + 每次醒来续期 | ✅ 每 ~53 秒准点            |
-| 3 | `onNotificationRemoved` | 通知被撤回那一刻                       | ✅ **实测独立救回过 1 笔**      |
-
-三层**共用同一条 `handle()` 判定链 + `AutoBookSeen` 持久指纹** → 同一笔不会记两遍。
-
-**为什么需要三层**：支付通知**只活 26 秒**（Redmi K50 实测 `19:16:03` 出现 →
-  
-`19:16:31` 被撤回，触发点是**用户点进支付成功页**）；撤回后
-  
-`getActiveNotifications()` 捞不到 → 层 3 是那一刻唯一的救援机会
-  
-（AOSP 保证撤回时 `extras` 仍完整，只丢 `contentView` / `largeIcon`）。
-
-⛔ **已证伪、别再重试的方向**（都有实测依据）：
-
-- **悬浮窗（`SYSTEM_ALERT_WINDOW`）** —— 只授权「在别应用上层画窗口」，
-    
-  **读不到别屏任何文字**；要读屏得换 `AccessibilityService` → Play 政策仅允许
-    
-  「服务身心障碍者」，Android 17.2 起 APM 模式下**非无障碍工具被系统直接切断**。
-- **`requestRebind()` / 重绑自愈** —— 能恢复连接与补抓，**救不了 posted 推送投递**
-    
-  （实测重绑后发 8 条探针，posted 仍 0 条）。
-- **用 logcat 判断回调是否到达** —— 代码只在 `decision != NOT_WATCHED` 时打日志，
-    
-  `posted pkg=` 为 0 **不能**证明回调没来；**唯一可信判据是内存计数差分**。
-
-⚠️ **装包后测守护层必须给足时间**：`adb install -r` 会 **force-stop 应用并清掉已排期闹钟**
-  
-→ 装完立刻测会得到「守护层从不被触发」的**假结论**（已误判过一轮）。
-  
-正确姿势：**装完 → 重绑监听（`disallow` → 2s → `allow`）→ 等 ≥60 秒**再读 `tickCatchUpTotal`。
-
-⚠️ **装机要用正式签名**：`assembleDebug` 出的是 **debug keystore** 包，而设备上是正式签名包
-  
-→ `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。**别卸载**（会丢账本）→ 正确做法是
-  
-`zipalign -f 4` + `apksigner sign --ks <key.properties 的 keystore>` **重签**
-  
-（装前先 `apksigner verify --print-certs` 比对指纹须与设备已装包**完全一致**）。
-  
-拉设备上的 drift 库必须用 **`adb exec-out`**（`adb shell cat` 会传输截断 → `database disk image is malformed`）。
-
-## 架构红线
-
-- ❌ 手写 SQL 字符串拼接（一律走 drift 生成的参数绑定）
-- ❌ 用浮点表示或计算金额（一律 `int` 分）
-- ❌ 物理 DELETE 业务数据（一律软删 `deleted_at`）
-- ❌ 绕过 `importTransaction()` 直接写 `transactions` 表
-- ❌ xlsx 数值经 `double` 中转（会丢 31 位单号精度，解析器必须按字符串走）
-- ❌ 在 Kotlin 侧解析金额 / 写数据库（自动记账的原生侧**只落盘**，drift 是唯一 DB writer）
-- ❌ 绕过 `AutoBookSeen` 直接把通知塞进队列（三层通道共用它去重，绕过就会重复入账）
-
-## 开发规范
-
-- **首次使用验收**：新增功能、改动入口文案/默认值/授权流程后，重跑 `first-run-acceptance`。
-    
-  规则、准备条件三分类与复查触发条件见
-    
-  [`docs/acceptance-first-run.md`](docs/acceptance-first-run.md)（F7.7-a 报表页 / 冷启动全链路，含数据层实跑）；
-    
-  M1/M2 基线报告见 [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)。
+仅供学习与个人使用。
