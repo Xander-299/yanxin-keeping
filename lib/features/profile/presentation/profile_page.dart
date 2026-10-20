@@ -259,7 +259,7 @@ class _BrandTip extends StatelessWidget {
               ),
               Spacer(),
               Text(
-                'v0.7.15',
+                'v0.7.16',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,

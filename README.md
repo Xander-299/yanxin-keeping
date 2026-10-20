@@ -4,30 +4,36 @@
 
 > 这是 uni-app 版的**重写**。旧仓库 `Tea-Codeman/yanxin-bookkeeping`（uni-app Vue3 + Vite）已归档为只读，不再开发。
 >
-> 📅 **本文状态核对于 2026-10-17**（基线 `4480fc0`）—— 版本号取自本机 Flutter SDK 的>   
-> `bin/cache/flutter.version.json`，阶段状态逐条比对 `CHANGELOG.md` tag 表与 `tasks/todo-flutter.md`。>   
+> 📅 **本文状态核对于 2026-10-17**（基线 `4480fc0`）—— 版本号取自本机 Flutter SDK 的
+>   
+> `bin/cache/flutter.version.json`，阶段状态逐条比对 `CHANGELOG.md` tag 表与 `tasks/todo-flutter.md`。
+>   
 > 若久未更新，**以 CHANGELOG 为准**。
 
 ## 项目简介
 
-**一句话**：本地优先的个人记账 App（Flutter / Android），从 uni-app 版**完整重写**；  
-技术难点集中在**自研账单解析**（GBK / xlsx 精度）与**Android 通知监听自动记账**  
+**一句话**：本地优先的个人记账 App（Flutter / Android），从 uni-app 版**完整重写**；
+  
+技术难点集中在**自研账单解析**（GBK / xlsx 精度）与**Android 通知监听自动记账**
+  
 （在国产 ROM 事件投递不可靠的限制下，用三层采集把「支付通知只活 26 秒」的丢账率压到可接受）。
 
-### 项目规模（2026-10-17 实测）
+### 项目规模（2026-10-20 实测）
 
 | 维度   | 数据                                                    |
 | ---- | ----------------------------------------------------- |
 | 代码量  | Dart **98 文件 / 25,361 行** · Kotlin **8 文件 / 1,507 行** |
 | 测试   | **52 个测试文件** · 485 个用例（静态计数，另有 18 处数据驱动循环展开）          |
-| 迭代   | **135 次提交** · **15 个版本 tag**（`v0.7.1`–`v0.7.15`）      |
-| 周期   | 2026-09-09 → 2026-10-17（约 6 周，单人 + AI 结对）             |
+| 迭代   | **140 次提交** · **16 个版本 tag**（`v0.7.1`–`v0.7.16`）      |
+| 周期   | 2026-09-09 → 2026-10-20（约 6 周，单人 + AI 结对）             |
 | 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查）    |
 
 ### 技术栈
 
-Flutter 3.47.2 / Dart 3.13.2 · Riverpod 3 · go_router 18 · drift 2.31.0 + sqlite3 2.9.4 ·  
-`crypto`（SHA-1 入账指纹）· `file_picker`（Android SAF）· `archive` + `gbk_codec` ·  
+Flutter 3.47.2 / Dart 3.13.2 · Riverpod 3 · go_router 18 · drift 2.31.0 + sqlite3 2.9.4 ·
+  
+`crypto`（SHA-1 入账指纹）· `file_picker`（Android SAF）· `archive` + `gbk_codec` ·
+  
 Android `NotificationListenerService` + `MethodChannel`（Kotlin 原生，**零新增 pub 依赖**）。
 
 ### 技术难点与解决方案
@@ -62,7 +68,7 @@ Android `NotificationListenerService` + `MethodChannel`（Kotlin 原生，**零�
 | `v0.7.13` | 09-25     | 统计页图表两处绘制修复（分类圆环 `useCenter` 楔形 + 趋势零值月不画柱）                                      |
 | `v0.7.14` | 09-25     | F7.14：新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹）                                             |
 | `v0.7.15` | 10-08     | **F7.15 自动记账**（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写）         |
-| `v0.7.16` | 🚧 未打 tag | F7.16 三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · **C 撤回通道 + 补抓守护层**（均真机验证；待「扩展监听应用清单」落地后一并转正） |
+| `v0.7.16` | 10-20     | F7.16 三段修复：**A 补抓**（服务未连接期间的通知不再永久丢失）· **B `[N条]` 折叠前缀误杀**（微信支付一笔都记不上）· **C 撤回通道 + 补抓守护层**（通知只活 26 秒的兜底） |
 
 ### 工程实践（可展开讲的点）
 
@@ -122,8 +128,10 @@ tool/                                        Python 兜底工具链 + 图标生�
 test/
 ```
 
-> ⚠️ **自动记账的原生/Dart 边界**：Kotlin 侧**只做「包名过滤 + 取文案 + 落盘队列」**，>   
-> **不做金额解析、不碰数据库**；解析与入账全在 Dart，drift 是唯一 DB writer。>   
+> ⚠️ **自动记账的原生/Dart 边界**：Kotlin 侧**只做「包名过滤 + 取文案 + 落盘队列」**，
+>   
+> **不做金额解析、不碰数据库**；解析与入账全在 Dart，drift 是唯一 DB writer。
+>   
 > 这条边界是 F7.15 定的，破坏它会让「记错账」无法在 Dart 单测里覆盖。
 
 ## 本地开发
@@ -144,19 +152,26 @@ fx-test                                                      # 只跑单测
 flutter build apk --debug
 ```
 
-> ⚠️ **A 机（panda / D:）上上面这些直连命令全部跑不了** —— 见下一节「本机 Dart 工具链不可用时的兜底」。>   
+> ⚠️ **A 机（panda / D:）上上面这些直连命令全部跑不了** —— 见下一节「本机 Dart 工具链不可用时的兜底」。
+>   
 > `env.sh` 会自动识别机器（看哪个 Flutter SDK 目录存在），无需手工改路径。
 
-> ⚠️ **`flutter test` 直接跑会踩两个坑**（env.sh 已处理）：>   
-> ① 沙箱吞掉了 `PROGRAMFILES(X86)`，VS 探测直接抛错 → 需手动注入；>   
+> ⚠️ **`flutter test` 直接跑会踩两个坑**（env.sh 已处理）：
+>   
+> ① 沙箱吞掉了 `PROGRAMFILES(X86)`，VS 探测直接抛错 → 需手动注入；
+>   
 > ② 代理会劫持测试进程的 WebSocket（`Invalid WebSocket upgrade request`）→ 跑测试必须去代理。
 
 ### ⚠️ 本机 Dart 工具链不可用时的兜底（**必读**）
 
-本机（A 机）Dart 在 Windows 上**起不了需要管道 stdio 的子进程**  
-（`ProcessException: 所有的管道范例都在使用中 (CreateFile failed 231)`，  
-`runtime/bin/process_win.cc:744`）→ `flutter analyze` / `flutter test` /  
-`flutter pub get` / `build_runner` / `flutter build apk` **直连全废**。  
+本机（A 机）Dart 在 Windows 上**起不了需要管道 stdio 的子进程**
+  
+（`ProcessException: 所有的管道范例都在使用中 (CreateFile failed 231)`，
+  
+`runtime/bin/process_win.cc:744`）→ `flutter analyze` / `flutter test` /
+  
+`flutter pub get` / `build_runner` / `flutter build apk` **直连全废**。
+  
 **这是主机级问题，与项目代码无关** —— 别怀疑代码、别换 Dart 版本。
 
 | 想做的事      | 直连命令（不可用）           | 兜底                                                                                                             |
@@ -166,12 +181,16 @@ flutter build apk --debug
 | 构建 APK    | `flutter build apk` | `python tool/build_kernel_fallback.py` → `(cd android && ./gradlew assembleDebug -x compileFlutterBuildDebug)` |
 | 核验装的是不是新包 | —                   | `python tool/verify_apk_kernel.py "文案1" "文案2"`                                                                 |
 
-⚠️ **`source env.sh` 不能省**：不 source 则 `GRADLE_USER_HOME` 未注入 → Gradle 退回  
-**拒删**的 `<USER_HOME>\.gradle` → `journal-1.lock (拒绝访问。)`，**2 秒即 BUILD FAILED** ——  
+⚠️ **`source env.sh` 不能省**：不 source 则 `GRADLE_USER_HOME` 未注入 → Gradle 退回
+  
+**拒删**的 `<USER_HOME>\.gradle` → `journal-1.lock (拒绝访问。)`，**2 秒即 BUILD FAILED** ——
+  
 表现像「链路坏了」，实为环境变量没注入。
 
-⚠️ **后台命令 ~15 分钟上限**：全量 test（40 文件）实测 15m03s 被掐断，输出停在中间  
-且**没有汇总行**（状态仍报 completed，极易误判跑完）→ **分批跑**。  
+⚠️ **后台命令 ~15 分钟上限**：全量 test（40 文件）实测 15m03s 被掐断，输出停在中间
+  
+且**没有汇总行**（状态仍报 completed，极易误判跑完）→ **分批跑**。
+  
 并行跑 `dart_test_fallback.py` 必须用 `FX_TEST_WORK_SUFFIX=<后缀>` 隔离产物目录。
 
 > **版本号有三个来源，装机前必须分清**（本项目踩过 `INSTALL_FAILED_VERSION_DOWNGRADE`）：
@@ -180,13 +199,18 @@ flutter build apk --debug
 > | ------------------------------------------------ | ---------- | ----------------- | ------------------------------------------------------------------------ |
 > | `pubspec.yaml` `version:`                        | `0.1.0+1`  | ✅                 | **新克隆的默认值** → versionCode=**1**                                          |
 > | `android/local.properties` `flutter.versionCode` | **`2001`** | ❌ `.gitignore` 忽略 | **实际装机用的值**（`build.gradle.kts:38` → `versionCode = flutter.versionCode`） |
-> | git tag / 「我的页」角标                                | `v0.7.15`  | ✅ tag             | 人看的版本号（`tag = v0.7.<N>` ↔ `F7.<N>`）                                      |
+> | git tag / 「我的页」角标                                | `v0.7.16`  | ✅ tag             | 人看的版本号（`tag = v0.7.<N>` ↔ `F7.<N>`）                                      |
 >
-> ⚠️ `local.properties` **不入版本控制**，且 `2001` 是**手工设的、不是从 tag 推导的** →>   
-> **新克隆 / 新机器上 versionCode 一定是 1**，直接 `install -r` 到走查机必报降级失败。>   
-> **装机前先把它改成设备上已装包的值**。>   
-> ⚠️ 该文件**还会被 flutter 工具改写**：跑一次 `flutter build apk --release` 就会写入>   
-> `buildMode=release` + `versionCode=1` → 之后 `assembleDebug` 出的包也变 1，同样降级失败。>   
+> ⚠️ `local.properties` **不入版本控制**，且 `2001` 是**手工设的、不是从 tag 推导的** →
+>   
+> **新克隆 / 新机器上 versionCode 一定是 1**，直接 `install -r` 到走查机必报降级失败。
+>   
+> **装机前先把它改成设备上已装包的值**。
+>   
+> ⚠️ 该文件**还会被 flutter 工具改写**：跑一次 `flutter build apk --release` 就会写入
+>   
+> `buildMode=release` + `versionCode=1` → 之后 `assembleDebug` 出的包也变 1，同样降级失败。
+>   
 > 验证成品：`aapt dump badging <apk> | head -1`。
 
 ## 迁移进度
@@ -214,18 +238,24 @@ flutter build apk --debug
 | F7.9    | 记一笔保存入口吸底常驻 + 启动图标 adaptive icon                                  | ✅ `v0.7.12`                        |
 | F7.14   | 新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹）                                    | ✅ `v0.7.14`                        |
 | F7.15   | **自动记账**（通知使用权为主 + 零权限兜底）+ 真机走查收口                                 | ✅ `v0.7.15`                        |
-| F7.16   | 自动记账三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · **C 撤回通道 + 补抓守护层**              | 🚧 三段已实现并真机验证，**未打 tag**（扩展监听清单待做） |
+| F7.16   | 自动记账三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · **C 撤回通道 + 补抓守护层**              | ✅ `v0.7.16`                        |
 | —       | 统计页图表两处绘制修复                                                       | ✅ `v0.7.13`                        |
 | F7.5-剩余 | 分类预算                                                              | ⬜ 待排期（属新功能，须先出小 SPEC 签字）           |
 
 
-> ⚠️ **F7.16 为何不打 tag**：2026-10-08 用户提的「**扩展内置监听应用清单**」需求未落地。>   
-> 现 `externalId = sha1(pkg|title|text|postTime)` **含 pkg，跨来源必然不重** ——>   
-> 京东/拼多多/抖音的普通支付资金流经微信或支付宝，直接加白名单会**重复记账**。>   
-> 故**跨应用去重是必做前置**，完成后一并转 `v0.7.16`。
+> ✅ **F7.16「扩展内置监听应用清单」已裁定不做**（2026-10-20 用户拍板）：
+> **其它平台的支付最终都是银行卡支出** —— 京东 / 拼多多 / 抖音的普通支付资金流经微信或支付宝，
+> 现有两个来源**已经覆盖**这笔支出；再监听电商 App 只会拿到同一笔的第二条通知。
+> 而现指纹 `externalId = sha1(pkg|title|text|postTime)` **含 pkg，跨来源必然不重** ——
+> 要支持扩展必须**先做跨应用去重**，那是「引入重复记账风险」换「已被覆盖的信号」，收益为负。
+> **结论**：保持「仅微信 + 支付宝」的最窄监听范围，**零代码改动**。
+> ⚠️ 若将来出现**绕过微信/支付宝的支付渠道**（白条 / 月付 / 云闪付 NFC）确需单独记账，
+> 届时**必须先做跨应用去重**，否则一定会重复记账。
 
-**版本与回滚**：迁移期版本号直接取 F 阶段号 —— `tag = v0.7.<N>` ↔ `F7.<N>`，同阶段多批交付合一个版本。  
-回滚用 `git checkout v0.7.5`（看旧版）或 `git revert <commit>`（在 master 上撤单次改动）。  
+**版本与回滚**：迁移期版本号直接取 F 阶段号 —— `tag = v0.7.<N>` ↔ `F7.<N>`，同阶段多批交付合一个版本。
+  
+回滚用 `git checkout v0.7.5`（看旧版）或 `git revert <commit>`（在 master 上撤单次改动）。
+  
 tag 表与规则见 [`CHANGELOG.md`](CHANGELOG.md) 顶部。
 
 **验收基线**：M1/M2 首次使用验收报告 → [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)（MuMu 12 隔离环境实走）。
@@ -234,7 +264,8 @@ tag 表与规则见 [`CHANGELOG.md`](CHANGELOG.md) 顶部。
 
 ## 自动记账（F7.15 交付 / F7.16 加固）
 
-链路：系统绑定 `NotificationListenerService` → Kotlin 抓通知（**只做包名过滤 + 落盘**）  
+链路：系统绑定 `NotificationListenerService` → Kotlin 抓通知（**只做包名过滤 + 落盘**）
+  
 → `autobook_queue.jsonl` → Dart `drain()` → 纯函数解析 → `importRows()` 复用导入链路。
 
 **三层采集**（F7.16 真机实证后确立，见 `docs/SPEC-F7.15-auto-bookkeeping.md` §10）：
@@ -247,29 +278,42 @@ tag 表与规则见 [`CHANGELOG.md`](CHANGELOG.md) 顶部。
 
 三层**共用同一条 `handle()` 判定链 + `AutoBookSeen` 持久指纹** → 同一笔不会记两遍。
 
-**为什么需要三层**：支付通知**只活 26 秒**（Redmi K50 实测 `19:16:03` 出现 →  
-`19:16:31` 被撤回，触发点是**用户点进支付成功页**）；撤回后  
-`getActiveNotifications()` 捞不到 → 层 3 是那一刻唯一的救援机会  
+**为什么需要三层**：支付通知**只活 26 秒**（Redmi K50 实测 `19:16:03` 出现 →
+  
+`19:16:31` 被撤回，触发点是**用户点进支付成功页**）；撤回后
+  
+`getActiveNotifications()` 捞不到 → 层 3 是那一刻唯一的救援机会
+  
 （AOSP 保证撤回时 `extras` 仍完整，只丢 `contentView` / `largeIcon`）。
 
 ⛔ **已证伪、别再重试的方向**（都有实测依据）：
 
-- **悬浮窗（`SYSTEM_ALERT_WINDOW`）** —— 只授权「在别应用上层画窗口」，    
-  **读不到别屏任何文字**；要读屏得换 `AccessibilityService` → Play 政策仅允许    
+- **悬浮窗（`SYSTEM_ALERT_WINDOW`）** —— 只授权「在别应用上层画窗口」，
+    
+  **读不到别屏任何文字**；要读屏得换 `AccessibilityService` → Play 政策仅允许
+    
   「服务身心障碍者」，Android 17.2 起 APM 模式下**非无障碍工具被系统直接切断**。
-- **`requestRebind()` / 重绑自愈** —— 能恢复连接与补抓，**救不了 posted 推送投递**    
+- **`requestRebind()` / 重绑自愈** —— 能恢复连接与补抓，**救不了 posted 推送投递**
+    
   （实测重绑后发 8 条探针，posted 仍 0 条）。
-- **用 logcat 判断回调是否到达** —— 代码只在 `decision != NOT_WATCHED` 时打日志，    
+- **用 logcat 判断回调是否到达** —— 代码只在 `decision != NOT_WATCHED` 时打日志，
+    
   `posted pkg=` 为 0 **不能**证明回调没来；**唯一可信判据是内存计数差分**。
 
-⚠️ **装包后测守护层必须给足时间**：`adb install -r` 会 **force-stop 应用并清掉已排期闹钟**  
-→ 装完立刻测会得到「守护层从不被触发」的**假结论**（已误判过一轮）。  
+⚠️ **装包后测守护层必须给足时间**：`adb install -r` 会 **force-stop 应用并清掉已排期闹钟**
+  
+→ 装完立刻测会得到「守护层从不被触发」的**假结论**（已误判过一轮）。
+  
 正确姿势：**装完 → 重绑监听（`disallow` → 2s → `allow`）→ 等 ≥60 秒**再读 `tickCatchUpTotal`。
 
-⚠️ **装机要用正式签名**：`assembleDebug` 出的是 **debug keystore** 包，而设备上是正式签名包  
-→ `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。**别卸载**（会丢账本）→ 正确做法是  
-`zipalign -f 4` + `apksigner sign --ks <key.properties 的 keystore>` **重签**  
-（装前先 `apksigner verify --print-certs` 比对指纹须与设备已装包**完全一致**）。  
+⚠️ **装机要用正式签名**：`assembleDebug` 出的是 **debug keystore** 包，而设备上是正式签名包
+  
+→ `INSTALL_FAILED_UPDATE_INCOMPATIBLE`。**别卸载**（会丢账本）→ 正确做法是
+  
+`zipalign -f 4` + `apksigner sign --ks <key.properties 的 keystore>` **重签**
+  
+（装前先 `apksigner verify --print-certs` 比对指纹须与设备已装包**完全一致**）。
+  
 拉设备上的 drift 库必须用 **`adb exec-out`**（`adb shell cat` 会传输截断 → `database disk image is malformed`）。
 
 ## 架构红线
@@ -284,7 +328,10 @@ tag 表与规则见 [`CHANGELOG.md`](CHANGELOG.md) 顶部。
 
 ## 开发规范
 
-- **首次使用验收**：新增功能、改动入口文案/默认值/授权流程后，重跑 `first-run-acceptance`。    
-  规则、准备条件三分类与复查触发条件见    
-  [`docs/acceptance-first-run.md`](docs/acceptance-first-run.md)（F7.7-a 报表页 / 冷启动全链路，含数据层实跑）；    
+- **首次使用验收**：新增功能、改动入口文案/默认值/授权流程后，重跑 `first-run-acceptance`。
+    
+  规则、准备条件三分类与复查触发条件见
+    
+  [`docs/acceptance-first-run.md`](docs/acceptance-first-run.md)（F7.7-a 报表页 / 冷启动全链路，含数据层实跑）；
+    
   M1/M2 基线报告见 [`docs/acceptance-M1-M2.md`](docs/acceptance-M1-M2.md)。
