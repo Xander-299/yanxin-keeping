@@ -17,7 +17,7 @@ import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
-import 'package:yanxin/features/onboarding/onboarding_keys.dart';
+import 'package:yanxin/features/onboarding/application/onboarding_keys.dart';
 import 'package:yanxin/features/onboarding/presentation/widgets/onboarding_slides.dart';
 
 /// 新手引导全屏页。

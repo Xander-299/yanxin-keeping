@@ -16,6 +16,8 @@
 | **arm64 单独包** | 只想给现代 arm64 机（体积小 2/3） | 22 MB | [下载](https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/download/v0.7.16/yanxin-v0.7.16-arm64-release.apk) |
 
 - Release 页：<https://github.com/Xander-299/yanxin-bookkeeping-flutter/releases/tag/v0.7.16>
+  > 📦 v0.7.16 的安装包仍在旧仓库的 Release 下；从下一版起发到本仓库。
+  > 自己出包见 [方式三](#方式三从源码构建)。
 - 版本 **0.7.16**（versionCode 2001）· 最低 **Android 7.0** · 正式签名（`CN=yanxin`）
 - 安装说明与自动记账配置见 👉 **[部署与体验教程](#-部署与体验教程)**
 
@@ -92,13 +94,14 @@
 lib/
 ├── app.dart                     路由表（go_router：壳路由 + 全屏页）
 ├── main.dart                    入口（ProviderScope + drift 初始化）
-├── core/                        基础设施（不依赖任何 feature）
+├── core/                        基础设施（不依赖任何 feature / data）
 │   ├── db/                      drift 数据库：tables / database / schema_v1 / schema_v2
-│   ├── providers/               Riverpod 注入：database / book / category / account / data_epoch
-│   ├── theme/                   tokens.dart（设计令牌）+ toon.dart（卡通通用件）
+│   ├── providers/               data_epoch（写操作后的统一失效信号）
+│   ├── theme/                   tokens.dart（设计令牌）+ toon/（卡通通用件，按组件分文件）
 │   ├── utils/                   money / id / fingerprint / date / highlight
 │   └── constants/               preset.dart（预置分类、账户类型、默认账本名）
 ├── data/
+│   ├── providers/               数据层 DI：database + book / account / category 等 provider
 │   └── repositories/            6 个仓储：book / account / category / transaction / budget / app_meta
 └── features/                    按业务垂直切分，每个模块 application（逻辑）+ presentation（UI）
     ├── nav/                     AppShell：抽屉 + 底栏 4 tab + 壳路由
@@ -127,9 +130,13 @@ android/app/src/main/kotlin/com/teacodeman/yanxin/
     ├── AutoBookNotifier.kt          回执通知（撤销 / 查看）
     └── AutoBookChannel.kt           平台通道
 
-tool/                            Python 工具链：门禁等效 / APK 核验 / Release 发布 / 通知取证
-test/                            52 个测试文件 · 485 个用例
-docs/                            SPEC、验收报告、Release 说明
+tool/                            开发工具链（Python + Dart）：门禁等效 / APK 核验 / 发布 / 设备调试
+test/                            52 个测试文件 · 485 个用例（目录与 lib/ 结构镜像）
+docs/spec/                       各阶段签字的 SPEC
+docs/dev/                        真机走查手册、Windows 环境重建
+docs/handoff/                    交接档案（reference 长期参考 / session-log 逐轮记录）
+docs/acceptance-*.md             各阶段真机走查验收报告
+docs/design/                     页面原型参考图
 ```
 
 ### 分层约定
@@ -141,6 +148,8 @@ presentation（UI）→ application（Controller / 纯函数）→ data（仓储
 - **drift 是唯一 DB writer** —— Kotlin 侧只落盘，不碰数据库。
 - **纯函数优先** —— 解析规则、金额计算、命中口径、聚合统计全部是无副作用纯函数，`test()` 直接覆盖。
 - **常驻 provider 必须 `ref.watch(dataEpochProvider)`** —— 否则「刚记一笔后搜索搜不到」这类过期快照 bug 会回来。
+- **纯 UI 的模块可以只有 `presentation/`** —— `book` / `category` / `profile` / `nav` 的数据与状态
+  在 `lib/data/providers/` 或对应 controller 里，这是有意为之的例外，不是漏了 `application/`。
 
 ---
 
@@ -185,8 +194,8 @@ presentation（UI）→ application（Controller / 纯函数）→ data（仓储
 **环境要求**：Flutter 3.47.2（Dart 3.13.2）· JDK 17 · Android SDK（platform 36 + build-tools 36）· Git。
 
 ```bash
-git clone git@github.com:Xander-299/yanxin-bookkeeping-flutter.git
-cd yanxin-bookkeeping-flutter
+git clone git@github.com:Xander-299/yanxin-flutter.git
+cd yanxin-flutter
 
 flutter pub get
 dart run build_runner build --delete-conflicting-outputs   # 生成 drift 代码（改表结构后必须重跑）
@@ -248,7 +257,7 @@ python tool/publish_release.py --tag v0.7.16 \
 | [`HANDOFF.md`](HANDOFF.md) | 交接文档：当前状态、决策依据、踩坑记录 |
 | [`SPEC-flutter-migration.md`](SPEC-flutter-migration.md) | 迁移总 SPEC（已签字） |
 | [`docs/PRD-yanxin-flutter.md`](docs/PRD-yanxin-flutter.md) | 功能需求汇总（FR 编号 + 状态） |
-| [`docs/SPEC-F7.15-auto-bookkeeping.md`](docs/SPEC-F7.15-auto-bookkeeping.md) | 自动记账 SPEC（架构 / 忽略规则 / Android 硬约束） |
+| [`docs/spec/SPEC-F7.15-auto-bookkeeping.md`](docs/spec/SPEC-F7.15-auto-bookkeeping.md) | 自动记账 SPEC（架构 / 忽略规则 / Android 硬约束） |
 | [`docs/acceptance-*.md`](docs/) | 各阶段真机走查验收报告 |
 | [`tasks/todo-flutter.md`](tasks/todo-flutter.md) | 迁移任务清单 |
 | [`docs/release-notes-v0.7.16.md`](docs/release-notes-v0.7.16.md) | v0.7.16 Release 说明（安装 + 权限 + 隐私） |

@@ -44,7 +44,7 @@ import urllib.parse
 import urllib.request
 
 OWNER = "Xander-299"
-REPO = "yanxin-bookkeeping-flutter"
+REPO = "yanxin-flutter"
 API = "https://api.github.com"
 
 

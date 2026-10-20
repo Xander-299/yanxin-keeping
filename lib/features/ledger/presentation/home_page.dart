@@ -1,6 +1,6 @@
 /// 首页：账本 header + hero 月支出卡 + 预算占位卡 + 本月账单列表。
 ///
-/// 视觉对齐 app_template/home_ui.jpg；对应旧栈 `pages/index/index.vue`。
+/// 视觉对齐 docs/design/home_ui.jpg；对应旧栈 `pages/index/index.vue`。
 /// 页面本身无 Scaffold（壳路由 AppShell 提供抽屉与底栏）。
 library;
 

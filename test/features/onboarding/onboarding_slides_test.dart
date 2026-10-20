@@ -5,7 +5,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:yanxin/features/onboarding/onboarding_keys.dart';
+import 'package:yanxin/features/onboarding/application/onboarding_keys.dart';
 import 'package:yanxin/features/onboarding/presentation/widgets/onboarding_slides.dart';
 
 void main() {

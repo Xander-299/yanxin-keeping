@@ -10,10 +10,10 @@
 | 来源 | 覆盖内容 |
 |---|---|
 | `SPEC-flutter-migration.md`（已签字 2026-09-09） | 目标 / 范围 / 技术选型 / 架构 ADR / F0–F6 任务与等价验收 |
-| `docs/SPEC-F7.3-budget.md` | FR-BUDGET |
-| `docs/SPEC-F7.4-search.md`（已签字） | FR-SEARCH 的匹配口径 |
-| `docs/SPEC-F7.5-search-overlay.md`（已签字） | FR-SEARCH 的浮层与类型指令 |
-| `docs/SPEC-F7.5-assets.md`（已签字 2026-09-17） | FR-ASSET |
+| `docs/spec/SPEC-F7.3-budget.md` | FR-BUDGET |
+| `docs/spec/SPEC-F7.4-search.md`（已签字） | FR-SEARCH 的匹配口径 |
+| `docs/spec/SPEC-F7.5-search-overlay.md`（已签字） | FR-SEARCH 的浮层与类型指令 |
+| `docs/spec/SPEC-F7.5-assets.md`（已签字 2026-09-17） | FR-ASSET |
 | `HANDOFF.md` / `CHANGELOG.md` / `tasks/todo-flutter.md` | F7.1 日历、F7.2 统计、交付与验收记录 |
 
 ### 状态图例
@@ -272,5 +272,5 @@
 ## 8. 变更规则
 
 1. 本文档**只汇总已签字需求**，不加新需求。
-2. 新需求流程：起草 `docs/SPEC-F7.x-<名>.md` → **用户签字** → 实现 → 门禁 → 回写 `CHANGELOG.md` / `HANDOFF.md` / `tasks/todo-flutter.md` → 更新本文档对应 FR 行与状态 → push。
+2. 新需求流程：起草 `docs/spec/SPEC-F7.x-<名>.md` → **用户签字** → 实现 → 门禁 → 回写 `CHANGELOG.md` / `HANDOFF.md` / `tasks/todo-flutter.md` → 更新本文档对应 FR 行与状态 → push。
 3. 改口径（§2）必须回到原 SPEC 重签字，并同步修订本文档。

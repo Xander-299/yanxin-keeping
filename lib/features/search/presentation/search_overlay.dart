@@ -1,6 +1,6 @@
 /// 搜索浮层：按**分类名 / 备注 / 金额**检索当前账本的全部流水，并支持类型筛选。
 ///
-/// 入口：首页 header 的搜索图标 → [showSearchOverlay]（见 `docs/SPEC-F7.5-search-overlay.md`）。
+/// 入口：首页 header 的搜索图标 → [showSearchOverlay]（见 `docs/spec/SPEC-F7.5-search-overlay.md`）。
 ///
 /// F7.5 起**不再是独立路由**（原 `/search` 已删除）：改为全屏 dialog，
 /// 首页留在页面栈里当背景，提示块以下的毛玻璃透出首页 —— 视觉上不再像「换了个 App」。

@@ -1,8 +1,8 @@
 # SPEC — F7.6 卡通浅色视觉改版（对齐页面原型）
 
 > 状态：**已签字并全部交付**（2026-09-18 用户确认三项决策）· P1 / P2 / P3 **均已交付 + 真机走查通过**
-> 起草：2026-09-18 · 原型：`D:\new file\modao\yanxin\`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）
-> 关联：`docs/PRD-yanxin-flutter.md`（口径不动）、`app_template/*.jpg`（旧参考图，本次起被原型取代）
+> 起草：2026-09-18 · 原型：`<PROTOTYPE_DIR>`（`index.html` + `styles.css` + `data.js` + `screens.js` + `app.js`）
+> 关联：`docs/PRD-yanxin-flutter.md`（口径不动）、`docs/design/*.jpg`（旧参考图，本次起被原型取代）
 
 ---
 

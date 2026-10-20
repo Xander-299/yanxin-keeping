@@ -2,7 +2,7 @@
 
 > 对象：`v0.7.12`（`F7.9`）· 日期 2026-09-25 · 执行：AI 经 adb 全包
 > 设备：MuMu 12 · `emulator-5554` · **900×1600 @320dpi**（逻辑 450×800）
-> SPEC：`docs/SPEC-F7.9-record-sticky-save.md` · 截图存 `.workbuddy/qa-f79/`（不入库）
+> SPEC：`docs/spec/SPEC-F7.9-record-sticky-save.md` · 截图存 `.workbuddy/qa-f79/`（不入库）
 
 ## 1. 装包与新鲜度核验
 

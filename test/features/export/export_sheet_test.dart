@@ -2,7 +2,7 @@
 ///
 /// 只覆盖**不依赖 file_picker 原生通道**的部分：
 /// 入口接通、两条选项、取消关闭、以及「原生通道不可用时」不崩且给出可读提示。
-/// 真正落盘（SAF 对话框 + 写文件）只能在真机上走查 —— 见 `docs/SPEC-F7.7-backlog.md` §B。
+/// 真正落盘（SAF 对话框 + 写文件）只能在真机上走查 —— 见 `docs/spec/SPEC-F7.7-backlog.md` §B。
 library;
 
 import 'package:flutter/material.dart';

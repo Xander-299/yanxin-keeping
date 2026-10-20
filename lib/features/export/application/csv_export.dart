@@ -1,4 +1,4 @@
-/// 数据导出纯函数（`F7.7 B 批`，见 `docs/SPEC-F7.7-backlog.md` §B）。
+/// 数据导出纯函数（`F7.7 B 批`，见 `docs/spec/SPEC-F7.7-backlog.md` §B）。
 ///
 /// 只负责「把已经读出来的行变成一段文本 / 一个文件名」——
 /// **不碰数据库、不碰文件系统**，所以全部可单测（`test/features/export/csv_export_test.dart`）。

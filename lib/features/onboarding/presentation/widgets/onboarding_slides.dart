@@ -1,7 +1,7 @@
 /// F7.14 新手引导的**页内容**：7 页文案 + 各自示意图。
 ///
 /// 一页一件事，顺序固定（有单测锁）。文案里的按钮名 / 图标 / 手势是**真件口径**，
-/// 改 UI 入口时务必同步回看这里与 `docs/SPEC-F7.14-onboarding.md` §3.2。
+/// 改 UI 入口时务必同步回看这里与 `docs/spec/SPEC-F7.14-onboarding.md` §3.2。
 library;
 
 import 'package:flutter/material.dart';

@@ -127,7 +127,7 @@
 
 | 文件 | 动作 |
 |---|---|
-| `lib/features/onboarding/onboarding_keys.dart` | **新增**：`kOnboardingDoneKey = 'onboarding_done'` + `kOnboardingDoneValue = '1'`（风格对齐 `kActiveBookKey` / `kSearchHistoryKey`） |
+| `lib/features/onboarding/application/onboarding_keys.dart` | **新增**：`kOnboardingDoneKey = 'onboarding_done'` + `kOnboardingDoneValue = '1'`（风格对齐 `kActiveBookKey` / `kSearchHistoryKey`） |
 | `lib/features/onboarding/application/onboarding_prompt.dart` | **新增**：`onboardingPromptProvider`（§3.1 两个条件的判定） |
 | `lib/features/onboarding/presentation/onboarding_page.dart` | **新增**：`OnboardingPage`（`PageView` + 进度点 + 跳过 / 下一步 / 开始记账 + `dispose` 落标记 + `Text.rich` 渲染 `**粗体**`） |
 | `lib/features/onboarding/presentation/widgets/onboarding_slides.dart` | **新增**：`OnboardingSlide` 模型 + `parseEmphasis` / `emphasisSpans` + `kOnboardingSlides`（7 页文案） |

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/database.dart';
-import 'package:yanxin/features/onboarding/onboarding_keys.dart';
+import 'package:yanxin/features/onboarding/application/onboarding_keys.dart';
 
 /// `true` = 立刻弹出全屏引导。
 ///

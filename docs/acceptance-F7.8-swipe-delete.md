@@ -6,7 +6,7 @@
 > **判读手段**：`uiautomator` 语义树（可信真值）+ 截图交叉验证；抓取脚本 `tool/ui_dump.py`
 > **构建方式**：见文末「构建路径」；**装机前核验** APK 内 `assets/flutter_assets/kernel_blob.bin`
 > sha256 与盘上一致 + grep `SwipeActionRow` 命中（脚本 `tool/verify_apk_kernel.py`）
-> **SPEC**：`docs/SPEC-F7.8-swipe-delete.md`（用户裁定三项见其 §7）
+> **SPEC**：`docs/spec/SPEC-F7.8-swipe-delete.md`（用户裁定三项见其 §7）
 
 ---
 

@@ -1,7 +1,7 @@
 # 首次使用验收 — F7.5-b 资产页（真机实走）
 
 > 验收对象：`/assets` 资产页（净资产 + 账户余额 + 账户 CRUD）
-> 环境：**MuMu 12**（A 机，`D:\Downloads\MuMu\MuMuPlayer`），Android 竖屏 **900×1600 @320dpi**
+> 环境：**MuMu 12**（A 机，`<EMULATOR_HOME>`），Android 竖屏 **900×1600 @320dpi**
 > 设备：`127.0.0.1:16384`；包名 `com.teocodeman.yanxin` → 实为 `com.teacodeman.yanxin`
 > 版本：`master` @ `249b199` + 本次验收修复（debug APK）
 > 方式：`adb + uiautomator` 语义树 + 截图（脚本 `tool/ui_dump.py`）

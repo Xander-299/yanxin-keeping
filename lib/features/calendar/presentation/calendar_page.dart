@@ -1,6 +1,6 @@
 /// 日历页：月份 header + 月历（每天标支出/收入）+ 月结余/日均支出 + 选中日账单。
 ///
-/// 视觉参考 app_template/calendar.jpg（布局对齐，配色沿用 App 深色 + 琥珀）。
+/// 视觉参考 docs/design/calendar.jpg（布局对齐，配色沿用 App 深色 + 琥珀）。
 /// 页面无 Scaffold（壳路由 AppShell 提供抽屉与底栏）。
 library;
 

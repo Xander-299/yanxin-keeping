@@ -53,8 +53,8 @@ export FLUTTER_STORAGE_BASE_URL=https://storage.flutter-io.cn
 # --- 代理 ---
 # 构建走镜像 / 代理是必需的；但 `flutter test` 相反必须**去代理**（见下方 fx-test）。
 # 不需要代理就把这段注释掉。
-export http_proxy="${http_proxy:-http://127.0.0.1:7890}"
-export https_proxy="${https_proxy:-http://127.0.0.1:7890}"
+export http_proxy="${http_proxy:-http://<PROXY_HOST>:7890}"
+export https_proxy="${https_proxy:-http://<PROXY_HOST>:7890}"
 export HTTP_PROXY="$http_proxy"
 export HTTPS_PROXY="$https_proxy"
 

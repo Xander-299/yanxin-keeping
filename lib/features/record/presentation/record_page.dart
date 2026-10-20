@@ -14,7 +14,7 @@
 /// 主按钮被折叠到视口外」的兜底理由不再成立，顶部冗余入口即可删掉。
 /// 吸底栏放在 **body 内**而非 `Scaffold.bottomNavigationBar`：后者按 `size.height - h`
 /// 贴屏幕底、**不随键盘上移**（会被键盘盖住）；而 body 会被 `viewInsets.bottom` 压缩，
-/// 吸底栏自然落到键盘上方。细节见 `docs/SPEC-F7.9-record-sticky-save.md`。
+/// 吸底栏自然落到键盘上方。细节见 `docs/spec/SPEC-F7.9-record-sticky-save.md`。
 library;
 
 import 'dart:async';

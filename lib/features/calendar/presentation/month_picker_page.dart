@@ -1,6 +1,6 @@
 /// 月份选择子页：按年展示 12 个月的缩略日历，点某天即跳到该月该日。
 ///
-/// 视觉参考 app_template/calendar_select.jpg（布局对齐）。
+/// 视觉参考 docs/design/calendar_select.jpg（布局对齐）。
 /// 有账的日期用琥珀色标出；点任意日期 → 日历页切到该月并选中该日，随后返回。
 library;
 

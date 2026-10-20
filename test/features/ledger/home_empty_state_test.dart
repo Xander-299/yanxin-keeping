@@ -35,7 +35,7 @@ void main() {
 
     // 真的进了记一笔页。
     // 判据口径改于 F7.9 —— 顶部 AppBar 的「保存」已删除，保存入口只留底部吸底按钮
-    // （见 `docs/SPEC-F7.9-record-sticky-save.md`）。故不再断言 AppBar 里的「保存」，
+    // （见 `docs/spec/SPEC-F7.9-record-sticky-save.md`）。故不再断言 AppBar 里的「保存」，
     // 改为「AppBar 只有标题」+「吸底按钮在位」。
     expect(find.widgetWithText(AppBar, '记一笔'), findsOneWidget);
     expect(find.widgetWithText(AppBar, '保存'), findsNothing);

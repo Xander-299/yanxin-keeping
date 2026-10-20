@@ -274,7 +274,7 @@
 > **断点 ①–⑤ 逐层通过**，含**用户实付支付宝 ¥0.01 端到端入账** ✅（详见 **I 段**）。
 > **回滚**：`git checkout v0.7.14` 或 `git revert <commit>`。
 > **不动 schema**（DB 仍 **v3**：批次记录复用既有 `schema_meta` KV）· **零新 pub 依赖**（Kotlin 原生 + 平台侧 `org.json`）。
-> SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（2026-09-30 用户签字 → **设计乙**；§8 含真机走查实施记录）。
+> SPEC：`docs/spec/SPEC-F7.15-auto-bookkeeping.md`（2026-09-30 用户签字 → **设计乙**；§8 含真机走查实施记录）。
 
 ### A · 需求与裁定
 
@@ -497,7 +497,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 > 真机走查（MuMu 12 / 900×1600 @320dpi，AI 经 adb 全包）**D1–D10 全部通过、0 崩溃**
 > → `docs/acceptance-F7.14-onboarding.md`。**回滚**：`git checkout v0.7.13`。
 > **零新依赖、不动 schema**（引导标记复写既有 `schema_meta` KV，DB 仍 **v3**）。
-> SPEC：`docs/SPEC-F7.14-onboarding.md`（用户裁定四项，见其 §7）。
+> SPEC：`docs/spec/SPEC-F7.14-onboarding.md`（用户裁定四项，见其 §7）。
 
 ### A · 需求与范围
 
@@ -646,7 +646,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 
 #### 新增
 
-- `docs/SPEC-F7.9-record-sticky-save.md`（含 **SPEC 前提修正**记录：初稿的 `bottomNavigationBar`
+- `docs/spec/SPEC-F7.9-record-sticky-save.md`（含 **SPEC 前提修正**记录：初稿的 `bottomNavigationBar`
   方案不成立）+ `docs/acceptance-F7.9-record-sticky-save.md`（走查报告）。
 - `test/features/record/record_save_entry_test.dart` **重写**为矮视口（逻辑 800×400）口径：
   ① AppBar 与全页无「保存」；② 吸底按钮唯一且在视口内；③ 滚动 400px 后按钮 y 不变；
@@ -705,7 +705,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 ## [v0.7.11] — 2026-09-25 · F7.8 流水左滑删除
 
 > **诉求**：删除入口原是**长按**（无视觉提示，且与日历页「长按空格子记一笔」语义撞车）→ 用户要求改为**左滑**。
-> **三项裁定（2026-09-25，详见 `docs/SPEC-F7.8-swipe-delete.md` §7）**：
+> **三项裁定（2026-09-25，详见 `docs/spec/SPEC-F7.8-swipe-delete.md` §7）**：
 > ① **长按取消**、只留左滑；② **滑出红色「删除」按钮 → 点按钮才删**（不采用「滑走即删」）；
 > ③ 作用范围 = **首页 + 日历日账单 + 搜索结果** 3 处（报表页流水行仍只读）。
 > **不动 schema、零新依赖**（手写滑动件，不引 `flutter_slidable`）。
@@ -763,7 +763,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 >
 > **本批不动 schema**（⚠️ 又一处 SPEC 前提修正）：§D.3 原计划新建 `app_meta` KV 表并把 schema
 > 推到 v4，但 `schema_meta`（`key` + `value`）本来就是 PRD 登记的 KV 元数据表，
-> `docs/SPEC-F7.3-budget.md` §3 也把它列为「零迁移」备选 → **复用现有表，schema 仍是 v3**。
+> `docs/spec/SPEC-F7.3-budget.md` §3 也把它列为「零迁移」备选 → **复用现有表，schema 仍是 v3**。
 > 另一处：§E.1 写「`/record?date=YYYY-MM-DD`」，实际约定是**毫秒**（`app.dart` 里
 > `int.tryParse(queryParameters['date'])` → `occurredAtMs`）→ 按毫秒传。
 > ⚠️ 走查抓到 1 个**真 bug**（搜索快照过期，见「修复」段）——D 批新增的「账户名命中」正好踩在它上面。
@@ -855,7 +855,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 
 ### 新增 — F7.7 A 批 · 报表明细清单 `/reports`（2026-09-23）
 
-- **范围**：`docs/SPEC-F7.7-backlog.md` §A（**A 批已签字**：A.0 前置做；D.5 拼音 / E.5 农历不做；
+- **范围**：`docs/spec/SPEC-F7.7-backlog.md` §A（**A 批已签字**：A.0 前置做；D.5 拼音 / E.5 农历不做；
   报表页流水行由用户裁定为**只读不可点**，按 A.4）。
 - **A.0 前置 —— 记一笔支持选账户**：`record_page.dart` 原先写死 `accounts.first.id`，用户无法选账户
   （不改这条，「按账户报表」永远只有一行）。现加第 4 个 `ToonField`「账户」+ 底部弹层
@@ -874,7 +874,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 - **展示限制**：每展开组最多 200 行 + 尾注（与搜索浮层同一做法）。
 - **只读改造**：`TxTile` 的 `onTap` / `onLongPress` 改为可空（空 = 只读行），新增 `neutral`（转账行配色）；
   首页 / 日历 / 搜索三处既有调用点行为不变。
-- **文档**：`docs/SPEC-F7.7-backlog.md` §F 签字表 + §G 实施记录已回写。
+- **文档**：`docs/spec/SPEC-F7.7-backlog.md` §F 签字表 + §G 实施记录已回写。
 
 ### 修复 + 验收 — 首次使用验收（F7.7-a，2026-09-23）
 
@@ -933,7 +933,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
   flutter_tools 生成的 listener 会把 `main()` 的异常转成 `IsolateSpawnException`，于是整个文件只剩一句「加载失败」。
   加固：`main()` 里**零 IO** —— 改 `RealBill`（懒读 + 懒解析 + `on Exception` 降级）+ `markTestSkipped`，
   缺件 / 读不出 / 解析失败**只跳过该例**并给出可读原因。复验 **`+8-0~0` 全绿**。
-- **文档**：`docs/SPEC-F7.7-backlog.md` §G 补「第二轮反馈」与工具说明；`HANDOFF.md` 未解决问题第 1 条改写
+- **文档**：`docs/spec/SPEC-F7.7-backlog.md` §G 补「第二轮反馈」与工具说明；`HANDOFF.md` 未解决问题第 1 条改写
   （`flutter test` 本机自查 + 用户终端复跑）、盲区防护新增 2 条（加载期 IO / `testWidgets` 假绿）。
 - **门禁闭合（2026-09-23 下午）**：用户在**自己的 Git Bash 终端**跑 `flutter test` → **整个套件全部通过**
   （预期 **289 passed / 0 skipped** = 基线 269 + A 批 18 + 修 F1 的 2 例），
@@ -964,7 +964,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
   ⚠️ 但 **63 个 `testWidgets` 用例跑不了**（该封装喂不了真运行器）→ 这一半仍需用户在自己终端跑。
 - **仍跑不了**：真机走查（构建链路是多层 spawn：`flutter_tools` → Gradle → 插件里的 `dart`，
   `inheritStdio` 包装器只救第一层）。
-- 解除方式见 `HANDOFF.md`「未解决问题」；协议三坑见 `docs/SPEC-F7.7-backlog.md` §G。
+- 解除方式见 `HANDOFF.md`「未解决问题」；协议三坑见 `docs/spec/SPEC-F7.7-backlog.md` §G。
 
 ## [v0.7.6] — 2026-09-23 · F7.6 卡通浅色视觉改版（P1 + P2 + P3）
 
@@ -973,7 +973,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 
 ### 新增 — F7.6 P3 卡通视觉改版（我的 / 账本 / 分类 / 导入 / 全部弹层）（2026-09-23）
 
-- **范围**：`docs/SPEC-F7.6-cartoon-ui.md` 第 3 批（末批）。我的页、账本管理、分类管理、
+- **范围**：`docs/spec/SPEC-F7.6-cartoon-ui.md` 第 3 批（末批）。我的页、账本管理、分类管理、
   导入三步、分类/日期/预算/账户四个弹层、搜索浮层、资产页空态、日历留白微调。
 - **我的页**：重写为头像卡（品牌圆角方块 + 小猪）+ 4 条目卡（描边图标方块 / 虚线分隔 /
   未实现项「建设中」）+ 品牌提示卡。
@@ -1003,7 +1003,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 
 ### 新增 — F7.6 P2 卡通视觉改版（日历 / 统计 / 资产）（2026-09-19）
 
-- **范围**：`docs/SPEC-F7.6-cartoon-ui.md` 第 2 批。日历页、月份选择页、统计页、资产页 + 3 个共用件。
+- **范围**：`docs/spec/SPEC-F7.6-cartoon-ui.md` 第 2 批。日历页、月份选择页、统计页、资产页 + 3 个共用件。
 - **共用件**：`ToonIconButton` 补 muted 变体（虚线灰 → 用于「报表（建设中）」占位）；
   新增 `ToonDashedBorder`（虚线描边容器）；`appBarTheme` 加底部墨色描边（原型 `.appbar`），
   snackBar / dialog / bottomSheet / input 的描边宽度统一到 `Tok.bw`。
@@ -1033,7 +1033,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 
 - **背景**：页面原型（`modao/yanxin/`，卡通风格）与本 App 的深色视觉是**两套体系**；
   且配色散在 15 个文件里硬编码，没有令牌层。用户确认：**全站硬替换为原型浅色 / 分 3 批交付 / 零新依赖**。
-  小 SPEC：`docs/SPEC-F7.6-cartoon-ui.md`（已签字）。
+  小 SPEC：`docs/spec/SPEC-F7.6-cartoon-ui.md`（已签字）。
 - **新增主题底座**：
   - `lib/core/theme/tokens.dart` —— 令牌 1:1 取自原型 `:root`（暖白画布 `#FFF7EA`、
     白卡、墨色 `#2A2A35` 描边 2.5px、硬阴影 `4px 4px 0`、四档圆角 28/22/16/12、
@@ -1074,7 +1074,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 
 - **背景**：底栏「资产」tab 一直是 `PlaceholderPage`，但**账户数据早已入库**
   （`accounts` 表 + `AccountRepository` 完整 CRUD、新建账本自带「现金」、导入自动建账户、
-  记一笔默认写 `accounts.first`）——缺的只是界面。SPEC：`docs/SPEC-F7.5-assets.md`（已签字）。
+  记一笔默认写 `accounts.first`）——缺的只是界面。SPEC：`docs/spec/SPEC-F7.5-assets.md`（已签字）。
 - **口径**：账户余额 = **初始余额 + Σ收入 − Σ支出**，**transfer 不计**
   （`transfer_group_id` 仍是预留字段，转账的「从哪到哪」没落库语义，硬算必错）。
   净资产 = 各未删账户余额之和，**全时间累计**（资产是存量，不按月筛选）。
@@ -1240,11 +1240,11 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
 ### 环境 — 换机重装（2026-09-12）
 
 - 新机器（用户 Administrator，只有 C:/M 盘，无 D 盘）重搭环境：Flutter 3.47.2 / Dart 3.13.2 →
-  `C:\src\flutter`；JDK 17.0.12 → `M:\QQcache`；Android SDK → `C:\src\Android`；Gradle 缓存 → `C:\src\gradle-home`。
+  `<FLUTTER_HOME>`；JDK 17.0.12 → `<JDK17_HOME>`；Android SDK → `<ANDROID_SDK>`；Gradle 缓存 → `<GRADLE_HOME>`。
   `env.sh` 路径已全部重指向，并新增两条本机专属坑的说明（sqlite3.dll、bash PATH 兜底）。
 - ⚠️ **Windows 自带 `winsqlite3.dll` 太老**：不支持 `RETURNING`（需 SQLite ≥ 3.35），drift 的
   `insertReturning` 全线报 `near "RETURNING": syntax error`，60 条测试挂掉。
-  解法：官方 sqlite-dll-win-x64（3.53.4）放到 `C:\src\sqlite3`（进 PATH）+ 复制一份到 flutter_tester 同目录。
+  解法：官方 sqlite-dll-win-x64（3.53.4）放到 `<SQLITE3_DIR>`（进 PATH）+ 复制一份到 flutter_tester 同目录。
 
 ## [v0.7.1] — 2026-09-11 · F7.1 日历页
 

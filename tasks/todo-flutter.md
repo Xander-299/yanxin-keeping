@@ -5,13 +5,13 @@
 
 ## F0 环境搭建 ✅ 已完成（2026-09-09）
 
-- [x] Flutter 3.47.2 → `D:\Download\Flutter\flutter`（Dart 3.13.2）
-- [x] JDK 17.0.20.1+1 → `D:\Download\Java\jdk-17.0.20.1+1`，已 `flutter config --jdk-dir`
-- [x] cmdline-tools → `D:\Download\Java\Android\cmdline-tools\latest`
+- [x] Flutter 3.47.2 → `<FLUTTER_HOME>`（Dart 3.13.2）
+- [x] JDK 17.0.20.1+1 → `<JDK17_HOME>`，已 `flutter config --jdk-dir`
+- [x] cmdline-tools → `<ANDROID_SDK>\cmdline-tools\latest`
 - [x] `flutter doctor --android-licenses` 已全部接受
 - [x] 门禁：`flutter doctor` → Flutter ✅ / Android toolchain ✅ / Network ✅；残留告警均为 Windows桌面、web、wmic 沙箱拦截，与 Android 无关
 - [x] 真机：Redmi K50 无线 adb 可见
-- [ ] 清理 `D:\Tencent\yanxin-flutter\_sdk`（2.1GB 临时 zip，F1 后删）
+- [ ] 清理 `<REPO>\_sdk`（2.1GB 临时 zip，F1 后删）
 
 ## F1 空壳 + 依赖（analyze/test 已过，剩 APK 门禁）
 
@@ -72,7 +72,7 @@
 
 ## F4.5 首页改版 + 底部导航 ✅ 代码完成（2026-09-10，真机验收待做）
 
-- [x] 全局深色主题（近黑底 #0C0C0C + 琥珀橙 #FFAF38，对齐 app_template/home_ui.jpg）
+- [x] 全局深色主题（近黑底 #0C0C0C + 琥珀橙 #FFAF38，对齐 docs/design/home_ui.jpg）
 - [x] 底部导航 4 tab（首页/日历/资产/我的）+ 中央橙色「记一笔」；StatefulShellRoute.indexedStack
 - [x] 日历 / 资产 = 占位页；「我的」= 占位骨架 + 分类管理入口
 - [x] 首页：header（左=账本名开抽屉，右=搜索/报表/统计占位图标）+ 琥珀 hero 月支出卡（保留 ‹ › 翻月）+ 预算占位卡（纯静态）+「本月账单」列表
@@ -203,7 +203,7 @@
 
 ### F7.5-b 资产页（2026-09-17 交付，SPEC 已签字）
 
-- [x] 小 SPEC `docs/SPEC-F7.5-assets.md`（已签字：范围全量、初始余额不允许负数）
+- [x] 小 SPEC `docs/spec/SPEC-F7.5-assets.md`（已签字：范围全量、初始余额不允许负数）
 - [x] `asset_aggregate.dart` 纯函数：`AssetItem` / `AssetSummary` / `buildAssetSummary`
       （余额 = 初始 + Σ收入 − Σ支出，**transfer 不计**；含 `txCount` 用于删除拦截）
 - [x] `account_meta.dart`：账户类型 → 中文名 + 图标（cash / bank / credit / alipay / wechat / other）
@@ -223,7 +223,7 @@
 
 ### F7.6 卡通浅色视觉改版（2026-09-23 全部交付，版本 `v0.7.6`，SPEC 已签字）
 
-- [x] 小 SPEC `docs/SPEC-F7.6-cartoon-ui.md`（已签字：全站硬替换浅色 / 分 3 批 / 零新依赖）
+- [x] 小 SPEC `docs/spec/SPEC-F7.6-cartoon-ui.md`（已签字：全站硬替换浅色 / 分 3 批 / 零新依赖）
 - [x] **P1**（2026-09-18）：`core/theme/tokens.dart` + `toon.dart` 底座、`buildToonTheme`、底栏、
       首页（header / hero / 预算卡 / 流水列表 / 空态）、记一笔、分类弹层、删除弹窗、账本抽屉
 - [x] **P2**（2026-09-19）：日历 / 月历格子 / 月份选择 / 统计 / 趋势柱 / 资产 + `ToonIconButton.muted` + `ToonDashedBorder`
@@ -237,9 +237,9 @@
 - [x] 走查补做：① 账户弹层其实没卡通化（P2 只取色，SPEC 误记「已复核」）；② 资产页 AppBar `+` 换 `ToonIconButton`
 - [x] 版本记录：`v0.7.6` tag + `CHANGELOG.md` 顶部版本规则与 tag 表（F7 阶段一版一 tag）
 
-### F7.7 backlog 五批（`docs/SPEC-F7.7-backlog.md`；**A–E 五批全部交付 ✅（v0.7.7 / v0.7.8 / v0.7.9 / v0.7.10）**）
+### F7.7 backlog 五批（`docs/spec/SPEC-F7.7-backlog.md`；**A–E 五批全部交付 ✅（v0.7.7 / v0.7.8 / v0.7.9 / v0.7.10）**）
 
-- [x] 小 SPEC 起草（`docs/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.10`
+- [x] 小 SPEC 起草（`docs/spec/SPEC-F7.7-backlog.md`，`909c3dc`）：5 批 A→E，各打一个 tag `v0.7.7`…`v0.7.10`
       （**D/E 合并为一个 tag `v0.7.10`**）
 - [x] **A 批签字**（2026-09-23）：A.0 做 / D.5 拼音不做 / E.5 农历不做；且裁定「报表页流水行只读不可点」
 - [x] **A 批真机走查通过（2026-09-23，MuMu 12 无阻断）→ `v0.7.7` 已打 tag 并推远端**；
@@ -254,7 +254,7 @@
       （⚠️ 2026-09-23 修正：此前写「20 例：11+7+2」是误记，静态计数实为 18）
 - [x] **`flutter analyze` 0 issue** —— ✅ **等效达成**（2026-09-23）：`python tool/dart_analyze_fallback.py` →
       `No issues found!`（Python 托管**同一个** `analysis_server_aot.dart.snapshot` + 同一套 `analysis_options.yaml`；
-      已用探针校准确认 lint 规则在线）。原理与协议三坑见 `docs/SPEC-F7.7-backlog.md` §G
+      已用探针校准确认 lint 规则在线）。原理与协议三坑见 `docs/spec/SPEC-F7.7-backlog.md` §G
 - [x] **`flutter test` 的等效手段已入库** —— `tool/dart_test_fallback.py`（Python 起 `frontend_server`
       编译 + `flutter_tester.exe` 执行；参数抄 flutter_tools 源码）。**实测纯 `test()` 226 例全绿 / 0 失败**
 - [x] **`flutter test` 全绿 0 skip（A 批）** —— ✅ **2026-09-23 用户终端全量通过（289 passed / 0 skipped）**
@@ -298,7 +298,7 @@
 
 ### F7.8 流水左滑删除（用户新需求，2026-09-25 · **已交付 / 已打 `v0.7.11`**）
 
-- [x] 小 SPEC 起草并签字（`docs/SPEC-F7.8-swipe-delete.md`，含 §7 三项用户裁定）：
+- [x] 小 SPEC 起草并签字（`docs/spec/SPEC-F7.8-swipe-delete.md`，含 §7 三项用户裁定）：
       ① 长按取消、只留左滑；② 滑出红色「删除」按钮 → 点按钮才删（否掉「滑走即删」）；
       ③ 范围 = 首页 + 日历日账单 + 搜索结果 3 处（报表页流水行仍只读）
 - [x] 通用件 `SwipeActionRow` + 纯函数 `resolveSwipeOpen`
@@ -325,7 +325,7 @@
 
 ### F7.9 记一笔双保存入口收敛（用户新需求，2026-09-25 · **已交付 / 已打 `v0.7.12`**）
 
-- [x] 小 SPEC 起草并签字（`docs/SPEC-F7.9-record-sticky-save.md`）：用户四选一裁定
+- [x] 小 SPEC 起草并签字（`docs/spec/SPEC-F7.9-record-sticky-save.md`）：用户四选一裁定
       **底部主按钮改吸底常驻 + 删顶部入口**（否掉「去底部、只留顶部」）
 - [x] `record_page.dart`：删 AppBar `actions` 的「保存」；`body` 改
       `Column(Expanded(滚动区) + 吸底栏)`，滚动区 bottom padding `24 → 16`
@@ -425,7 +425,7 @@
 ### F7.14 新手引导（7 页全屏导览）—— 用户新需求，**已交付 ✅ `v0.7.14`**（2026-09-25）
 
 > 需求：让第一次使用的用户知道「没有明显标识的按钮 / 隐藏手势」是做什么的。
-> SPEC：`docs/SPEC-F7.14-onboarding.md`（用户裁定四项：全屏分页导览 / 四项内容全覆盖 /
+> SPEC：`docs/spec/SPEC-F7.14-onboarding.md`（用户裁定四项：全屏分页导览 / 四项内容全覆盖 /
 > 「我的」新增重看入口 / **老用户不弹**）。**零新依赖、不动 schema（KV 复用 `schema_meta`，DB 仍 v3）**。
 
 - [x] 调研：全站 **17 处**「无文字 / 只有手势」入口（底栏中央歪 4° 方块、首页三图标、日历三图标、
@@ -456,7 +456,7 @@
 ### F7.15 自动记账（通知使用权为主 + 零权限兜底）—— 用户新需求，**✅ 已交付（tag `v0.7.15`）**（2026-09-30 起）
 
 > 需求：用户要「自动记账」，并先问权限方案；选完组合后又追加「能不能在通知栏里确认入账」。
-> SPEC：`docs/SPEC-F7.15-auto-bookkeeping.md`（**已签字**：方案 A + D3 + 强化导入 / 静默直入 /
+> SPEC：`docs/spec/SPEC-F7.15-auto-bookkeeping.md`（**已签字**：方案 A + D3 + 强化导入 / 静默直入 /
 > 按来源建账户 / 仅微信+支付宝 / **设计乙 = 静默入账 + 通知栏回执（撤销·查看）**）。
 > **零新 pub 依赖、零 Gradle 新依赖、不动 schema**（批次记录复用 `schema_meta` KV，DB 仍 v3）。
 

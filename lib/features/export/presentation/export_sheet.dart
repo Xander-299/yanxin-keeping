@@ -1,4 +1,4 @@
-/// 「数据导出」底部弹层（`F7.7 B 批`，见 `docs/SPEC-F7.7-backlog.md` §B）。
+/// 「数据导出」底部弹层（`F7.7 B 批`，见 `docs/spec/SPEC-F7.7-backlog.md` §B）。
 ///
 /// 两条选项：导出流水 CSV / 导出备份 JSON。落盘用 `file_picker` 的
 /// **静态** `saveFile`（12.x 起没有 `.platform`），Android 走 SAF

@@ -516,7 +516,7 @@ D.5 拼音 / 首字母 **不做**、E.5 农历 / 节假日 **不做**，均不�
 **⚠️ SPEC 前提修正（第二处）**：§D.3 计划「`tables.dart` 新增 `AppMeta` 表 + `schemaVersion` 2 → 3」——
 **两处都不成立**：
 1. **KV 表已存在**：`SchemaMeta`（`key` 主键 + `value`）就是通用 KV，PRD §表清单登记为
-   「KV 元数据（含 `active_book_id`）」，`docs/SPEC-F7.3-budget.md` §3 也把它列为**零迁移**备选；
+   「KV 元数据（含 `active_book_id`）」，`docs/spec/SPEC-F7.3-budget.md` §3 也把它列为**零迁移**备选；
 2. **版本号前提过期**：C 批已把 schema 推到 v3，「2 → 3」无论如何都不对。
 
 → **本批复用 `schema_meta`**（新建 `AppMetaRepository` 薄封装 + `appMetaRepositoryProvider`），

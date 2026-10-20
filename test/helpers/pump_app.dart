@@ -9,7 +9,7 @@ import 'package:yanxin/app.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
-import 'package:yanxin/features/onboarding/onboarding_keys.dart';
+import 'package:yanxin/features/onboarding/application/onboarding_keys.dart';
 
 /// 打开一个内存库（每用例独立，互不污染）。
 AppDatabase openTestDatabase() => AppDatabase(NativeDatabase.memory());
