@@ -40,8 +40,8 @@ jobs:
       # build_runner，编译期不会报错、运行时才会出问题 —— 这里把它变成硬门禁。
       - name: Generated code is up to date
         run: |
-          if ! git diff --exit-code -- 'lib/**.g.dart'; then
-            echo "::error::lib/**.g.dart 与 tables.dart 不同步。请在本地执行"
+          if ! git diff --exit-code -- 'lib/**/*.g.dart'; then
+            echo "::error::lib/**/*.g.dart 与 tables.dart 不同步。请在本地执行"
             echo "::error::'dart run build_runner build --delete-conflicting-outputs' 并提交生成物。"
             exit 1
           fi
