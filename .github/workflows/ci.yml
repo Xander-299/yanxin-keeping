@@ -1,0 +1,53 @@
+name: CI
+
+# 门禁与本地一致：analyze + test。本项目此前只有「本机手工门禁」，
+# 换机器 / 换会话就无法证明 README 声称的用例数 —— 这个 workflow 就是那条自动化的门禁。
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  # ⚠️ pubspec.lock 里 116 个包的 url 都是 https://pub.flutter-io.cn（作者在国内开发，
+  #    env.sh 也设了这个镜像）。CI 必须设成同一个 host，否则 pub 会判定 lock 失效、
+  #    重新求解版本 —— 那样 CI 跑过的版本和提交进仓库的版本可能不是同一套。
+  PUB_HOSTED_URL: https://pub.flutter-io.cn
+
+jobs:
+  gate:
+    name: analyze + test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Regenerate drift code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      # database.g.dart 是入库的生成物（约 180 KB）。改了 tables.dart 却忘了重跑
+      # build_runner，编译期不会报错、运行时才会出问题 —— 这里把它变成硬门禁。
+      - name: Generated code is up to date
+        run: |
+          if ! git diff --exit-code -- 'lib/**.g.dart'; then
+            echo "::error::lib/**.g.dart 与 tables.dart 不同步。请在本地执行"
+            echo "::error::'dart run build_runner build --delete-conflicting-outputs' 并提交生成物。"
+            exit 1
+          fi
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

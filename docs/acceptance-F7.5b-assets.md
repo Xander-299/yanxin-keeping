@@ -4,7 +4,7 @@
 > 环境：**MuMu 12**（A 机，`D:\Downloads\MuMu\MuMuPlayer`），Android 竖屏 **900×1600 @320dpi**
 > 设备：`127.0.0.1:16384`；包名 `com.teocodeman.yanxin` → 实为 `com.teacodeman.yanxin`
 > 版本：`master` @ `249b199` + 本次验收修复（debug APK）
-> 方式：`adb + uiautomator` 语义树 + 截图（脚本 `.workbuddy/ui_dump.py`）
+> 方式：`adb + uiautomator` 语义树 + 截图（脚本 `tool/ui_dump.py`）
 > 日期：2026-09-18 · 走查人：AI 助手（**未经真实用户测试**）
 
 ---

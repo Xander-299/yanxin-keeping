@@ -1099,7 +1099,7 @@ analyze 等效 **全项目 `No issues found!`**；本机纯 `test()` **386 例�
   遗留体验摩擦 1 条：账户图标 / 颜色无法设置（`icon` / `color` 列已存在，仅界面未暴露）。
 - **本次修正的实走方法**：空 `TextField` 不出现在语义树里，早期按推算坐标点击落到遮罩区，
   表现为「弹窗莫名关闭 + 键盘不拉起」，一度被误判为阻断 bug；用「保存 / 取消」按钮坐标
-  反推弹窗边界后复测推翻。坑已写进 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md`。
+  反推弹窗边界后复测推翻。坑已写进 `docs/dev/android-ui-smoke.md`。
 
 ### 新增 — F7.5-a 搜索浮层化 + 类型筛选建议（2026-09-12）
 

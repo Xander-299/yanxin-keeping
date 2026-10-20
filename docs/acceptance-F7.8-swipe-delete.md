@@ -3,9 +3,9 @@
 > **日期**：2026-09-25 · **执行**：AI（经 adb 全包，MuMu 12）
 > **被验版本**：工作区最新（含左滑删除 + 走查中修的白底 bug）· **基线**：`v0.7.10`
 > **设备**：MuMu 12 @ `127.0.0.1:16384`，900×1600 @320dpi（竖屏，逻辑 450×800）
-> **判读手段**：`uiautomator` 语义树（可信真值）+ 截图交叉验证；抓取脚本 `.workbuddy/ui_dump.py`
+> **判读手段**：`uiautomator` 语义树（可信真值）+ 截图交叉验证；抓取脚本 `tool/ui_dump.py`
 > **构建方式**：见文末「构建路径」；**装机前核验** APK 内 `assets/flutter_assets/kernel_blob.bin`
-> sha256 与盘上一致 + grep `SwipeActionRow` 命中（脚本 `.workbuddy/verify_apk_kernel.py`）
+> sha256 与盘上一致 + grep `SwipeActionRow` 命中（脚本 `tool/verify_apk_kernel.py`）
 > **SPEC**：`docs/SPEC-F7.8-swipe-delete.md`（用户裁定三项见其 §7）
 
 ---
@@ -99,6 +99,6 @@ python tool/build_kernel_fallback.py                                  # 产 kern
 装机前核验（防「装到旧包」）：
 
 ```bash
-python .workbuddy/verify_apk_kernel.py   # APK 内 kernel_blob 的 sha256 与盘上一致 + grep 新增符号
+python tool/verify_apk_kernel.py   # APK 内 kernel_blob 的 sha256 与盘上一致 + grep 新增符号
 # 本次：ae6f85f8e88ef2d1（两处一致）；grep SwipeActionRow / resolveSwipeOpen / swipe- 全部 True
 ```

@@ -956,7 +956,7 @@ F7 之后为「持续加功能」阶段，SPEC 未签字不动产品代码。
 | 旧 3 | `gradle wrapper` 用 `-all.zip`（754 MB） | ✅ 2026-09-23 改 `-bin.zip`（277 MB，镜像已验证可下），构建复跑通过；旧 `-all` 目录已是死重，手工删可回收 754 MB |
 | 旧 5① | 资产页「还没有账户」空态仍是 Material 图标 + `FilledButton` | ✅ 走查前改卡通空态（虚线圆 + 小猪 + `ToonButton`） |
 | 旧 5② | 日历页月历与「月结余」卡之间留白比原型略大 | ✅ 网格 padding 10→8，留白改由卡 margin 承担 |
-| 旧 6 | `.workbuddy/skills/flutter-windows-env-bootstrap` 是 B 机专用 | ✅ 该技能正文顶部加粗体警告，避免 A 机照抄 |
+| 旧 6 | `docs/dev/windows-env-bootstrap.md` 是 B 机专用 | ✅ 该技能正文顶部加粗体警告，避免 A 机照抄 |
 | 新增（走查发现） | **账户弹层根本没卡通化**（P2 只做了取色，SPEC 误记「已复核」） | ✅ 按原型 `ovlAccount` 补做（抓手 + 小标 + 描边输入框 + 类型 chips + 红底流水提示条 + `ToonButton`） |
 | 新增（走查发现） | 资产页 AppBar `+` 还是 Material `IconButton` | ✅ 换 `ToonIconButton`；错误态 `OutlinedButton` → `ToonButton` |
 
@@ -1019,7 +1019,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 - `env.sh` — **每次开终端必 `source env.sh`**（自动识别 A/B 机）
 - `android/gradle.properties` — 含 **`kotlin.incremental=false`**（修跨盘 Kotlin 崩溃，**勿删**）与 `android.builder.sdkDownload=false`
 - 参考图 `app_template/*.jpg`；旧栈资产 `D:\Tencent\yanxin\src\{db,repositories,modules/bill-import,utils}`
-- 真机走查：`.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md`；`uiautomator` 语义树脚本 `.workbuddy/ui_dump.py`
+- 真机走查：`docs/dev/android-ui-smoke.md`；`uiautomator` 语义树脚本 `tool/ui_dump.py`
 - 验收报告：`docs/acceptance-M1-M2.md`（首用验收 M1/M2）、`docs/acceptance-F7.5b-assets.md`（资产页真机走查）、
   `docs/acceptance-first-run.md`（首次使用验收 F7.7-a，2026-09-23）、
   **`docs/acceptance-F7.7-DE.md`（F7.7 D/E 批走查，2026-09-24 —— 含抓到的搜索快照 bug 与「构建路径变通」）**
@@ -1093,7 +1093,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
     要点按钮里的 `Text`：`tap(find.text('保存'))`（`record_save_entry_test.dart` 就是这么写的）。
 32. **真机 adb 命令一律加 `MSYS_NO_PATHCONV=1`**：Git Bash 会把 `/sdcard/...` 转成 Windows 路径 →
     `adb push` 报 `remote secure_mkdirs failed`、`uiautomator dump` + `pull` 找不到文件（**报错文案完全不提路径转换，极难联想**）
-33. **`.workbuddy/ui_dump.py` 报的坐标可能是「整张卡的容器中心」而不是真实按钮** → 点了没反应时别怀疑没改包，
+33. **`tool/ui_dump.py` 报的坐标可能是「整张卡的容器中心」而不是真实按钮** → 点了没反应时别怀疑没改包，
     用原始语义树按 node `bounds` 自己换算（踩过：投放卡的 `选择文件` 按钮真实 y=639，dump 报 y=483）
 34. **清走查残留 / 造数据**：`run-as com.teacodeman.yanxin sqlite3 app_flutter/yanxin.sqlite "..."`（设备自带 sqlite3 可用）；
     **改前先 `cp` 备份**成 `app_flutter/yanxin.sqlite.bak-<日期>`。详见 `mumu-flutter-ui-smoke` 对应小节
@@ -1286,7 +1286,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
    ⚠️ **装机前必验包新鲜度**：从 APK 读 `assets/flutter_assets/kernel_blob.bin` 比对 sha256（与盘上一致）
    + grep 本次新增文案（如「最近搜过」「近3月」）—— 否则极易「装到旧包」而误判「改了没用」。
    然后 `adb -s emulator-5554 install -r -t <apk>`（debug 包 **`-t` 必须**）装到 MuMu 12，
-   照 `.workbuddy/skills/mumu-flutter-ui-smoke/SKILL.md` 走（**adb 命令一律加 `MSYS_NO_PATHCONV=1`**）。
+   照 `docs/dev/android-ui-smoke.md` 走（**adb 命令一律加 `MSYS_NO_PATHCONV=1`**）。
    D/E 批走查记录（含逐步期望值）可直接对拍：`docs/acceptance-F7.7-DE.md`。
 3. **占位项（未做功能，别当 bug）** —— **已全部点亮**：4 处「报表」入口（A 批）+「我的 → 数据导出」（B 批）
    + 账户图标 / 颜色（C 批）→ **当前无占位页**（`PlaceholderPage` 仍留在 `lib/features/nav/` 备用）。

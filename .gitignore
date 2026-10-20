@@ -59,7 +59,7 @@ app.*.map.json
 # 兜底：签名配置若被挪到别处（如 android/app/key.properties）同样禁止入库
 key.properties
 
-# Gradle 缓存（沙箱不允许删 <USER_HOME>\.gradle，故挪到工作区内）
+# Gradle 缓存（放在工作区内，避免写用户目录下的 .gradle）
 /.gradle-home/
 
 # 构建产物（android/ 根级 build 目录）
@@ -71,20 +71,14 @@ key.properties
 # 真实账单样本（含隐私，只留本机）
 test/fixtures/*-real.*
 
-# 走查截图（二进制，只留本机）
-/.workbuddy/shots/
-# 按批次命名的走查中间产物目录（如 qa-f79 → F7.9）
-/.workbuddy/qa-*/
-# 兜底：.workbuddy 根下散落的截图同样不入库
-/.workbuddy/*.png
+# 本机 agent 工作台（会话记忆 / 走查截图 / 一次性环境脚本 / 本地回收站）。
+# 这些内容带着本机绝对路径与用户名，且只对这台机器有意义 —— 整个目录都不入库。
+# 需要长期保留的方法论文档在 docs/dev/，通用脚本在 tool/。
+/.workbuddy/
 
-# 会话记忆（逐日工作日志，只留本机）
-/.workbuddy/memory/
-
-# 本地回收站（safe-delete shim 拦 rm，删文件一律 mv 到这里）
-/.workbuddy/trash/
+# 本机环境（含本机 SDK 绝对路径与用户名）—— 模板见 env.example.sh
+/env.sh
 
 # tool/ 下 Python 脚本的字节码缓存（此前无规则，`git add .` 会误入库）
 __pycache__/
 *.pyc
-
