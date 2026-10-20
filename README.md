@@ -253,15 +253,18 @@ python tool/publish_release.py --tag v0.7.16 \
 
 | 文档 | 内容 |
 |---|---|
+| [`HANDOFF.md`](HANDOFF.md) | **接手入口**：现状、必须守住的不变量、目录导航 |
 | [`CHANGELOG.md`](CHANGELOG.md) | 版本变更记录 + tag 表 |
-| [`HANDOFF.md`](HANDOFF.md) | 交接文档：当前状态、决策依据、踩坑记录 |
-| [`SPEC-flutter-migration.md`](SPEC-flutter-migration.md) | 迁移总 SPEC（已签字） |
-| [`docs/PRD-yanxin-flutter.md`](docs/PRD-yanxin-flutter.md) | 功能需求汇总（FR 编号 + 状态） |
-| [`docs/spec/SPEC-F7.15-auto-bookkeeping.md`](docs/spec/SPEC-F7.15-auto-bookkeeping.md) | 自动记账 SPEC（架构 / 忽略规则 / Android 硬约束） |
-| [`docs/acceptance-*.md`](docs/) | 各阶段真机走查验收报告 |
-| [`tasks/todo-flutter.md`](tasks/todo-flutter.md) | 迁移任务清单 |
-| [`docs/release-notes-v0.7.16.md`](docs/release-notes-v0.7.16.md) | v0.7.16 Release 说明（安装 + 权限 + 隐私） |
 | [`docs/RESUME.md`](docs/RESUME.md) | **简历用项目介绍**（规模 / 技术难点 / 迭代记录 / 为什么要重写） |
+| [`docs/PRD-yanxin-flutter.md`](docs/PRD-yanxin-flutter.md) | 功能需求汇总（FR 编号 + 状态） |
+| [`docs/spec/`](docs/spec/) | 各阶段签字的 SPEC（总 SPEC + F7.3–F7.15） |
+| [`docs/dev/`](docs/dev/) | 真机走查手册、Windows 环境重建 |
+| [`docs/handoff/`](docs/handoff/) | 交接档案（事实 / 坑 / 未解决 / 历史 / 逐轮记录） |
+| [`docs/acceptance-*.md`](docs/) | 各阶段真机走查验收报告 |
+| [`docs/release-notes-v0.7.16.md`](docs/release-notes-v0.7.16.md) | v0.7.16 Release 说明（安装 + 权限 + 隐私） |
+| [`docs/design/`](docs/design/) | 页面原型参考图（视觉对拍用） |
+| [`tool/README.md`](tool/README.md) | `tool/` 下每个脚本的用途与适用条件 |
+| [`tasks/todo-flutter.md`](tasks/todo-flutter.md) | 迁移任务清单 |
 
 ---
 
