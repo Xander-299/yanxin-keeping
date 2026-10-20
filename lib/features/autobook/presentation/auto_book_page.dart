@@ -22,6 +22,10 @@ import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
 import 'package:yanxin/features/autobook/data/auto_book_bridge.dart';
 import 'package:yanxin/features/autobook/data/auto_book_diagnostics.dart';
 
+part 'widgets/autobook_status_row.dart';
+part 'widgets/autobook_blocks.dart';
+part 'widgets/autobook_info_line.dart';
+
 /// 「通知使用权」是否已开启（原生侧实时查系统设置）。
 final autoBookListenerEnabledProvider = FutureProvider<bool>(
   (Ref ref) => ref.watch(autoBookBridgeProvider).listenerEnabled(),
@@ -56,10 +60,6 @@ final autoBookLastRunProvider = FutureProvider<AutoBookLastRun?>((Ref ref) async
       .get(kAutoBookLastRunKey);
   return AutoBookLastRun.parse(raw);
 });
-
-part 'widgets/autobook_status_row.dart';
-part 'widgets/autobook_blocks.dart';
-part 'widgets/autobook_info_line.dart';
 
 class AutoBookPage extends ConsumerStatefulWidget {
   const AutoBookPage({super.key});

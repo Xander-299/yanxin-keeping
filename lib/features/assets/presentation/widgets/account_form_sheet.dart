@@ -19,6 +19,9 @@ import '../../application/account_meta.dart';
 import '../../application/asset_aggregate.dart';
 import '../../application/assets_controller.dart';
 
+part 'account_form_sheet/form_chips.dart';
+part 'account_form_sheet/form_fields.dart';
+
 /// 打开账户表单弹窗。[account] 为空 = 新增，否则 = 编辑。
 Future<void> showAccountFormSheet(
   BuildContext context,
@@ -36,9 +39,6 @@ Future<void> showAccountFormSheet(
     builder: (BuildContext _) => _AccountFormSheet(account: account),
   );
 }
-
-part 'account_form_sheet/form_chips.dart';
-part 'account_form_sheet/form_fields.dart';
 
 class _AccountFormSheet extends ConsumerStatefulWidget {
   const _AccountFormSheet({this.account});

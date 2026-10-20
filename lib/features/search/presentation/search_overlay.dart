@@ -29,6 +29,10 @@ import '../application/search_controller.dart';
 import '../application/search_history.dart';
 import '../application/search_query.dart';
 
+part 'widgets/search_bar.dart';
+part 'widgets/search_result_bar.dart';
+part 'widgets/search_states.dart';
+
 /// 单次展示的结果上限：超出只显示最近 N 条（列表太长反而不好找）。
 const int kSearchResultLimit = 200;
 
@@ -49,10 +53,6 @@ Future<void> showSearchOverlay(BuildContext context) {
         FadeTransition(opacity: anim, child: child),
   );
 }
-
-part 'widgets/search_bar.dart';
-part 'widgets/search_result_bar.dart';
-part 'widgets/search_states.dart';
 
 /// 搜索浮层主体。
 class SearchOverlay extends ConsumerStatefulWidget {
