@@ -78,6 +78,14 @@ android.overridePathCheck=true
   `widgetWithText(AppBar`）—— 曾因 grep 加了上限而漏掉一个文件，用户终端直接挂。
 - 真机走查见 [`docs/dev/android-ui-smoke.md`](docs/dev/android-ui-smoke.md)：
   语义树是「有没有 / 在哪」的真值，截图才是「颜色 / 遮挡」的真值，**两者交叉验证**。
+- **出 release 包必须走 ASCII 副本**：项目在中文路径下，`gen_snapshot` 会因路径含非 ASCII
+  直接挂（报 `Unable to read file: …\.dart_tool\flu`）。做法是 robocopy 到 `D:\yanxin-build`
+  （排除 `build` / `.gradle-home` / `.git`）+ 带上仓库的 `pubspec.lock` 与 `.dart_tool` +
+  `--no-pub` 构建。keystore 口令、核验三步、发布命令见
+  [`docs/dev/release-v0.7.17.md`](docs/dev/release-v0.7.17.md)。
+- **换签名 = 用户必须卸载重装 = 丢本地账本**：release 签名只用
+  `<USER_HOME>\upload-keystore.jks`（`CN=yanxin`），**不是** `~/.android/debug.keystore`。
+  装机前先 `apksigner verify --print-certs` 比对指纹。
 
 ## 目录导航
 
@@ -117,4 +125,5 @@ lib/
 | [`docs/RESUME.md`](docs/RESUME.md) | 简历用项目介绍（规模 / 难点 / 迭代记录） |
 | [`docs/spec/`](docs/spec/) | 各阶段签字的 SPEC |
 | [`docs/dev/`](docs/dev/) | 真机走查、Windows 环境重建 |
+| [`docs/dev/release-v0.7.17.md`](docs/dev/release-v0.7.17.md) | **出 release 包 + 发布**：keystore / 口令 / ASCII 副本构建法 / 核验三步 |
 | [`tasks/todo-flutter.md`](tasks/todo-flutter.md) | 迁移任务清单 |
