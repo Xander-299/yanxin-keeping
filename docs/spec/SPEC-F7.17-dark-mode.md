@@ -2,7 +2,8 @@
 
 > **状态**：需求由用户 2026-10-20 直接下达（三条：三选项 · 默认跟随系统 · 放设置里）→
 > **✅ 已交付（2026-10-20 转正 `v0.7.17`）**
-> **门禁**：`flutter analyze` 等效 `No issues found!` · `flutter test` **511 passed / 6 skipped / 0 failed**（本批 +17）
+> **门禁**：`flutter analyze` 等效 `No issues found!` · `flutter test` **525 passed / 6 skipped / 0 failed**
+> （本批新增 17 例 + 深色对比度护栏 14 例）
 > **真机走查**：2026-10-21 MuMu 12 全包完成（23 个页面 / 弹层逐页截图 + 语义树），
 > 记录见 [`docs/acceptance-F7.17.md`](acceptance-F7.17.md)
 > **版本**：交付后打 tag **`v0.7.17`**（沿用 `tag = v0.7.<N>` ↔ `F7.<N>` 规则；最新已占用 `v0.7.16`）
@@ -57,7 +58,7 @@ abstract final class Tok {
 | D6 | 深色下**每个页面**都可读：首页 / 日历 / 资产 / 我的 / 记一笔 / 统计 / 报表 / 导入 / 导出 / 账本 / 分类 / 自动记账 / 新手引导 / 搜索浮层 / 各弹层 |
 | D7 | 冷启动**不闪浅色**：首帧前已取到持久化模式（`main()` 预热） |
 | D8 | 状态栏图标随主题反色（浅色主题深图标 / 深色主题浅图标） |
-| D9 | 既有 **479 例**测试全绿；新增用例覆盖模式解析 / 持久化 / 设置页切换 / 深色生效 |
+| D9 | 既有测试**全绿**（`flutter test` 0 failed）；新增用例覆盖模式解析 / 持久化 / 设置页切换 / 深色生效 / 深色对比度护栏 |
 | D10 | `flutter analyze` 等效 `No issues found!`；无新增 pub 依赖；DB 仍 v3 |
 
 ## 3. 交互与口径
@@ -95,7 +96,7 @@ abstract final class Tok {
 | 画布 `canvas` | `#FFF7EA` 暖白 | `#17151D` 夜墨 |
 | 卡片 `paper` | `#FFFFFF` | `#26242F` |
 | 主文字 / 描边 `ink` | `#2A2A35` 近黑 | `#F6F0E4` 暖白 |
-| 次级 / 三级 | `#6C6C7C` / `#9C9CAD` | `#BDB6C7` / `#857F91` |
+| 次级 / 三级 | `#6C6C7C` / `#9C9CAD` | `#BDB6C7` / `#A098AE` |
 | 品牌 `brand` | `#FFB627` | **不变**（琥珀是品牌锚点） |
 | 品牌浅底 `brandTint` | `#FFF1D4` | `#3A2C10` |
 | 品牌底上的字 `onBrand` | `#4A3103` | `#33230A`（琥珀仍亮，字仍深） |
@@ -105,8 +106,9 @@ abstract final class Tok {
 
 - 语义色（红 / 绿 / 蓝 / 紫）**提亮一档**（深底上更跳），对应 tint **压暗**（成为深色底）。
 - 分类饼图色板**两套共用**（本就高饱和，深底上可读），账户自选色是用户数据，不动。
-- 新增 2 个令牌解决「一色两用」的冲突：`onBrand`（亮琥珀底上的字）与 `shadow`（硬阴影）；
-  另加 `veil`（hero 上的半透明白胶囊，深浅都用白）。
+- 新增 3 个令牌解决「一色两用」的冲突：`onBrand`（亮琥珀底上的字）、`shadow`（硬阴影）、
+  `onRed`（实心红底上的字 / 图标）；另加 `veil`（品牌底上的半透明白胶囊，深浅都用白）、
+  `decorInk`（**恒深**的插画描边 —— 小猪 / 星星画在品牌底上，不能跟着 `ink` 反色）。
 
 ### 3.4 状态栏 / 启动
 
@@ -145,6 +147,7 @@ abstract final class Tok {
 
 > 浅色 `ink3` 是 F7.6 遗留的 **2.70:1**（未达 AA）—— 提到 4.5 会让它与 `ink2` 几乎同色、层级丢失，
 > 本批**不动**，只钉住下限不更差，待设计侧决定。
+> 深色 `ink3` 已从 `#857F91` 提亮到 `#A098AE`（3.96 → 5.52），因为深色下它是「能定高一点」的。
 
 ---
 
@@ -162,16 +165,17 @@ abstract final class Tok {
 
 | 文件 | 动作 |
 |---|---|
-| `lib/core/theme/palette.dart` | **新增**：`ToonPalette extends ThemeExtension` + `light` / `dark` + `context.toon` + `hard/inkBorder/cardDeco` |
+| `lib/core/theme/palette.dart` | **新增**：`ToonPalette extends ThemeExtension`（浅 / 深两套）+ `context.toon` + `hard / inkBorder(on:) / cardDeco / inkOn` 助手 |
 | `lib/core/theme/tokens.dart` | 改：删掉颜色常量，只留几何（`bw` / `rXl` / `rLg` / `rMd` / `rSm`）；`buildToonTheme(ToonPalette, Brightness)` |
-| `lib/core/theme/toon/*.dart` | 改：默认参数由常量改为 `null` + build 内解析调色板（保持 `const` 构造可用） |
-| `lib/core/theme/theme_mode.dart` | **新增**：`ToonThemeMode`（`light/dark/system`）+ `parse` / `key` 纯函数 |
-| `lib/features/settings/application/theme_controller.dart` | **新增**：`themeModeProvider`（AsyncNotifier，读 KV / 点选写 KV） |
-| `lib/features/settings/presentation/settings_page.dart` | **新增**：设置页（外观三行单选） |
-| `lib/app.dart` | 改：`ConsumerStatefulWidget`，`theme` / `darkTheme` / `themeMode` |
+| `lib/core/theme/toon/*.dart` | 改：默认参数由常量改为 `null` + build 内解析调色板（保持 `const` 构造可用）；自定义画笔颜色改由构造注入 |
+| `lib/core/theme/theme_mode.dart` | **新增**：`ToonThemeMode`（`light/dark/system`）+ `parse` / `storageValue` / `materialMode` 纯函数 |
+| `lib/features/settings/application/theme_controller.dart` | **新增**：`themeModeProvider`（AsyncNotifier，读 KV / 点选写 KV，失败回落 system） |
+| `lib/features/settings/presentation/settings_page.dart` | **新增**：设置页（外观三行单选，行带 `themeMode_<name>` key） |
+| `lib/app.dart` | 改：`ConsumerStatefulWidget`，`theme` / `darkTheme` / `themeMode`；新增 `/settings` 路由 |
 | `lib/main.dart` | 改：`ProviderContainer` 预热主题后 `UncontrolledProviderScope` |
-| `lib/features/profile/presentation/profile_page.dart` | 改：「设置」条目点亮 → `push('/settings')` |
-| 其余 ~60 个 `lib/features/**` 文件 | 改：`Tok.<颜色>` → `p.<颜色>`（调色板实例），`const` 就地收敛 |
+| `lib/features/profile/presentation/profile_page.dart` | 改：「设置」条目从**占位灰条**点亮 → `push('/settings')`；版本号升 `v0.7.17` |
+| 其余 ~60 个 `lib/features/**` 文件 | 改：`Tok.<颜色>` → `p.<颜色>`（调色板实例），`const` 就地收敛；琥珀底描边补 `on:` |
+| 测试 | **新增 5 个文件 / 31 例**：`theme_mode_test`（解析）· `toon_theme_test`（两套主题 + 跟随系统）· `theme_controller_test`（默认 / 落库 / 冷启动 / 容错）· `settings_page_test`（三行单选）· `palette_contrast_test`（WCAG 护栏） |
 
 ---
 
@@ -181,10 +185,10 @@ abstract final class Tok {
 |---|---|
 | 613 处替换漏改 → 深色下局部仍白底 | **不给 `Tok` 留颜色常量**：编译期报错即清单；analyze 归零才算完 |
 | `const` 去掉后 lint `prefer_const_constructors` 反弹 | 只对「表达式内含 `p.`」的 `const` 就地收敛，其余保持 const |
-| 深色对比度不足（尤其 tint 上的字） | 逐令牌定 `onXxx` 语义色；深色 tint 压暗 + 前景提亮 |
+| 深色对比度不足（尤其 tint 上的字） | 逐令牌定 `onXxx` 语义色；深色 tint 压暗 + 前景提亮；**WCAG 量化 + 14 例护栏测试**（见 §3.5） |
 | 自定义绘制（小猪 / 饼图 / 趋势柱 / 虚线）拿不到 context | 画笔颜色改由构造函数注入（`ink` / `track` 等参数），build 里从调色板取 |
 | 切主题后页面不刷新 | 全部颜色经 `context.toon`（= `Theme.of`）解析 → 自动建立 InheritedWidget 依赖 |
-| 冷启动闪浅色 | `main()` 在 `runApp` 前 `await` 一次主题读取（失败回落 system） |
+| 冷启动闪浅色 | `main()` 在 `runApp` 前 `await` 一次主题读取（失败回落 system）；系统级启动图由 Android 深浅决定，Dart 侧改不了（已登记） |
 
 ---
 
@@ -195,4 +199,4 @@ abstract final class Tok {
 - [x] 深色下逐页走查：首页 / 日历 / 资产 / 我的 / 记一笔 / 统计 / 报表 / 导入 / 导出 / 账本 / 分类 / 自动记账 / 新手引导 / 搜索浮层 / 记账键盘 / 各底部弹层
       **（2026-10-21 MuMu 12 全包完成，见 `docs/acceptance-F7.17.md`）**
 - [x] 深色下硬阴影为黑、描边为暖白、hero 仍为琥珀且文字可读（`toon_theme_test` 断言令牌级）
-- [x] `flutter analyze` 等效 `No issues found!`；`flutter test` 全绿（含新增 17 例）
+- [x] `flutter analyze` 等效 `No issues found!`；`flutter test` 全绿（525 passed / 6 skipped / 0 failed，本批新增 31 例：17 功能 + 14 对比度护栏）

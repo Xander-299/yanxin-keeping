@@ -64,13 +64,13 @@
 | **通用包**（推荐） | 绝大多数手机（arm64 / armv7 / x86_64 全含） | 64 MB | [下载][apk-universal] |
 | **arm64 单独包** | 只想给现代 arm64 机（体积小 2/3） | 22 MB | [下载][apk-arm64] |
 
-- 版本 **0.7.16** · 最低 **Android 7.0** · 正式签名（`CN=yanxin`）· release 页见 [Releases][releases]
+- 版本 **0.7.17** · 最低 **Android 7.0** · 正式签名（`CN=yanxin`）· release 页见 [Releases][releases]
 - 装好后首次会弹 7 页新手引导；卸载即彻底删除数据（无云端），想留档请先「我的 → 数据导出」
 
 > ⚠️ 未上架任何应用商店。系统提示「未知来源」时，允许**当前这个文件管理器**安装即可。
 
-[apk-universal]: https://github.com/Xander-299/yanxin-flutter/releases/download/v0.7.16/yanxin-v0.7.16-universal-release.apk
-[apk-arm64]: https://github.com/Xander-299/yanxin-flutter/releases/download/v0.7.16/yanxin-v0.7.16-arm64-release.apk
+[apk-universal]: https://github.com/Xander-299/yanxin-flutter/releases/download/v0.7.17/yanxin-v0.7.17-universal-release.apk
+[apk-arm64]: https://github.com/Xander-299/yanxin-flutter/releases/download/v0.7.17/yanxin-v0.7.17-arm64-release.apk
 [releases]: https://github.com/Xander-299/yanxin-flutter/releases
 
 ---
@@ -90,6 +90,7 @@
 | **报表** | `/reports` | 三档切换：明细 / 分类汇总 / 账户汇总 |
 | **预算** | 首页卡 | 月度预算环、日均支出、**剩余每日可消费**、超支预警 |
 | **资产** | `/assets` | 净资产卡 + 账户列表；账户增改删（**有流水的账户禁删**） |
+| **设置** | `/settings` | 外观三选一：**浅色 / 深色 / 跟随系统（默认）**，选择落 `schema_meta` KV，冷启动沿用 |
 
 </details>
 
@@ -248,9 +249,9 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
 
 | 维度 | 数据 |
 |---|---|
-| 代码量 | Dart **123 个源文件 / 19,640 行**（含 27 个 `part`）· Kotlin **8 个文件 / 1,507 行** |
-| 测试 | **52 个测试文件** · 近 500 个用例 |
-| 迭代 | **149 次提交** · **16 个版本 tag**（`v0.7.1` – `v0.7.16`） |
+| 代码量 | Dart **128 个源文件 / 25,870 行**（含 27 个 `part`）· Kotlin **8 个文件 / 1,507 行** |
+| 测试 | **57 个测试文件** · 525 个用例 |
+| 迭代 | **154 次提交** · **17 个版本 tag**（`v0.7.1` – `v0.7.17`） |
 | 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查） |
 
 > 数字取自仓库本身（`git rev-list --count HEAD`、文件行数统计），可复算。

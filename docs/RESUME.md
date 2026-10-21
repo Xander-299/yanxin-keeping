@@ -2,7 +2,7 @@
 
 > 本文从 README 拆出，**专供简历 / 面试叙述使用**。
 > README 面向的是「怎么用、怎么跑、代码怎么组织」；本文面向「做出了什么、难在哪、怎么解的」。
-> 数据核对于 **2026-10-20**（基线 `v0.7.16`）。
+> 数据核对于 **2026-10-21**（基线 `v0.7.17`）。
 
 ## 项目简介
 
@@ -12,14 +12,14 @@
   
 （在国产 ROM 事件投递不可靠的限制下，用三层采集把「支付通知只活 26 秒」的丢账率压到可接受）。
 
-### 项目规模（2026-10-20 实测）
+### 项目规模（2026-10-21 实测）
 
 | 维度   | 数据                                                    |
 | ---- | ----------------------------------------------------- |
-| 代码量  | Dart **98 文件 / 25,361 行** · Kotlin **8 文件 / 1,507 行** |
-| 测试   | **52 个测试文件** · 485 个用例（静态计数，另有 18 处数据驱动循环展开）          |
-| 迭代   | **140 次提交** · **16 个版本 tag**（`v0.7.1`–`v0.7.16`）      |
-| 周期   | 2026-09-09 → 2026-10-20（约 6 周，单人 + AI 结对）             |
+| 代码量  | Dart **128 文件 / 25,870 行** · Kotlin **8 文件 / 1,507 行** |
+| 测试   | **57 个测试文件** · 525 个用例（含 17 例外观模式 + 14 例对比度护栏）          |
+| 迭代   | **154 次提交** · **17 个版本 tag**（`v0.7.1`–`v0.7.17`）      |
+| 周期   | 2026-09-09 → 2026-10-21（约 6 周，单人 + AI 结对）             |
 | 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查）    |
 
 ### 技术栈
@@ -42,6 +42,8 @@ Android `NotificationListenerService` + `MethodChannel`（Kotlin 原生，**零�
 | 6 | **主机级 Dart 工具链故障**：Windows 命名管道只读打开被拒（`CreateFile failed 231`），`flutter analyze/test/build` 全废，极易误判成「代码坏了」          | 用 **Python 托管同一个 `analysis_server` snapshot** + Dart 原生协议（行分隔 JSON、无 `jsonrpc` 字段、id 为 String）**完整复刻 `flutter analyze` 含 lint**，全项目 19s；另做 test / kernel / APK 核验兜底                                                              | 上线前跑**校准探针**（塞必然报 lint 的文件）排除「0 issue 只是 lint 没生效」的假绿                       |
 | 7 | **装机签名冲突但不能卸载**：`assembleDebug` 用 debug keystore，设备上是正式签名包 → `INSTALL_FAILED_UPDATE_INCOMPATIBLE`；卸载会丢走查机 160+ 笔账本  | `zipalign -f 4` + `apksigner sign` **用正式 keystore 重签**，装前 `verify --print-certs` 比对指纹须与设备已装包**完全一致**                                                                                                                             | 覆盖安装后 **DB 196,608 B / `integrity_check ok` / 数据零丢失**                       |
 | 8 | **依赖版本被编译链锁死**                                                                                                      | sqlite3 3.x 起带 native-assets（需本机 MSVC，无 VS 会失败）→ 锁 `drift 2.31.0 / drift_flutter 0.2.8 / sqlite3 2.9.4`；`build_runner` 2.16+ 要求 analyzer ≥13 与 `drift_dev 2.31` 冲突 → 锁 `2.15.1`                                                  | 决策依据写入 README 技术选型，避免后人误升                                                   |
+| 9 | **「加个深色模式」不是加个开关**：F7.6 卡通改版把色值做成了 613 处 `static const Color`，`const Color` 不可能随主题变，而 Dart 的 `const` 构造要求参数是常量 | 改 `MaterialApp(themeMode:)` 不生效（`TextStyle(color: Tok.ink)` 仍是常量）；把 `Tok.ink` 改成读全局变量的 getter 也不行（`const` widget 实例被 Element 判 `identical` 直接跳过重建 → 切主题不刷新）。唯一解：**颜色改成随 `BuildContext` 解析的实例数据**（`ThemeExtension<ToonPalette>` + `context.toon`），逐处 `Tok.ink` → `p.ink` | 分析器「不给颜色常量留后路」：删掉 `Tok` 颜色字段，编译期报错即清单；`No issues found!` 才算改完 |
+| 10 | **深色不是「反色」**：简单把底色调深后，5 处「底色变了」的合成色直接不可读（最低 1.1:1）                                                                                | 按 WCAG 把两套调色板所有「前景 × 背景」组合量化一遍，逐条修在根上：hero 恒为琥珀底 → 减淡层只能用 `veil`（白）、描边只能走 `inkOn(底色)`、字恒 `heroInk`；`inkBorder(on:)` 让描边跟着**所画底色**取色；新增 `onRed`（实心红底上的字）；深色 `ink3` 提亮一档              | `palette_contrast_test.dart` 14 例护栏（文字 ≥4.5 / 图形 ≥3.0）+ MuMu 真机 23 个页面深色逐页走查 |
 
 ### 版本迭代记录
 
@@ -63,6 +65,7 @@ Android `NotificationListenerService` + `MethodChannel`（Kotlin 原生，**零�
 | `v0.7.14` | 09-25     | F7.14：新手引导（7 页全屏导览 + 「我的」重看入口；老用户不弹）                                             |
 | `v0.7.15` | 10-08     | **F7.15 自动记账**（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写）         |
 | `v0.7.16` | 10-20     | F7.16 三段修复：**A 补抓**（服务未连接期间的通知不再永久丢失）· **B `[N条]` 折叠前缀误杀**（微信支付一笔都记不上）· **C 撤回通道 + 补抓守护层**（通知只活 26 秒的兜底） |
+| `v0.7.17` | 10-21     | F7.17 **深色模式**：外观三选一（浅色 / 深色 / 跟随系统，默认跟随系统）；**613 处 `Tok.*` 编译期常量 → `ThemeExtension<ToonPalette>` 实例令牌**；深色可读性用 WCAG 量化后修掉 5 处「底色变了」的坑 |
 
 ### 工程实践（可展开讲的点）
 

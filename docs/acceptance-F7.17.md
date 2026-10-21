@@ -155,5 +155,5 @@ SPEC §3.4 已登记：Android 启动主题由系统深浅决定，Dart 侧改�
 
 - DoD **D1 / D2 / D3 / D4 / D5 / D7 / D8**：真机通过。
 - **D6（每页可读）**：逐页通过（清单见 §2）。
-- **D9 / D10**：`No issues found!` + `flutter test` 511 passed / 6 skipped（新增 17 例）。
+- **D9 / D10**：`No issues found!` + `flutter test` 525 passed / 6 skipped（511 + 本批 §3-2 追加的 14 例对比度护栏）。
 - **遗留**：§3-1 已修并复验；§3-2 记待设计侧决定；§4 为已知边界。

@@ -113,7 +113,7 @@ F7.6 卡通改版把色值做成了 **`Tok` 的编译期常量**（`static const
 把「文字三阶 ≥4.5」「描边/图形 ≥3.0」「hero 合成色 ≥4.5」「实心底前景 ≥4.5」钉死；
 浅色 `ink3` 是 F7.6 遗留（2.70，未达 AA），只钉住下限不更差，已在测试注释里记录待设计侧决定。
 
-**门禁**：`No issues found!` · `flutter test` **523 passed / 6 skipped / 0 failed**（+14 例）。
+**门禁**：`No issues found!` · `flutter test` **525 passed / 6 skipped / 0 failed**（511 + 新增 14 例）。
 
 ### 验收遗留
 
