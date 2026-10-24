@@ -23,7 +23,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 #   - git tag / 「我的页」角标 = 人看的版本号（`tag = v0.7.<N>` ↔ `F7.<N>`）
 # versionCode 固定 2001（不随小版本递增）：走查机已装 2001 的正式签名包，
 # 改小会撞 `INSTALL_FAILED_VERSION_DOWNGRADE`。
-version: 0.7.17+2001
+version: 0.8.1+2001
 
 environment:
   sdk: ^3.13.2
@@ -65,6 +65,16 @@ dependencies:
 # gbk_codec 0.4.0 的 sdk 上界 <3.0.0 为历史遗留（代码纯 Dart 可编译），强制放行
 dependency_overrides:
   gbk_codec: 0.4.0
+
+  # ⚠️ F8.1 真机排查结论（2026-10-24，Redmi K50 / Android 14 / Flutter 3.47.2）：
+  #    `jni_flutter 1.0.3`（经 `path_provider_android 2.3.1` 传递引入）会让 App
+  #    **一启动就 SIGSEGV**，Abort message =
+  #    "JNI is not initialized. Are you trying to invoke a Java API from Dart code too early,
+  #     before 'main()' (such as during Dart plugin class registration)?"
+  #    复现范围：release / debug **都崩**，且**未改动的 HEAD（v0.7.17）同样崩** → 与业务代码无关。
+  #    只把 jni_flutter 退到 1.0.1（jni 仍留 1.0.3，避免影响 path_provider 的 JNI 能力）后启动正常。
+  #    等上游修好再升。
+  jni_flutter: 1.0.1
 
 dev_dependencies:
   # ⚠️ 锁 2.15.x：build_runner 2.16+ 要求 analyzer >=13，与 drift_dev 2.31（analyzer <11）冲突

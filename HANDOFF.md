@@ -7,11 +7,11 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 **全部交付**，最新 tag **`v0.7.17`**，无未收口批次 |
-| 下一步 | 等新需求；新功能走「小 SPEC 签字 → 实现 → 门禁 → 文档」 |
-| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 |
-| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`） |
-| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`） |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**；真机走查 7 项全过（[验收报告](docs/acceptance-F8.1-receipt.md)） |
+| 下一步 | 阶段二（本地财务问答）：先做「设备 × 模型」基准表（`docs/spec/SPEC-local-ai.md` §4.2），再定模型 |
+| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** |
+| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1 **未动 schema** |
+| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **588 passed / 6 skipped** |
 
 ## 开始工作前
 
@@ -62,6 +62,16 @@ android.overridePathCheck=true
    - **前景必须配对的底**：`onBrand`→`brand`、`brandInk`→浅底、`onRed`→实心红、`redInk`→`redTint`。
      放错底（如 `onBrand` 放纸底）浅色看不出来，深色下直接看不见。
    门槛：正文小字 **4.5:1**、描边/图形 **3.0:1**。
+8. **正式包不得出现 `INTERNET`（F8.1 起新增，实测踩到过）** —— ML Kit 的依赖链
+   （`com.google.android.datatransport:transport-backend-cct`）**会自己合并进 `INTERNET` +
+   `ACCESS_NETWORK_STATE`**，所以 `android/app/src/release/AndroidManifest.xml` 里用
+   `tools:node="remove"` 把它们删掉。**以后任何「加个 Google/ML 库」的改动，改完必须重核**：
+   `./gradlew :app:processReleaseMainManifest` → 看
+   `build/app/intermediates/merged_manifest/release/.../AndroidManifest.xml` 是否只剩
+   `POST_NOTIFICATIONS` / `RECEIVE_BOOT_COMPLETED`。
+   ⚠️ **不要在 `src/main/` 里删**：debug 包需要 `INTERNET` 跑热重载（VM service 走 TCP）。
+9. **写后刷新只有一处实现**（F8.1 收口）：`lib/core/providers/after_write.dart`，
+   `Ref` 与 `WidgetRef` 两个入口。**别再复制那五行** —— 三处复制就会漏一处（HANDOFF 不变量 #2 的成因）。
 
 ## 最容易踩的坑（完整清单见 [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md)）
 
@@ -86,6 +96,39 @@ android.overridePathCheck=true
 - **换签名 = 用户必须卸载重装 = 丢本地账本**：release 签名只用
   `<USER_HOME>\upload-keystore.jks`（`CN=yanxin`），**不是** `~/.android/debug.keystore`。
   装机前先 `apksigner verify --print-certs` 比对指纹。
+- **本机内存余量不足时 Gradle 守护进程会崩**（F8.1 实测两次）：`hs_err_pid*.log` 里是
+  `Chunk::new` / `malloc` 失败，而系统 commit 只剩 ~0.9 GB。临时处理：把
+  `android/gradle.properties` 的 `-Xmx8G -XX:MaxMetaspaceSize=4G` 降到 `-Xmx3G`，
+  构建完**按字节还原**（`git diff android/gradle.properties` 必须为空）。
+  `flutter test` 全量在内存紧张时也会 `Out of memory` 崩 → 用 `--concurrency=1`。
+- **`flutter build` 目前直接可用**（2026-10-24 实测 `flutter build apk --debug --no-pub` 成功，
+  442 s）；`tool/dart_*_fallback.py` 那套 231 变通本轮**没有用到**（analyze / test 直连也都能跑）。
+- **⚠️ `jni_flutter 1.0.3` 会让 App 启动即崩（2026-10-24 真机定位，已 pin 回 1.0.1）**：
+  现象是 `Fatal signal 11` + `Abort message: 'JNI is not initialized … before main()'`，
+  **debug / release 都崩，未改动的 HEAD 也崩**。来源是 `path_provider_android 2.3.1`
+  （已改用 jnigen）带进来的 `jni / jni_flutter`。修法 = `pubspec.yaml` 的 `dependency_overrides`
+  锁 `jni_flutter: 1.0.1`。**别顺手升它**（升了就得重新真机验证启动）。
+- **⚠️ release 包必须关 R8，否则 ML Kit 端上识别必崩（2026-10-24 真机定位）**：
+  现象是选图成功、OCR 抛 `NullPointerException: … Object.getClass() on a null object reference`
+  （栈里是 `r51/b61/rg0` 这类 ML Kit 混淆内部类）。**同一张图 debug 包正常、release 包必崩**。
+  `android/app/build.gradle.kts` 的 `release` 里已显式 `isMinifyEnabled = false; isShrinkResources = false`
+  （APK 61.6 → 64.6 MB）。要瘦身请加 ML Kit keep 规则后**重新真机验证**，别直接开回来。
+- **选图不要用 `file_picker`**（F8.1 实测：release 包里点「选图 / 选文件」直接返回 null，系统 Activity 都不起）。
+  截图记账已改用自家通道 `yanxin/ocr` 的 `pickImage`（Android 13+ Photo Picker，老系统 SAF 兜底）；
+  「导入账单」页仍是 `file_picker` → **存量问题，待单独处理**。
+- **真机装包别覆盖用户的正式包**：走查机上的 `com.teacodeman.yanxin` 带真实账本，
+  且 versionCode 4001 > 仓库的 2001、签名不同 → `adb install -r` 只会失败或逼你卸载（=丢账本）。
+  用 QA 包名并列安装：`android/gradle.properties` 临时写 `qaAppId=com.teacodeman.yanxin.qa`
+  再 `flutter build apk --release --no-pub`，装完 `adb uninstall` 清掉。
+- **MIUI 上 `adb shell input tap` 会打偏**：uiautomator 给的语义节点常是**整张卡片**，
+  按它的中心点可能落在按钮外 —— 在目标区域扫一遍 y（如 640–780）才稳；
+  手机被人同时使用时，事件会落到别人的 App 上；`input` 被 `INJECT_EVENTS` 拦时需开「USB 调试（安全设置）」。
+- **不走 UI 的排查手段**：`tool/ocr_probe_main.dart`（`flutter build apk -t tool/ocr_probe_main.dart`）
+  启动即对一张固定路径的图跑 OCR + 解析并打日志 —— 用于区分「OCR/解析坏了」还是「UI/构建坏了」。
+- **release 包体积/ABI（F8.1 实测）**：64.6 MB（关 R8），ABI = `arm64-v8a` + `armeabi-v7a`；
+  ML Kit 占 `libmlkit_google_ocr_pipeline.so` 10.5 MB(arm64) + 6.5 MB(v7a) + 模型 2.4 MB。
+  `defaultConfig.ndk.abiFilters` 只放 ARM，**debug 里额外 `add("x86_64")`** 给模拟器 ——
+  ⚠️ AGP 的 `abiFilters` 在 buildType 层是**并集**，不是覆盖（实测过）。
 
 ## 目录导航
 
@@ -95,7 +138,7 @@ lib/
 ├── main.dart                入口
 ├── core/                    基础设施（不依赖任何 feature / data）
 │   ├── db/                  drift：tables / database / schema_v1 / schema_v2
-│   ├── providers/           data_epoch（写操作后的统一失效信号）
+│   ├── providers/           data_epoch（写操作后的统一失效信号）+ after_write（写后刷新的唯一实现）
 │   ├── theme/               palette.dart（调色板 · 浅/深两套）+ theme_mode.dart（外观三选一）
 │   │                        + tokens.dart（几何量 + buildToonTheme）+ toon.dart（卡通通用件）
 │   ├── utils/               money / id / fingerprint / date / highlight
@@ -106,6 +149,11 @@ lib/
 └── features/                按业务垂直切分：application（逻辑）+ presentation（UI）
 ```
 
+- **F8.1 新增**：`lib/features/receipt/`（`data/{ocr_engine,mlkit_ocr_engine,receipt_rules,receipt_parse}`
+  + `application/{receipt_draft,receipt_write}` + `presentation/receipt_page` & `widgets/receipt_bits`），
+  原生侧 `android/app/src/main/kotlin/com/teacodeman/yanxin/ocr/OcrChannel.kt`（通道 `yanxin/ocr`），
+  入口「我的 → 截图记账」（路由 `/receipt`）。
+
 - 纯 UI 的 feature（`book` `category` `profile` `nav`）只有 `presentation/`，
   数据与状态在 `lib/data/providers/` 或对应 controller 里 —— 这是有意的例外，不是漏了。
 - `docs/` 下：`spec/` 签字的 SPEC、`dev/` 开发运维手册、`acceptance-*.md` 走查报告、
@@ -115,6 +163,7 @@ lib/
 
 | 文档 | 内容 |
 |---|---|
+| [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 未验证项） |
 | [`docs/handoff/reference.md`](docs/handoff/reference.md) | **开工前读**：环境事实 / 架构决策 / 关键资料 / 接手指南 |
 | [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md) | 盲区防护清单：踩过的坑与判据 |
 | [`docs/handoff/open-issues.md`](docs/handoff/open-issues.md) | 未解决问题、待确认事项 |

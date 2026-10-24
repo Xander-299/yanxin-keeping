@@ -64,7 +64,8 @@
 | **通用包**（推荐） | 绝大多数手机（arm64 / armv7 / x86_64 全含） | 64 MB | [下载][apk-universal] |
 | **arm64 单独包** | 只想给现代 arm64 机（体积小 2/3） | 22 MB | [下载][apk-arm64] |
 
-- 版本 **0.7.17** · 最低 **Android 7.0** · 正式签名（`CN=yanxin`）· release 页见 [Releases][releases]
+- 版本 **0.8.1**（截图记账 · F8.1；下面 Downloads 里的 APK 仍是上一次发布的 `v0.7.17`）
+  · 最低 **Android 7.0** · 正式签名（`CN=yanxin`）· release 页见 [Releases][releases]
 - 装好后首次会弹 7 页新手引导；卸载即彻底删除数据（无云端），想留档请先「我的 → 数据导出」
 
 > ⚠️ 未上架任何应用商店。系统提示「未知来源」时，允许**当前这个文件管理器**安装即可。
@@ -249,9 +250,9 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
 
 | 维度 | 数据 |
 |---|---|
-| 代码量 | Dart **128 个源文件 / 25,870 行**（含 27 个 `part`）· Kotlin **8 个文件 / 1,507 行** |
-| 测试 | **57 个测试文件** · 525 个用例 |
-| 迭代 | **154 次提交** · **17 个版本 tag**（`v0.7.1` – `v0.7.17`） |
+| 代码量 | Dart **138 个源文件 / 26,660 行**（含 `part`）· Kotlin **9 个文件 / 1,689 行** |
+| 测试 | **63 个测试文件** · 574 处 `test()` / `testWidgets()`（实跑 588 passed / 6 skipped） |
+| 迭代 | **157 次提交** · **18 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`） |
 | 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查） |
 
 > 数字取自仓库本身（`git rev-list --count HEAD`、文件行数统计），可复算。

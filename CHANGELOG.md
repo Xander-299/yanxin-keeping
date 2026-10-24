@@ -4,8 +4,8 @@
 版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
 > **版本号规则（2026-09-23 起执行）**：迁移期直接拿 **F 阶段号当版本号** —— `v0.7.<N>` 对应 `F7.<N>`，
-> 同阶段内的多批交付（如 F7.6 的 P1/P2/P3）**合并成一个版本**，批次写在 CHANGELOG 段落里。
-> 每个版本一次：CHANGELOG 段落带版本号 → `git tag -a v0.7.<N> -m '…'` → `git push --tags`。
+> `v0.8.<N>` 对应 `F8.<N>`（F8 = 端上 AI 线）。同阶段内的多批交付**合并成一个版本**，批次写在 CHANGELOG 段落里。
+> 每个版本一次：CHANGELOG 段落带版本号 → `git tag -a v0.8.<N> -m '…'` → `git push --tags`。
 > **回滚**：`git checkout v0.7.5`（看/跑旧版）或 `git revert <commit>`（在 master 上撤某次改动）。
 > 首个正式对外版本起改回常规语义化版本号（`v1.x`）。
 
@@ -28,6 +28,66 @@
 | `v0.7.15` | F7.15 自动记账（通知使用权为主 + 零权限兜底）+ 真机走查收口（硬/软忽略拆分 · 组摘要去重 · 金额优先级 · 诊断层重写） | 本段所在提交 |
 | `v0.7.16` | F7.16 自动记账三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · C 撤回通道 + 补抓守护层 | 本段所在提交 |
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
+| `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
+
+## [v0.8.1] — 2026-10-24 · 端上截图记账（F8.1 阶段一）
+
+> **门禁**：`flutter analyze` **No issues found!** ✅ ·
+> `flutter test --concurrency=1` **588 passed / 6 skipped / 0 failed**（本批**新增 63 例**）✅
+> **不动 schema**（DB 仍 **v3**）· **零新 pub 依赖**（`pubspec.lock` 只改了 3 条 override 相关的行）
+> · **release 包无 `INTERNET` 权限**（ML Kit 依赖链带的已用 `tools:node="remove"` 去掉）。
+> **真机走查**：Redmi K50 / Android 14，2026-10-24，7 项全过（详见
+> [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md)）。
+> **回滚**：`git checkout v0.7.17`。
+
+### 需求（用户 `Prompt.md` 任务书：阶段一）
+
+导入一张支付 / 订单截图 → **端上** 识别 → 生成待确认账单 → 用户确认 → 调用现有记账业务写库。
+硬要求：不要求注册 AI 账号、不要求配 API Key、优先离线、默认不上传、复用现有记账系统、不重写。
+
+### 做了什么
+
+| 层 | 内容 |
+|---|---|
+| 原生 | `ocr/OcrChannel.kt`（通道 `yanxin/ocr`）：`recognize`（ML Kit 中文 **bundled**，模型随 APK、无需 GMS）、`pickImage`（Android 13+ 系统 Photo Picker）、`pickDocument`（SAF，导入账单页共用）、`release`；单线程队列 + 25s 超时 + 主线程回包 |
+| 解析 | `receipt_rules.dart`（平台 / 状态 / 方向 / 7 级金额锚点 / 优惠词 / 时间 4 档 / 商户 / 单号 / 支付方式）+ `receipt_parse.dart`（纯函数，`parseReceipt(lines, nowMs:)`） |
+| 草稿 | `receipt_draft.dart`：`ReceiptField<T>`（值 + 可信度 + 候选）、`ReceiptIssue`（**阻断** vs 提醒）、`canWrite` 口径 |
+| 写库 | `receipt_write.dart`：`writeReceipt()` → 现有 `TransactionRepository.importTransaction(source:'screenshot')`；`findSimilarReceipts()` 只提示不阻断 |
+| UI | `/receipt` 三步页（选图 → 核对：可改字段 / 多金额切换 / 低可信高亮 / 原文展开 → 结果）；入口「我的 → 截图记账」 |
+| 刷新 | 新增 `core/providers/after_write.dart`，把「写后刷新」收口成**唯一实现**（自动记账也改为委托） |
+
+**判定原则**：识别结果不等于账单 —— 没识别到金额 / 支付失败 / 已取消 → **禁止保存**；
+退款 → 建议记收入；多金额 → 全列候选让用户挑；缺年份 → 按「不晚于今天」推断并提示；
+同名分类「其他」→ 用 `(kind, name)` 二元组解析。
+
+### 走查中修掉的三个环境级阻塞（都不是业务代码写错）
+
+| 阻塞 | 根因 | 修法 |
+|---|---|---|
+| 新包**一启动就 SIGSEGV** | `path_provider_android 2.3.1` 传递的 `jni_flutter 1.0.3` 在本机 Flutter 3.47.2 + Android 14 上初始化时序不对（**未改动的 HEAD 同样崩**） | `dependency_overrides: jni_flutter: 1.0.1` |
+| 点「选图 / 选文件」**没反应** | `file_picker 12` 在 release 包里 `pickFile()` 直接返回 null，系统 Activity 都没起 | 选图 / 选文件收进自家通道（Photo Picker / SAF） |
+| 选图成功但 **OCR 抛 NPE** | Flutter release **默认开 R8**，把 ML Kit 内部组件裁掉（同图 debug 正常、release 必崩） | `release { isMinifyEnabled = false; isShrinkResources = false }`（61.6 → 64.6 MB） |
+
+另修两个真实截图暴露的**解析** bug：`商户` 标签命中 `商户单号`（商户名变成「单号」）、
+`交易单号` 与号码被 OCR 拆成两行导致拿不到单号。
+
+### 测试（本批新增 63 例 / 5 个文件）
+
+| 文件 | 覆盖 |
+|---|---|
+| `test/features/receipt/receipt_parse_test.dart`（24） | 多金额 / 原价实付 / 优惠贴身判定 / 退款 / 失败 / 取消 / 缺年份 / 非法日期 / 归一化 / 指纹 |
+| `test/features/receipt/receipt_real_samples_test.dart`（18） | **真机原始 OCR 文本**：8 张微信「账单详情」+ 1 张「交易详情」，含 OCR 错字 |
+| `test/features/receipt/receipt_draft_test.dart`（8） | 可信度口径、阻断集合、`canWrite`、候选去重 |
+| `test/features/receipt/receipt_write_test.dart`（7） | 落库 / 同图二次确认去重 / 0 元与空分类被拒 / 分类回退 / 疑似重复窗口 |
+| `test/features/receipt/receipt_page_test.dart` + `ocr_result_test.dart`（10） | 全流程 widget 测试、失败单禁用、通道不可用文案、行排序稳定性 |
+
+### 已知限制
+
+- **支付失败截图**只有单测覆盖，没有真实失败样本做真机走查。
+- 二维码付款的商户取到的是**收款方昵称**（如「静」），店名在标题行；「美团」恒判餐饮（走美团订的民宿也会是餐饮）——都可在确认页改。
+- APK 64.6 MB（关 R8 的代价）；ML Kit 占 10.5 MB(arm64 so) + 2.4 MB 模型。
+- 「导入账单」页已一并换成本地通道，但**没有**回归真实账单文件的完整导入（只验证到「文件读入 + 解析器报格式不符」）。
+
 
 ## [v0.7.17] — 2026-10-20 · 深色模式（外观三选一）+ 令牌体系改造
 

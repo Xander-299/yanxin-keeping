@@ -62,6 +62,8 @@ final categoryRules = <CategoryRule>[
     '购物',
     RegExp(r'超市|便利店|商场|百货|旗舰店|专营店'),
   ),
+  // 「零食有鸣」这类零食集合店（F8.1 真实截图样本里出现，落「其他」不合适）
+  CategoryRule('expense', '购物', RegExp(r'零食|生鲜|菜市场|水果店')),
   CategoryRule('expense', '购物', RegExp(r'数码|服饰|服装')),
   CategoryRule('expense', '居住', RegExp(r'房租|房东|中介|链家|自如')),
   CategoryRule(

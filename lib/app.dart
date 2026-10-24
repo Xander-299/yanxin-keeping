@@ -29,6 +29,7 @@ import 'package:yanxin/features/ledger/presentation/home_page.dart';
 import 'package:yanxin/features/nav/presentation/app_shell.dart';
 import 'package:yanxin/features/onboarding/presentation/onboarding_page.dart';
 import 'package:yanxin/features/profile/presentation/profile_page.dart';
+import 'package:yanxin/features/receipt/presentation/receipt_page.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/reports/presentation/reports_page.dart';
@@ -116,6 +117,8 @@ class _YanxinAppState extends ConsumerState<YanxinApp> {
       GoRoute(path: '/autobook', builder: (_, _) => const AutoBookPage()),
       // 设置（F7.17）：外观 = 浅色 / 深色 / 跟随系统（默认跟随系统）
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
+      // 截图记账（F8.1）：端上 OCR + 规则解析 → 确认页 → 复用现有入账链路
+      GoRoute(path: '/receipt', builder: (_, _) => const ReceiptPage()),
     ],
   );
 

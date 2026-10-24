@@ -4,16 +4,11 @@
 /// 走 `auto_book_batches.dart` 落库的 KV —— 两条入口最终都汇到 [AutoBookNoticeNotifier.undo]。
 library;
 
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:yanxin/core/providers/data_epoch.dart';
+import 'package:yanxin/core/providers/after_write.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/features/autobook/data/auto_book_batches.dart';
-import 'package:yanxin/features/calendar/application/calendar_controller.dart';
-import 'package:yanxin/features/ledger/application/ledger_controller.dart';
-import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 /// 最近一批自动记账（null = 没有待提示的批次）。
 ///
@@ -64,12 +59,9 @@ class AutoBookNoticeNotifier extends Notifier<AutoBookBatch?> {
 /// 自动记账写库后的视图刷新（与首页删流水的口径一致 —— 逐个 provider 手工 refresh
 /// 是已知脆弱点，这里集中一处）。
 ///
+/// F8.1 起刷新逻辑收口到 `core/providers/after_write.dart`（截图记账也要用同一份），
+/// 这里保留函数名只是为了让既有调用方零改动。
+///
 /// ⚠️ 三个 refresh 都**吞掉异常**：自动记账是后台路径，刷新失败绝不能冒泡成
 /// 「未捕获的异步异常」（测试里库已 close、页面上 provider 还没建等场景都会命中）。
-void refreshAfterAutoBookWrite(Ref ref) {
-  ref.invalidate(yearDayIndexProvider);
-  unawaited(ref.read(calendarProvider.notifier).refresh().catchError((Object _) {}));
-  unawaited(ref.read(statsProvider.notifier).refresh().catchError((Object _) {}));
-  unawaited(ref.read(ledgerProvider.notifier).refresh().catchError((Object _) {}));
-  ref.read(dataEpochProvider.notifier).bump();
-}
+void refreshAfterAutoBookWrite(Ref ref) => refreshAfterWrite(ref);

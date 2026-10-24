@@ -7,12 +7,13 @@
 library;
 
 import 'dart:async';
+import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/platform/media_picker.dart';
 import '../../../core/providers/data_epoch.dart';
 import '../../../core/theme/tokens.dart';
 import '../../../core/theme/toon.dart';
@@ -89,14 +90,12 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       if (widget.pickBytesOverride != null) {
         bytes = await widget.pickBytesOverride!();
       } else {
-        // file_picker 12：静态入口 + readAsBytes（withData 已废弃）
-        final file = await FilePicker.pickFile(
-          type: FileType.custom,
-          allowedExtensions: const ['csv', 'xlsx'],
-        );
-        if (file != null) {
-          bytes = await file.readAsBytes();
-          name = file.name;
+        // F8.1 起改走自家通道（SAF）：`file_picker` 在这台机器上点不出系统选择器
+        // （真机实测 release 包 `pickFile()` 直接返回 null，见 core/platform/media_picker.dart）。
+        final String? path = await ref.read(mediaPickerProvider).pickDocument();
+        if (path != null && path.isNotEmpty) {
+          bytes = await File(path).readAsBytes();
+          name = path.split(Platform.pathSeparator).last;
         }
       }
       if (bytes == null || bytes.isEmpty) {
@@ -115,6 +114,12 @@ class _ImportPageState extends ConsumerState<ImportPage> {
       setState(() => _parsing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message)),
+      );
+    } on MediaPickFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _parsing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.userMessage)),
       );
     } catch (e) {
       if (!mounted) return;

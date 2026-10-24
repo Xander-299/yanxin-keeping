@@ -54,6 +54,15 @@ class ProfilePage extends ConsumerWidget {
                       onTap: () => context.push('/autobook'),
                     ),
                     _Entry(
+                      icon: Icons.document_scanner_outlined,
+                      title: '截图记账',
+                      sub: '支付 / 订单截图 → 本地识别 → 确认后入账',
+                      iconBg: p.brandTint,
+                      iconFg: p.brandDeep,
+                      dashedTop: true,
+                      onTap: () => context.push('/receipt'),
+                    ),
+                    _Entry(
                       icon: Icons.description_outlined,
                       title: '导入账单',
                       sub: '微信 xlsx / 支付宝 CSV，重复导入不重复记账',
