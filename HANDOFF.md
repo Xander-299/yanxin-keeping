@@ -13,6 +13,23 @@
 | 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1 **未动 schema** |
 | 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **588 passed / 6 skipped** |
 
+### F8.1 收口快照（2026-10-24）
+
+| 项 | 值 |
+|---|---|
+| 提交 / tag | `feac627` · **`v0.8.1`**（annotated）· **已推远端** `origin/master` + `origin v0.8.1` |
+| 版本号 | `pubspec.yaml` = `0.8.1+2001`（versionCode 固定 2001，不随小版本递增）；README / RESUME / CHANGELOG 已对齐 |
+| 手机上装了什么 | ① `com.teacodeman.yanxin` = **用户的正式包 v0.7.16，带真实账本，千万别卸**；② `com.teacodeman.yanxin.qa` = 走查用并列包（v0.8.1，**空账本 + 1 条 ¥22.98 测试记录**），随时可 `adb uninstall` |
+| 真机 | Redmi K50 `22041211AC`（Android 14 / HyperOS），adb 可用；`input tap` 需在手机上开「USB 调试（安全设置）」 |
+| 只差一项验收 | 支付失败截图的**真机**用例（单测已覆盖「按钮禁用 + 不写库」，缺真实失败截图样本） |
+
+**阶段二（本地财务问答）的起手式**（细节见 `docs/spec/SPEC-local-ai.md` §4）：
+1. 先做 §4.2 的「设备 × 模型」基准表（同一台 K50 上测候选模型：加载 ms / 峰值 RSS / 首 token ms / tok/s /
+   10 轮后 RSS / 20 分钟温升降频），**没有这张表不要承诺速度或机型支持**；
+2. 候选推理方案：llama.cpp 自建 JNI（推荐，掌控流式/取消/停止）vs MediaPipe `tasks-genai`（集成最快，但只支持 Gemma 系）；
+3. 模型候选：Qwen3-1.7B / Qwen2.5-1.5B-Instruct（Q4_K_M）、Gemma-3-1B（MediaPipe 路线）——**先测再选**；
+4. 模型文件**不要打进 APK**；分发方式（手动导入 vs App 内下载=要加 `INTERNET`）属**产品决策**，动它之前先问用户。
+
 ## 开始工作前
 
 ```bash
@@ -21,29 +38,51 @@ source env.sh
 fx-qa                        # = flutter analyze && flutter test（去代理）
 ```
 
-依赖版本**锁死，不要随手升**：`drift 2.31.0` / `sqlite3 2.9.4` / `build_runner 2.15.1`。
-`sqlite3 3.x` 起带 native-assets 构建钩子（Windows 上需要 MSVC），
+**本机路径（2026-10-24 实测，`env.sh` 里的 `$HOME/flutter` 在本机并不存在）**：
+
+| 项 | 实际位置 |
+|---|---|
+| Flutter 3.47.2 / Dart 3.13.2 | `D:\Download\Flutter\flutter`（`bin\flutter.bat`） |
+| JDK 17 | `D:\Download\Java\jdk-17.0.20.1+1`（**系统默认是 JDK 25，不能用**） |
+| Android SDK | `D:\Download\Java\Android`（platform-tools / build-tools 36.0.0 / platforms 35-36） |
+| adb | `D:\Download\Java\Android\platform-tools\adb.exe`（**注意**上表 SDK 与 `<USER_HOME>\AppData\Local\Android\Sdk` 都曾出现过，以能连上设备者为准） |
+
+**门禁实测（2026-10-24）**：`flutter analyze` 直连可跑、`flutter test` 直连可跑（**必须加 `--concurrency=1`**，
+本机内存紧时默认并发会让 Dart VM `Out of memory` 崩）。`tool/dart_*_fallback.py` 那套 231 变通本轮没用到。
+
+依赖版本**锁死，不要随手升**：`drift 2.31.0` / `sqlite3 2.9.4` / `build_runner 2.15.1` /
+**`jni_flutter 1.0.1`**（见下「最容易踩的坑」，升了 App 直接起不来）。
+`sqlite3 3.x` 起带 native-assets 构建钩子（Windows 上需要 MSVC）；
 `build_runner 2.16+` 要求 analyzer ≥13 与 `drift_dev` 冲突。
 
 改了 `lib/core/db/tables.dart` 必须重跑 `dart run build_runner build --delete-conflicting-outputs`
 并提交 `database.g.dart` —— CI 有一条硬检查会因此失败。
 
-**出 APK（2026-10-21 起可直接用 flutter 命令）**：本仓库在**中文路径**下，AGP 会直接拒绝构建
-（`Your project path contains non-ASCII characters`）。前置一步，写在**不入库**的
-`$GRADLE_USER_HOME/gradle.properties`（本仓库 `GRADLE_USER_HOME=.gradle-home`）：
+**出 APK**：本仓库在**中文路径**下，AGP 会拒绝构建（`Your project path contains non-ASCII characters`）。
+前置一步写在**不入库**的 `$GRADLE_USER_HOME/gradle.properties`（本仓库 `GRADLE_USER_HOME=.gradle-home`）：
 
 ```
 android.overridePathCheck=true
 ```
 
-然后 `flutter build apk --debug` 即可（本机实测约 8 分钟首构、增量 1.5 分钟）。
+然后 `flutter build apk --release --no-pub`（实测 80–110 s 增量；`--no-pub` 很重要，见下「坑」）。
 装机后**必跑** `python tool/verify_apk_kernel.py <本次新增字符串>` 核验包是新码。
+
+⚠️ **本机内存不足时 Gradle 会崩**（`hs_err_pid*.log` 里 `Chunk::new`/malloc 失败）：构建前把
+`android/gradle.properties` 的 `-Xmx8G -XX:MaxMetaspaceSize=4G` **临时**降到 `-Xmx3G -XX:MaxMetaspaceSize=1G`，
+构建完**按字节还原**（`git diff android/gradle.properties` 必须为空）。
+
+⚠️ **debug 包可以出、但真机启动要留意**：`flutter build apk --debug` 正常；装到手机上请用 QA 包名
+（见下「真机装包别覆盖用户的正式包」）。
 
 ## 必须守住的不变量
 
 这几条每条都有回归测试兜着，改动前先看测试为什么这么写：
 
 1. **drift 是唯一 DB writer** —— Kotlin 侧只落盘 JSONL，不碰数据库。
+   **F8.1 起同样适用截图记账**：原生只回「文字行 + 坐标」，解析是 Dart 纯函数，
+   写库统一走 `TransactionRepository.importTransaction(source:'screenshot', externalId: 文本指纹)`；
+   **OCR / 解析层永远不碰 DB**，也不许新增第二条写库路径。
 2. **常驻 provider 要 `ref.watch(dataEpochProvider)`** —— 否则「刚记一笔后搜索搜不到」
    这类过期快照 bug 会回来（`test/features/search/search_freshness_test.dart`）。
 3. **纯函数优先** —— 解析、金额、命中口径、聚合统计都是无副作用纯函数，`test()` 直接覆盖。
@@ -151,8 +190,12 @@ lib/
 
 - **F8.1 新增**：`lib/features/receipt/`（`data/{ocr_engine,mlkit_ocr_engine,receipt_rules,receipt_parse}`
   + `application/{receipt_draft,receipt_write}` + `presentation/receipt_page` & `widgets/receipt_bits`），
-  原生侧 `android/app/src/main/kotlin/com/teacodeman/yanxin/ocr/OcrChannel.kt`（通道 `yanxin/ocr`），
+  `lib/core/platform/media_picker.dart`（选图/选文件，截图记账与导入页共用），
+  原生侧 `android/app/src/main/kotlin/com/teacodeman/yanxin/ocr/OcrChannel.kt`（通道 `yanxin/ocr`：
+  `recognize` / `pickImage` / `pickDocument` / `release`），`android/app/src/release/AndroidManifest.xml`（剔除 INTERNET），
   入口「我的 → 截图记账」（路由 `/receipt`）。
+  诊断工具 `tool/ocr_probe_main.dart`（`flutter build apk -t tool/ocr_probe_main.dart` 后启动即跑一遍
+  OCR + 解析并打日志，用于**区分**「OCR/解析坏了」还是「UI/构建坏了」）。
 
 - 纯 UI 的 feature（`book` `category` `profile` `nav`）只有 `presentation/`，
   数据与状态在 `lib/data/providers/` 或对应 controller 里 —— 这是有意的例外，不是漏了。
@@ -163,7 +206,8 @@ lib/
 
 | 文档 | 内容 |
 |---|---|
-| [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 未验证项） |
+| [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 真机阻塞排查 / 已知限制） |
+| [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md) | **F8.1 真机验收报告**：7 项走查结果、3 个阻塞的根因与修法、复现命令 |
 | [`docs/handoff/reference.md`](docs/handoff/reference.md) | **开工前读**：环境事实 / 架构决策 / 关键资料 / 接手指南 |
 | [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md) | 盲区防护清单：踩过的坑与判据 |
 | [`docs/handoff/open-issues.md`](docs/handoff/open-issues.md) | 未解决问题、待确认事项 |
