@@ -30,6 +30,41 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
+## [Unreleased] — 阶段二 · 设备 × 模型基准（只加工具与文档，未动产品代码）
+
+> **门禁**：`flutter analyze` → `No issues found!` ✅（本轮零 Dart 改动，`flutter test` 无需重跑）
+> **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · release 包行为完全不变
+> **回滚**：`git revert <本段提交>`
+
+### 做了什么
+
+| 层 | 内容 |
+|---|---|
+| 探针 | `tool/llm_bench/bench_android.cpp`：调 llama.cpp C API，逐轮输出 `冷加载 / 首 token / pp·tg tok/s / VmRSS·VmHWM / CPU 频率`（`KEY=value`，供脚本解析） |
+| 构建 | `tool/llm_bench/build_android.ps1`：NDK 28.2 交叉编 llama.cpp `b7050` + 探针；支持基线 / `armv8.2-a+dotprod` 两个变体，产物落库外 `D:\yanxin-llm-bench` |
+| 跑测 | `tool/llm_bench/run_bench.ps1`：推模型（按字节数跳过）→ 跑 → 主机侧每 15 s 采电池温度/大小核频率 → 直接吐一行 markdown |
+| 语料 | `tool/llm_bench/prompts_finance.txt`：8 段中文财报问答（173–177 token），逐轮轮换 |
+
+### 实测结果（Redmi K50 / MT6895 / Android 14 / HyperOS V816）
+
+| 模型（Q4_K_M） | 冷加载 | 首 token | pp tok/s | tg tok/s | 峰值 RSS | 10 轮后 RSS |
+|---|---|---|---|---|---|---|
+| **Qwen2.5-1.5B-Instruct** | 1.70 s | 5.07 s | 36.4 | **7.4** | 1185 MB | 1184 MB |
+| Qwen3-1.7B | 1.63 s | 5.66 s | 32.2 | 6.6 | 1350 MB | 1348 MB |
+| Gemma-3-1B-it | 1.19 s | 3.51 s | 50.4 | 8.8 | 885 MB | 883 MB |
+
+- **20 分钟长跑（68 轮）不掉速**：tg 7.4 → 7.0，大核 2.85 → 2.15 GHz（−24%），电池 +1.4 ℃ —— 瓶颈是内存带宽，不是算力。
+- **两个开关比模型更关键**：`dotprod` 让预填 +47%（24.8 → 36.4）；线程绑大核让生成 +27%，开 8 线程反而 −50%。
+- **质量抽查推翻「让模型算数」**：Qwen2.5 算对超支额但编了每日额度；Qwen3 的 `<think>` 吃光 token；Gemma 数字全错。
+
+详细报告 [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md)，逐轮原始数据
+[`docs/dev/llm-benchmark-raw.md`](docs/dev/llm-benchmark-raw.md)。
+
+### 未做（下一批）
+
+`LlmProvider` 抽象、JNI 引擎、财务查询编排、问答页 —— 阶段二真正的产品代码一行未写；
+模型分发（D4）仍待拍板；只测了 1 台设备（SPEC 要求 2 台）。
+
 ## [v0.8.1] — 2026-10-24 · 端上截图记账（F8.1 阶段一）
 
 > **门禁**：`flutter analyze` **No issues found!** ✅ ·

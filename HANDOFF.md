@@ -7,10 +7,10 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**；真机走查 7 项全过（[验收报告](docs/acceptance-F8.1-receipt.md)） |
-| 下一步 | 阶段二（本地财务问答）：先做「设备 × 模型」基准表（`docs/spec/SPEC-local-ai.md` §4.2），再定模型 |
-| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** |
-| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1 **未动 schema** |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**；真机走查 7 项全过（[验收报告](docs/acceptance-F8.1-receipt.md)）。**阶段二任务 1（设备 × 模型基准表）已实测完成**（[基准报告](docs/dev/llm-benchmark.md)），尚未进产品代码 |
+| 下一步 | 阶段二任务 2：按基准表**定引擎与模型**（推荐 llama.cpp 自建 JNI + Qwen2.5-1.5B-Instruct Q4_K_M），先做 `LlmProvider` 抽象 + 财务查询编排，再谈模型分发 D4 |
+| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
+| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1 与阶段二任务 1 **均未动 schema** |
 | 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **588 passed / 6 skipped** |
 
 ### F8.1 收口快照（2026-10-24）
@@ -23,12 +23,20 @@
 | 真机 | Redmi K50 `22041211AC`（Android 14 / HyperOS），adb 可用；`input tap` 需在手机上开「USB 调试（安全设置）」 |
 | 只差一项验收 | 支付失败截图的**真机**用例（单测已覆盖「按钮禁用 + 不写库」，缺真实失败截图样本） |
 
-**阶段二（本地财务问答）的起手式**（细节见 `docs/spec/SPEC-local-ai.md` §4）：
-1. 先做 §4.2 的「设备 × 模型」基准表（同一台 K50 上测候选模型：加载 ms / 峰值 RSS / 首 token ms / tok/s /
-   10 轮后 RSS / 20 分钟温升降频），**没有这张表不要承诺速度或机型支持**；
-2. 候选推理方案：llama.cpp 自建 JNI（推荐，掌控流式/取消/停止）vs MediaPipe `tasks-genai`（集成最快，但只支持 Gemma 系）；
-3. 模型候选：Qwen3-1.7B / Qwen2.5-1.5B-Instruct（Q4_K_M）、Gemma-3-1B（MediaPipe 路线）——**先测再选**；
-4. 模型文件**不要打进 APK**；分发方式（手动导入 vs App 内下载=要加 `INTERNET`）属**产品决策**，动它之前先问用户。
+**阶段二（本地财务问答）的进度**（细节见 `docs/spec/SPEC-local-ai.md` §4 + §10）：
+
+1. ✅ **§4.2 的「设备 × 模型」基准表已实测**：Redmi K50 上 3 个模型 × 10 轮，含冷加载 / 首 token /
+   pp·tg tok/s / 峰值与逐轮 RSS / 温升。**报告 [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md)**，
+   复现入口 `tool/llm_bench/{build_android,run_bench}.ps1` + `bench_android.cpp`（探针源码在库，源码/产物在库外）。
+   **一句话结论**：Qwen2.5-1.5B-Instruct Q4_K_M = **7.4 tok/s 生成 / 1.18 GB 常驻 / 10 轮不涨**，
+   但 **首 token 3.5–5.1 s**（177 token 上下文）→ 上下文必须压到 ≤80 token，模型只做「措辞层」。
+2. **候选推理方案**：llama.cpp 自建 JNI（推荐，掌控流式/取消/停止）vs MediaPipe `tasks-genai`
+   （集成最快，但只支持 Gemma 系）—— 基准表已给出 Gemma-3-1B 的中文算数表现（会编数），**倾向 llama.cpp + Qwen2.5**。
+3. **两条从实测得出的实现硬约束**：App 里 worker 线程必须**绑大核**（不绑 −27%，开 8 线程 −50%）、
+   编译必须开 `-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod`（首 token −45%），但后者**不支持 ≤A72 的老机**，
+   真要兼容得走 `GGML_CPU_ALL_VARIANTS`。
+4. 模型文件**不要打进 APK**；分发方式（手动导入 vs App 内下载=要加 `INTERNET`）属**产品决策**，
+   2026-10-25 用户选择「**等基准表出来再定**」→ 目前 D4 仍未拍板，动它之前先问用户。
 
 ## 开始工作前
 
@@ -168,6 +176,18 @@ android.overridePathCheck=true
   ML Kit 占 `libmlkit_google_ocr_pipeline.so` 10.5 MB(arm64) + 6.5 MB(v7a) + 模型 2.4 MB。
   `defaultConfig.ndk.abiFilters` 只放 ARM，**debug 里额外 `add("x86_64")`** 给模拟器 ——
   ⚠️ AGP 的 `abiFilters` 在 buildType 层是**并集**，不是覆盖（实测过）。
+- **端上基准（阶段二任务 1）踩到的五个坑**（复现细节见 [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md) §6–7）：
+  ① **HyperOS 屏蔽 thermal zone**：`/sys/class/thermal/**` 对 shell 是 `Permission denied`，
+     温度只能 `dumpsys battery`（电池温度，滞后，别当 SoC 温度用）；
+  ② **toybox 的 `taskset` 没有 `-c`**：只吃十六进制掩码 → `taskset f0 ./bin`（cpu4–7 大核）；
+  ③ **本机只有 Windows PowerShell 5.1（无 `pwsh`）**：`.ps1` 必须 **UTF-8 with BOM**；
+     `$ErrorActionPreference='Stop'` 会被 cmake/adb 的正常 stderr 打断；
+     `adb shell "... 2>/dev/null"` 里的 `2>` 会被 PowerShell 当自己的重定向（报 `D:\dev\null` 不存在）；
+  ④ **NDK 的 `clang++.cmd` 会丢 `-L<dir> -lxxx`**（`ld.lld: unable to find library -llama`，文件明明在）→
+     改成把 `.so` 全路径传给编译器；
+  ⑤ **llama.cpp 必须在库外编**（`D:\yanxin-llm-bench`）：仓库在中文路径下，且源码+产物 1–2 GB 不该进库。
+- **性能两条（同一台 K50 实测，别在 App 里忘了）**：worker 线程**绑大核**（不绑 −27%，开 8 线程 −50%）；
+  编 ggml 开 `-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod`（首 token −45%，但只影响预填不影响生成）。
 
 ## 目录导航
 
@@ -197,6 +217,15 @@ lib/
   诊断工具 `tool/ocr_probe_main.dart`（`flutter build apk -t tool/ocr_probe_main.dart` 后启动即跑一遍
   OCR + 解析并打日志，用于**区分**「OCR/解析坏了」还是「UI/构建坏了」）。
 
+- **阶段二任务 1 新增**（2026-10-25，**只加工具与文档，零产品代码**）：
+  `tool/llm_bench/bench_android.cpp`（端上探针：冷加载 / 首 token / pp·tg tok/s / 逐轮 RSS / 频率，
+  `KEY=value` 行输出）+ `tool/llm_bench/build_android.ps1`（NDK 交叉编译 llama.cpp + 探针）+
+  `tool/llm_bench/run_bench.ps1`（推模型 → 跑 → 主机侧采温度/频率 → 直接吐一行 markdown）+
+  `tool/llm_bench/prompts_finance.txt`（8 段中文财报问答，逐轮轮换）。
+  **源码与产物都在库外** `D:\yanxin-llm-bench`（llama.cpp 克隆 + 3 个 gguf）；仓库里只有探针源码与脚本。
+  ⚠️ 两个 `.ps1` 必须存成 **UTF-8 with BOM**（Windows PowerShell 5.1 会把无 BOM 的 UTF-8 当 ANSI，
+  中文注释直接语法错；`write`/`edit` 工具写文件会丢 BOM，改完记得补）。
+
 - 纯 UI 的 feature（`book` `category` `profile` `nav`）只有 `presentation/`，
   数据与状态在 `lib/data/providers/` 或对应 controller 里 —— 这是有意的例外，不是漏了。
 - `docs/` 下：`spec/` 签字的 SPEC、`dev/` 开发运维手册、`acceptance-*.md` 走查报告、
@@ -206,7 +235,8 @@ lib/
 
 | 文档 | 内容 |
 |---|---|
-| [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 真机阻塞排查 / 已知限制） |
+| [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md) | **阶段二任务 1 基准报告**：设备/构建/口径、3 模型 × 10 轮实测表、dotprod 与线程亲和性对比、质量抽查、已知限制、复现命令 |
+| [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 真机阻塞排查 / 已知限制）+ **§10 阶段二任务 1 记录** |
 | [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md) | **F8.1 真机验收报告**：7 项走查结果、3 个阻塞的根因与修法、复现命令 |
 | [`docs/handoff/reference.md`](docs/handoff/reference.md) | **开工前读**：环境事实 / 架构决策 / 关键资料 / 接手指南 |
 | [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md) | 盲区防护清单：踩过的坑与判据 |
