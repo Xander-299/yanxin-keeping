@@ -156,6 +156,32 @@ void main() {
     expect(find.text('合计（元）'), findsNothing);
   });
 
+  // 2026-10-28 排查「翻月生硬」时统一：翻月不切 loading，避免整屏闪转圈。
+  testWidgets('翻月不闪转圈：切换过程中旧内容仍在，落定后换成新月份', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await _seed(db);
+    await _openStats(tester, db);
+
+    final DateTime now = DateTime.now();
+    final DateTime prev = DateTime(now.year, now.month - 1, 1);
+
+    await tester.tap(find.byTooltip('上一月'));
+    await tester.pump(); // 触发状态更新
+    await tester.pump(const Duration(milliseconds: 40)); // 淡入淡出进行中
+
+    expect(
+      find.byType(CircularProgressIndicator),
+      findsNothing,
+      reason: '翻月时不许闪转圈（要保留上一屏）',
+    );
+
+    await tester.pumpAndSettle();
+    expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
+  });
+
   testWidgets('趋势区间：近 6 个月柱子（含跨年）都渲染出来', (
     WidgetTester tester,
   ) async {

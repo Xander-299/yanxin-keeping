@@ -53,6 +53,9 @@ class HomePage extends ConsumerWidget {
           _Header(bookName: bookAsync.value?.name ?? '…'),
           Expanded(
             child: ledger.when(
+              // 翻月 / 写后刷新不再切 loading（controller 侧已改），这里再加一道保险：
+              // 即使状态短暂回到 loading，也继续画旧数据，不闪转圈。
+              skipLoadingOnReload: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (Object e, StackTrace _) =>
                   Center(child: Text('加载失败：$e')),

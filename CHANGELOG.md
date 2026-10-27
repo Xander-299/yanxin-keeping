@@ -37,6 +37,18 @@
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 6 · 全面排查「切视图闪转圈 + 瞬切」（2026-10-28）
+
+顺着日历那处往下查，**另外三处同样的坑**，全修：
+
+| 位置 | 症状 | 修法 |
+|---|---|---|
+| 首页 `ledger_controller._reload` | 翻月、**记完一笔后的自动刷新**都会先把整屏切成转圈再瞬切 | 不切 loading，保留旧数据；页面 `when(skipLoadingOnReload: true)` 双保险 |
+| 统计 `stats_controller._reload` | 翻月闪转圈 | 同上；并加 **200ms 淡入淡出**（`AnimatedSwitcher`，key = 年月） |
+| 搜索 `search_controller.refresh` | 删/改一笔后整片结果闪转圈 | 不切 loading |
+| 报表 / 资产 / 账本 / 分类 | **无问题**：报表 `_reload` 本来就没切 loading；其余用 `FutureProvider`，切换不重新取数 | 不动 |
+
+回归：`stats_page_test` 新增「翻月不闪转圈」；日历那条（上批）继续守。
 ### 批次 5 · 日历翻月过渡（2026-10-28）
 
 **用户报**：「日历页滑动切换没有过渡动画，很生硬」。根因两条，都修了：

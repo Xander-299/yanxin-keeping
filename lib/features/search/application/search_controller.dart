@@ -83,7 +83,11 @@ class SearchController extends AsyncNotifier<SearchState> {
   /// 重新载入（搜索页里删除 / 编辑完流水后调用）。
   Future<void> refresh() async {
     final current = state.value ?? await future;
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _load(current.bookId));
+    // 不切 loading：否则删一笔就让整片结果闪成转圈（2026-10-28 统一）
+    try {
+      state = AsyncData<SearchState>(await _load(current.bookId));
+    } catch (e, st) {
+      state = AsyncError<SearchState>(e, st);
+    }
   }
 }

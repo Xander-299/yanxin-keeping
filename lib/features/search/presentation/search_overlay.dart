@@ -210,6 +210,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay> {
                 ),
                 Expanded(
                   child: async.when(
+                    skipLoadingOnReload: true,
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
                     error: (Object e, StackTrace _) =>
