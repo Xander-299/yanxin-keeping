@@ -122,10 +122,20 @@ class CalendarController extends AsyncNotifier<CalendarState> {
   }
 
   Future<void> _reload(String bookId, int year, int month, {int? selectedDay}) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(
-      () => _load(bookId, year, month, selectedDay: selectedDay),
-    );
+    // 翻月时**不切 loading**：页面继续显示上一屏（否则会先闪一下转圈、内容瞬切 ——
+    // 用户报的「很生硬」就是它）。新数据到了再一次性替换，过渡动画由页面播。
+    // 只有首次加载（还没有任何数据）才看得到 loading。
+    try {
+      final CalendarState next = await _load(
+        bookId,
+        year,
+        month,
+        selectedDay: selectedDay,
+      );
+      state = AsyncData<CalendarState>(next);
+    } catch (e, st) {
+      state = AsyncError<CalendarState>(e, st);
+    }
   }
 
   /// 选中某一天（只改选中态，不重新查库）。

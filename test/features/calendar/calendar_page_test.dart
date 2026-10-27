@@ -321,4 +321,37 @@ void main() {
     expect(after, lessThan(before), reason: '竖向滑动必须仍能滚动页面');
     expect(find.text(header), findsOneWidget);
   });
+
+  // 用户报：「滑动切换页面没有过渡动画，很生硬」。
+  // 两件事一起兜住：① 翻月时**不能闪转圈**（controller 不再切 loading）；
+  // ② 要有过渡 —— 动画期间新旧两页同时在场（AnimatedSwitcher 的 outgoing 还在），
+  //    落定后只剩新的。
+  testWidgets('翻月有过渡动画：动画中新旧两页同时在场，且全程不闪转圈', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await BookRepository(db).ensureDefaultBook();
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    final DateTime now = DateTime.now();
+    final DateTime next = DateTime(now.year, now.month + 1);
+
+    await tester.drag(find.byType(MonthGrid), const Offset(-260, 0));
+    await tester.pump(); // 触发状态更新
+    await tester.pump(const Duration(milliseconds: 80)); // 动画进行中
+
+    // 过渡中：新旧两页共存（瞬切的话只会有 1 个），并且有 SlideTransition
+    expect(find.byType(MonthGrid), findsNWidgets(2), reason: '翻月要有过渡，不能瞬切');
+    expect(find.byType(SlideTransition), findsWidgets);
+    // 翻月不闪转圈
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(MonthGrid), findsOneWidget);
+    expect(find.text('${next.year}年${next.month}月'), findsOneWidget);
+  });
 }

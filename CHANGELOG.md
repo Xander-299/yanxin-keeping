@@ -37,6 +37,19 @@
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 5 · 日历翻月过渡（2026-10-28）
+
+**用户报**：「日历页滑动切换没有过渡动画，很生硬」。根因两条，都修了：
+
+1. `CalendarController._reload` 每次翻月都 `state = AsyncLoading()` → 页面 `calendar.when(loading:)`
+   会先闪一整屏转圈，再瞬间换成新月份（**内容瞬切 + 闪白**）；
+   改为「不切 loading，拿到新数据再一次性替换」，首次加载仍有 loading。
+2. 页面没有任何过渡：月历+月结余+日账单整体包进 `AnimatedSwitcher`（240ms，`easeOutCubic`），
+   key = 年月，**按翻月方向**做 `SlideTransition`（0.12 屏宽）+ 淡入；方向由 `ref.listenManual`
+   比对 `year*12+month` 得出，滑动 / 顶部箭头 / 月份选择子页三条入口共用。
+
+回归测试：`calendar_page_test`「翻月有过渡动画」——动画中**新旧两个 MonthGrid 同时在场**、
+存在 `SlideTransition`、且全程不出现 `CircularProgressIndicator`。
 ### 批次 4 · 换 Material 3 皮肤（2026-10-28，纯视觉层，业务逻辑零改动）
 
 **用户要求**：「界面风格改成 Material Design 那种」。范围=整个 App；卡通元素（小猪 / 手绘虚线 / 硬描边）全去掉；主色沿用琥珀。

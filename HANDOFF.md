@@ -197,6 +197,10 @@ android.overridePathCheck=true
   ④ **NDK 的 `clang++.cmd` 会丢 `-L<dir> -lxxx`**（`ld.lld: unable to find library -llama`，文件明明在）→
      改成把 `.so` 全路径传给编译器；
   ⑤ **llama.cpp 必须在库外编**（`D:\yanxin-llm-bench`）：仓库在中文路径下，且源码+产物 1–2 GB 不该进库。
+- **切换视图时别把 state 切成 `AsyncLoading`**（2026-10-28，用户报「日历翻月很生硬」）：
+  `AsyncNotifierProvider` 每次重查都 `state = AsyncLoading()` 的话，页面 `when(loading:)` 会
+  闪一整屏转圈再瞬切内容。正确做法是**保留旧数据、拿到新数据再一次性替换**
+  （`calendar_controller._reload`），过渡动画交给页面（`AnimatedSwitcher` + `SlideTransition`）。
 - **`ref.read(FutureProvider).value` 首次是 null**（2026-10-28 踩到）：聊天页发图时用
   `ref.read(categoriesProvider).value ?? []` 取分类，结果永远是空 → 待确认卡显示「请选择分类」、
   点确认永远失败。**要 `await ref.read(provider.future)`**。同类写法在别处也要查一遍。

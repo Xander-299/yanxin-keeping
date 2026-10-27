@@ -27,14 +27,48 @@ import '../application/calendar_controller.dart';
 import 'widgets/month_grid.dart';
 
 /// 日历页。
-class CalendarPage extends ConsumerWidget {
+class CalendarPage extends ConsumerStatefulWidget {
   const CalendarPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CalendarPage> createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends ConsumerState<CalendarPage> {
+  /// 翻月方向：1 = 往后翻（新月份从右侧进），-1 = 往前翻。
+  /// 滑动、顶部箭头、月份选择子页都会改 (year, month)，统一在 [initState] 里判方向。
+  int _dir = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<AsyncValue<CalendarState>>(calendarProvider, (
+      AsyncValue<CalendarState>? prev,
+      AsyncValue<CalendarState> next,
+    ) {
+      final CalendarState? a = prev?.value;
+      final CalendarState? b = next.value;
+      if (a == null || b == null) return;
+      final int ia = a.year * 12 + a.month;
+      final int ib = b.year * 12 + b.month;
+      if (ia != ib && mounted) setState(() => _dir = ib > ia ? 1 : -1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final AsyncValue<CalendarState> calendar = ref.watch(calendarProvider);
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final nameOf = _categoryNameResolver(categoriesAsync.value);
+    final AsyncValue<List<Category>> categoriesAsync = ref.watch(
+      categoriesProvider,
+    );
+    final String Function(String?) nameOf = _categoryNameResolver(
+      categoriesAsync.value,
+    );
+
+    // ⚠️ 不用 `calendar.when(...)`：翻月时状态会短暂变成 loading，
+    // `when` 默认把 loading 当独立分支 → 整页闪一下转圈、内容瞬切（用户报的「生硬」）。
+    // 这里改成「拿到过数据就一直渲染数据」，新数据到了再播过渡动画。
+    final CalendarState? state = calendar.value;
 
     return SafeArea(
       bottom: false,
@@ -42,51 +76,42 @@ class CalendarPage extends ConsumerWidget {
         children: <Widget>[
           const _HeaderBody(),
           Expanded(
-            child: calendar.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, StackTrace _) => Center(child: Text('加载失败：$e')),
-              data: (CalendarState state) => SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      // 原型 `.cal { padding: 6px 8px 0 }`
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: MonthGrid(
-                        year: state.year,
-                        month: state.month,
-                        byDay: state.byDay,
-                        selectedDay: state.selectedDay,
-                        onSelectDay: (int day) =>
-                            ref.read(calendarProvider.notifier).selectDay(day),
-                        // F7.7 E 批：长按某天 → 直接记这一天的账（顺带把那天选中，
-                        // 回来就能看到刚记的那笔）；左右滑动 → 翻月
-                        onLongPressDay: (DateTime day) {
-                          ref.read(calendarProvider.notifier).selectDay(day.day);
-                          context.push(
-                            '/record?date=${day.millisecondsSinceEpoch}',
+            child: state == null
+                ? (calendar.hasError
+                      ? Center(child: Text('加载失败：${calendar.error}'))
+                      : const Center(child: CircularProgressIndicator()))
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    // 新旧两页叠在同一位置（默认布局会把旧页挤到旁边、看起来像跳一下）
+                    layoutBuilder: (Widget? current, List<Widget> previous) =>
+                        ClipRect(
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: <Widget>[...previous, ?current],
+                          ),
+                        ),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position:
+                                  Tween<Offset>(
+                                    begin: Offset(0.12 * _dir, 0),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                              child: child,
+                            ),
                           );
                         },
-                        onShiftMonth: (int delta) =>
-                            ref.read(calendarProvider.notifier).shiftMonth(delta),
-                      ),
-                    ),
-                    // 网格与月结余卡之间不再另加间距：原型是 `.day` 的 2px 外边距
-                    // + `.summary-bar` 的 10px margin（= 12px），由卡的 margin 承担。
-                    _SummaryBar(state: state),
-                    const SizedBox(height: 8),
-                    _SelectedDaySection(
+                    child: _CalendarBody(
+                      key: ValueKey<String>('${state.year}-${state.month}'),
                       state: state,
-                      categoryNameOf: nameOf,
-                      onEdit: (TxRow tx) =>
-                          context.push('/record', extra: tx.id),
-                      onDelete: (TxRow tx) => _confirmDelete(context, ref, tx),
+                      nameOf: nameOf,
                     ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
+                  ),
           ),
         ],
       ),
@@ -98,9 +123,65 @@ class CalendarPage extends ConsumerWidget {
       return (String? _) => '未分类';
     }
     final map = <String, String>{
-      for (final Category c in categories) c.id: c.name,
+      for (final c in categories) c.id: c.name,
     };
     return (String? id) => (id == null ? null : map[id]) ?? '未分类';
+  }
+}
+
+/// 一个月的全部内容（月历 + 月结余 + 选中日账单）。
+///
+/// 单独抽出来是为了让 [AnimatedSwitcher] 能用「年月」当 key：key 一变才播翻月动画。
+class _CalendarBody extends ConsumerWidget {
+  const _CalendarBody({
+    super.key,
+    required this.state,
+    required this.nameOf,
+  });
+
+  final CalendarState state;
+  final String Function(String?) nameOf;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            // 原型 `.cal { padding: 6px 8px 0 }`
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: MonthGrid(
+              year: state.year,
+              month: state.month,
+              byDay: state.byDay,
+              selectedDay: state.selectedDay,
+              onSelectDay: (int day) =>
+                  ref.read(calendarProvider.notifier).selectDay(day),
+              // F7.7 E 批：长按某天 → 直接记这一天的账（顺带把那天选中，
+              // 回来就能看到刚记的那笔）；左右滑动 → 翻月
+              onLongPressDay: (DateTime day) {
+                ref.read(calendarProvider.notifier).selectDay(day.day);
+                context.push('/record?date=${day.millisecondsSinceEpoch}');
+              },
+              onShiftMonth: (int delta) =>
+                  ref.read(calendarProvider.notifier).shiftMonth(delta),
+            ),
+          ),
+          // 网格与月结余卡之间不再另加间距：原型是 `.day` 的 2px 外边距
+          // + `.summary-bar` 的 10px margin（= 12px），由卡的 margin 承担。
+          _SummaryBar(state: state),
+          const SizedBox(height: 8),
+          _SelectedDaySection(
+            state: state,
+            categoryNameOf: nameOf,
+            onEdit: (TxRow tx) => context.push('/record', extra: tx.id),
+            onDelete: (TxRow tx) => _confirmDelete(context, ref, tx),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 
   Future<void> _confirmDelete(
@@ -119,7 +200,6 @@ class CalendarPage extends ConsumerWidget {
     ref.read(dataEpochProvider.notifier).bump();
   }
 }
-
 /// 顶部栏：左侧侧面栏（抽屉）+ 中间年月（点开月份选择子页）+ 报表(建设中) + 统计。
 ///
 /// 日历页 header 用的是原型 `.hdr`（不是 `.appbar`），所以图标是**带框**的。
