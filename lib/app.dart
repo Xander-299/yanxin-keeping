@@ -19,6 +19,7 @@ import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/theme/theme_mode.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/features/assets/presentation/assets_page.dart';
+import 'package:yanxin/features/assistant/presentation/assistant_page.dart';
 import 'package:yanxin/features/autobook/presentation/auto_book_page.dart';
 import 'package:yanxin/features/book/presentation/book_manage_page.dart';
 import 'package:yanxin/features/calendar/presentation/calendar_page.dart';
@@ -119,6 +120,8 @@ class _YanxinAppState extends ConsumerState<YanxinApp> {
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
       // 截图记账（F8.1）：端上 OCR + 规则解析 → 确认页 → 复用现有入账链路
       GoRoute(path: '/receipt', builder: (_, _) => const ReceiptPage()),
+      // 问账本（M1）：一句话问，数字由账本算（无模型、无网络）
+      GoRoute(path: '/assistant', builder: (_, _) => const AssistantPage()),
     ],
   );
 

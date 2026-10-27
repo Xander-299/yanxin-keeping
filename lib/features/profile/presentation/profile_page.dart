@@ -63,6 +63,15 @@ class ProfilePage extends ConsumerWidget {
                       onTap: () => context.push('/receipt'),
                     ),
                     _Entry(
+                      icon: Icons.forum_outlined,
+                      title: '问账本',
+                      sub: '这个月花了多少、预算还剩多少 —— 一句话问，本地算',
+                      iconBg: p.purpleTint,
+                      iconFg: p.purple,
+                      dashedTop: true,
+                      onTap: () => context.push('/assistant'),
+                    ),
+                    _Entry(
                       icon: Icons.description_outlined,
                       title: '导入账单',
                       sub: '微信 xlsx / 支付宝 CSV，重复导入不重复记账',

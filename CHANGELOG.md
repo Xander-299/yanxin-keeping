@@ -30,11 +30,37 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
-## [Unreleased] — 阶段二 · 设备 × 模型基准（只加工具与文档，未动产品代码）
+## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1「问账本」）
 
-> **门禁**：`flutter analyze` → `No issues found!` ✅（本轮零 Dart 改动，`flutter test` 无需重跑）
+> **门禁**：`flutter analyze` → `No issues found!` ✅ ·
+> `flutter test --concurrency=1` → **634 passed / 6 skipped / 0 failed**（基线 588，本批 **+45**）✅
+> **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
+> **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
+
+### 批次 2 · M1「问账本」（2026-10-27，产品代码）
+
+| 层 | 内容 |
+|---|---|
+| 理解 | `finance_intent.dart`：一句话 → 7 类意图（汇总 / 分类 / 预算 / 环比 / 大额 / 储蓄 / 不认识）+ `Period` 区间；中文数字归一（「最近三个月」）、分类别名（「吃饭」→餐饮）、**顺序即优先级**（「为什么比上月多」必须先判对比） |
+| 计算 | `finance_answer.dart`：只调既有口径 `summarize` / `categoryBreakdown` / `buildBudgetView`，**模板层不做新算术**；占比走整数千分比 |
+| 编排 | `assistant_controller.dart`：解析 → `listByRange` / `getForMonth` → 出答案；不缓存数字（避免过期快照） |
+| UI | `/assistant` + 「我的 → 问账本」：示例 chips、问题气泡、答案卡（主数字 + 事实行 + 叙述 + 追问）、输入栏 |
+| 测试 | 46 例：意图 22 / 回答 14 / 控制器 6 / 页面 4（含深色主题） |
+
+**口径**（与 `docs/spec/SPEC-local-assistant.md` §4 一致）：区间半开且**必须写进回答**；
+「最近一个月」= 滚动 30 天；上期没数据就说「没法比较」；空区间说「没有记账记录」而**不返回 ¥0.00**；
+不认识就回示例问题，**绝不编数字**。
+
+**验收（`Prompt.md` 阶段二 §6）**：8 条里 7 条 ✅，第 5 条（模型缺失提示）留 M2 —— 页脚已写明
+「现在是规则 + 账本计算，本地模型是后续可选」。
+
+**产物**：`flutter build apk --debug --target-platform android-arm64` → 131.9 MB（debug），
+已核验包内 `kernel_blob.bin` 含「问账本」文案；**未装机**（手机在构建完成前被拔掉）。
+
+### 批次 1 · 设备 × 模型基准（2026-10-27，只加工具与文档，未动产品代码）
+
+> **门禁**：`flutter analyze` → `No issues found!`（本轮零 Dart 改动）
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · release 包行为完全不变
-> **回滚**：`git revert <本段提交>`
 
 ### 做了什么
 

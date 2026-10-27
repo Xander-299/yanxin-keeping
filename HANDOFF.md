@@ -7,11 +7,11 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**；真机走查 7 项全过（[验收报告](docs/acceptance-F8.1-receipt.md)）。**阶段二任务 1（设备 × 模型基准表）已实测完成**（[基准报告](docs/dev/llm-benchmark.md)），尚未进产品代码 |
-| 下一步 | 阶段二任务 2：按基准表**定引擎与模型**（推荐 llama.cpp 自建 JNI + Qwen2.5-1.5B-Instruct Q4_K_M），先做 `LlmProvider` 抽象 + 财务查询编排，再谈模型分发 D4 |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」已交付**（`/assistant`，不依赖模型，46 例测试；**真机走查未做**） |
+| 下一步 | **M1 真机走查**（装 QA 包 → 我的 → 问账本 → 5 个示例各点一次，核对金额）；然后 **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / dotprod / 绑大核 / 流式 / 取消）+ `.gguf` 手动导入（`getExternalFilesDir` + sha256 校验） |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
-| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1 与阶段二任务 1 **均未动 schema** |
-| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **588 passed / 6 skipped** |
+| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1、阶段二任务 1、M1 **均未动 schema** |
+| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **634 passed / 6 skipped**（M1 新增 46） |
 
 ### F8.1 收口快照（2026-10-24）
 
@@ -217,6 +217,14 @@ lib/
   诊断工具 `tool/ocr_probe_main.dart`（`flutter build apk -t tool/ocr_probe_main.dart` 后启动即跑一遍
   OCR + 解析并打日志，用于**区分**「OCR/解析坏了」还是「UI/构建坏了」）。
 
+- **阶段二 M1 新增**（2026-10-27，**产品代码，只读不写库**）：`lib/features/assistant/`
+  （`application/{finance_intent,finance_answer,assistant_controller}` + `presentation/assistant_page`），
+  入口「我的 → 问账本」（路由 `/assistant`）。链路 =
+  `parseFinanceIntent`（纯函数选区间与口径）→ `listByRange` / `getForMonth` →
+  既有口径纯函数（`summarize` / `categoryBreakdown` / `buildBudgetView`）→ 模板回答。
+  **没有模型、没有网络、没有新依赖**；不认识的问题回示例，绝不编数字。
+  ⚠️ 新增/修改意图词表后，先跑 `test/features/assistant/`（46 例）再动 UI。
+
 - **阶段二任务 1 新增**（2026-10-25，**只加工具与文档，零产品代码**）：
   `tool/llm_bench/bench_android.cpp`（端上探针：冷加载 / 首 token / pp·tg tok/s / 逐轮 RSS / 频率，
   `KEY=value` 行输出）+ `tool/llm_bench/build_android.ps1`（NDK 交叉编译 llama.cpp + 探针）+
@@ -235,6 +243,7 @@ lib/
 
 | 文档 | 内容 |
 |---|---|
+| [`docs/spec/SPEC-local-assistant.md`](docs/spec/SPEC-local-assistant.md) | **阶段二 · 本地财务问答（已签字）**：三层架构（T0 无模型 / T1 可选模型 / T2 云端不做）、为什么先做 M1、M1 文件级交付、口径表、验收 8 条、已知限制、M2 计划 |
 | [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md) | **阶段二任务 1 基准报告**：设备/构建/口径、3 模型 × 10 轮实测表、dotprod 与线程亲和性对比、质量抽查、已知限制、复现命令 |
 | [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 真机阻塞排查 / 已知限制）+ **§10 阶段二任务 1 记录** |
 | [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md) | **F8.1 真机验收报告**：7 项走查结果、3 个阻塞的根因与修法、复现命令 |
