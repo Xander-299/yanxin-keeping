@@ -33,7 +33,7 @@
 ## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1「问账本」）
 
 > **门禁**：`flutter analyze` → `No issues found!` ✅ ·
-> `flutter test --concurrency=1` → **634 passed / 6 skipped / 0 failed**（基线 588，本批 **+45**）✅
+> `flutter test --concurrency=1` → **636 passed / 6 skipped / 0 failed**（基线 588，本批 **+48**）✅
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
@@ -45,7 +45,7 @@
 | 计算 | `finance_answer.dart`：只调既有口径 `summarize` / `categoryBreakdown` / `buildBudgetView`，**模板层不做新算术**；占比走整数千分比 |
 | 编排 | `assistant_controller.dart`：解析 → `listByRange` / `getForMonth` → 出答案；不缓存数字（避免过期快照） |
 | UI | `/assistant` + 「我的 → 问账本」：示例 chips、问题气泡、答案卡（主数字 + 事实行 + 叙述 + 追问）、输入栏 |
-| 测试 | 46 例：意图 22 / 回答 14 / 控制器 6 / 页面 4（含深色主题） |
+| 测试 | 48 例：意图 22 / 回答 16 / 控制器 6 / 页面 4（含深色主题） |
 
 **口径**（与 `docs/spec/SPEC-local-assistant.md` §4 一致）：区间半开且**必须写进回答**；
 「最近一个月」= 滚动 30 天；上期没数据就说「没法比较」；空区间说「没有记账记录」而**不返回 ¥0.00**；
@@ -54,8 +54,14 @@
 **验收（`Prompt.md` 阶段二 §6）**：8 条里 7 条 ✅，第 5 条（模型缺失提示）留 M2 —— 页脚已写明
 「现在是规则 + 账本计算，本地模型是后续可选」。
 
-**产物**：`flutter build apk --debug --target-platform android-arm64` → 131.9 MB（debug），
-已核验包内 `kernel_blob.bin` 含「问账本」文案；**未装机**（手机在构建完成前被拔掉）。
+**真机走查（MuMu 12 / Android 12）**：导入用户提供的真实微信账单（161 行）→ 153 笔入库 →
+「我的 → 问账本」逐条问 5 个示例 + 1 条无关问题，数字与首页 hero / 数据库聚合三方一致。
+走查中发现并修掉一处**误导**：账单只覆盖 8/29 起，8 月仅 3 天有记录，「比上个月多」直接给「+3060.6%」——
+现改为用**数据自身天数跨度**判断两期是否可比，不平衡时补「日均（N 天）」并点明「直接比总额会放大差距」。
+详见 [`docs/spec/SPEC-local-assistant.md`](docs/spec/SPEC-local-assistant.md) §7。
+
+**产物**：`flutter build apk --debug` → 203.3 MB（debug，含 x86_64 便于模拟器走查）；
+已核验包内 `kernel_blob.bin` 含「问账本」文案。
 
 ### 批次 1 · 设备 × 模型基准（2026-10-27，只加工具与文档，未动产品代码）
 

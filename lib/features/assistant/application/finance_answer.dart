@@ -332,6 +332,27 @@ List<TxRow> _rowsIn(List<TxRow> rows, Period p) => <TxRow>[
     if (t.occurredAt >= p.startMs && t.occurredAt < p.endMs) t,
 ];
 
+/// 一批流水覆盖的「天数」：首末交易日的日历日跨度（含首末）；没有数据返回 0。
+///
+/// 用途：判断「拿不完整的一期去比完整的一期」——比如账单只导出了 29 天，
+/// 上月只有 3 天有记录，这时直接比总额会把差距放大几十倍。
+int _spanDaysOf(List<TxRow> rows) {
+  if (rows.isEmpty) return 0;
+  int min = rows.first.occurredAt;
+  int max = rows.first.occurredAt;
+  for (final TxRow t in rows) {
+    if (t.occurredAt < min) min = t.occurredAt;
+    if (t.occurredAt > max) max = t.occurredAt;
+  }
+  final DateTime a = DateTime.fromMillisecondsSinceEpoch(min);
+  final DateTime b = DateTime.fromMillisecondsSinceEpoch(max);
+  final int days = DateTime(b.year, b.month, b.day)
+          .difference(DateTime(a.year, a.month, a.day))
+          .inDays +
+      1;
+  return days < 1 ? 1 : days;
+}
+
 FinanceAnswer _compare(CompareIntent intent, FinanceData data) {
   final List<TxRow> curRows = _rowsIn(data.rows, intent.current);
   final List<TxRow> prevRows = _rowsIn(data.rows, intent.previous);
@@ -378,6 +399,16 @@ FinanceAnswer _compare(CompareIntent intent, FinanceData data) {
   final List<({String name, int delta})> ups = deltas.where((({String name, int delta}) d) => d.delta > 0).take(3).toList();
   final List<({String name, int delta})> downs = deltas.where((({String name, int delta}) d) => d.delta < 0).take(2).toList();
 
+  // 「不完整区间 vs 完整区间」必须点破，否则就是误导（Prompt §3 明确要求）。
+  // 判据用**数据本身的跨度**，不猜日历：两边「有记录的天数」差一倍以上就算不平衡
+  // （实测场景：微信账单只导出了 8/29–9/29，8 月只有 3 天有记录 → 直接比总额会放大 30 倍）。
+  final int curSpan = _spanDaysOf(curRows);
+  final int prevSpan = _spanDaysOf(prevRows);
+  final bool unbalanced = curSpan > 0 && prevSpan > 0 &&
+      (curSpan * 10 < prevSpan * 6 || prevSpan * 10 < curSpan * 6);
+  final int curDaily = curSpan > 0 ? (cur + curSpan ~/ 2) ~/ curSpan : 0;
+  final int prevDaily = prevSpan > 0 ? (prev + prevSpan ~/ 2) ~/ prevSpan : 0;
+
   final StringBuffer narrative = StringBuffer();
   narrative.write('$curLabel支出 ${_yuan(cur)}，$prevLabel支出 ${_yuan(prev)}，');
   narrative.write(delta == 0 ? '两期持平。' : '$arrow ${_yuan(delta.abs())}（$pct）。');
@@ -391,6 +422,12 @@ FinanceAnswer _compare(CompareIntent intent, FinanceData data) {
     narrative.write(downs.map((({String name, int delta}) d) => '「${d.name}」${_yuan(d.delta)}').join('、'));
     narrative.write(' 有所下降。');
   }
+  if (unbalanced) {
+    narrative.write(
+      '注意：$prevLabel 只有 $prevSpan 天有记录、$curLabel 有 $curSpan 天，'
+      '直接比总额会放大差距；按每天算分别是 ${_yuan(prevDaily)} 和 ${_yuan(curDaily)}。',
+    );
+  }
 
   return FinanceAnswer(
     title: '$curLabel vs $prevLabel',
@@ -400,6 +437,10 @@ FinanceAnswer _compare(CompareIntent intent, FinanceData data) {
       AnswerFact(curLabel, _yuan(cur)),
       AnswerFact(prevLabel, _yuan(prev)),
       AnswerFact('差额', delta == 0 ? '¥0.00' : '${delta > 0 ? '+' : '-'}${_yuan(delta.abs())}', note: pct),
+      if (unbalanced)
+        AnswerFact('日均（$curSpan 天）', _yuan(curDaily), note: curLabel),
+      if (unbalanced)
+        AnswerFact('日均（$prevSpan 天）', _yuan(prevDaily), note: prevLabel),
       if (ups.isNotEmpty) AnswerFact('涨最多', '${ups.first.name} +${_yuan(ups.first.delta)}'),
       if (downs.isNotEmpty) AnswerFact('降最多', '${downs.first.name} ${_yuan(downs.first.delta)}'),
     ],

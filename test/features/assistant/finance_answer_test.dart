@@ -172,6 +172,38 @@ void main() {
       expect(a.narrative, contains('没有支出记录，没法比较'));
       expect(a.headline, isNull);
     });
+
+    test('两期天数相当：不啰嗦，不加「注意」', () {
+      final FinanceAnswer a = buildFinanceAnswer(
+        CompareIntent(current: _oct, previous: _sep, categoryFocus: false),
+        _data(),
+      );
+      expect(a.narrative, isNot(contains('注意')));
+      expect(a.facts.any((AnswerFact f) => f.label.startsWith('日均')), isFalse);
+    });
+
+    // 真实场景回归：微信账单只导出了 8/29–9/29，8 月只有 3 天有记录 →
+    // 直接拿总额比会把差距放大十几倍（实测线上出现过）。
+    test('一期数据不完整（天数差一倍以上）：点破并给日均', () {
+      final List<TxRow> sparse = <TxRow>[
+        // 10 月：20 天都有记录
+        for (int d = 1; d <= 20; d++)
+          _tx(id: 'x$d', type: 'expense', cents: 10000, at: DateTime(2026, 10, d), categoryId: 'c-food'),
+        // 9 月：只有 1 天有记录（相当于「上个月只有几天数据」）
+        _tx(id: 'y1', type: 'expense', cents: 5000, at: DateTime(2026, 9, 30), categoryId: 'c-food'),
+      ];
+      final FinanceAnswer a = buildFinanceAnswer(
+        CompareIntent(current: _oct, previous: _sep, categoryFocus: false),
+        _data(rows: sparse),
+      );
+      expect(a.narrative, contains('注意'));
+      expect(a.narrative, contains('直接比总额会放大差距'));
+      expect(a.narrative, contains('按每天算'));
+      expect(
+        a.facts.where((AnswerFact f) => f.label.startsWith('日均')).length,
+        2,
+      );
+    });
   });
 
   group('大额支出', () {

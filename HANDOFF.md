@@ -7,11 +7,11 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」已交付**（`/assistant`，不依赖模型，46 例测试；**真机走查未做**） |
-| 下一步 | **M1 真机走查**（装 QA 包 → 我的 → 问账本 → 5 个示例各点一次，核对金额）；然后 **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / dotprod / 绑大核 / 流式 / 取消）+ `.gguf` 手动导入（`getExternalFilesDir` + sha256 校验） |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」已交付并真机走查通过**（`/assistant`，不依赖模型，48 例测试；MuMu + 真实微信账单 161 行） |
+| 下一步 | **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / dotprod / 绑大核 / 流式 / 取消）+ `.gguf` 手动导入（`getExternalFilesDir` + sha256 校验） |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
 | 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1、阶段二任务 1、M1 **均未动 schema** |
-| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **634 passed / 6 skipped**（M1 新增 46） |
+| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **636 passed / 6 skipped**（M1 新增 48） |
 
 ### F8.1 收口快照（2026-10-24）
 
@@ -167,6 +167,14 @@ android.overridePathCheck=true
   且 versionCode 4001 > 仓库的 2001、签名不同 → `adb install -r` 只会失败或逼你卸载（=丢账本）。
   用 QA 包名并列安装：`android/gradle.properties` 临时写 `qaAppId=com.teacodeman.yanxin.qa`
   再 `flutter build apk --release --no-pub`，装完 `adb uninstall` 清掉。
+- **模拟器走查（2026-10-27 实测，MuMu 12 / Android 12）——四个坑**：
+  ① `uiautomator dump` 会偶发返回 `null root node`，**千万别读上一轮的 `/sdcard/ui.xml` 当现状**
+     （本轮真踩到：误以为改了代码没生效）。用 `tool/ui_mumu.ps1`，它会「删旧 → dump → 校验非空 → 重试 3 次 → 失败抛错」；
+  ② Flutter 里**一个可点按钮常被合并成整张卡片**的语义节点（例：导入页「选择文件」的节点是 [0,244]-[900,722]），
+     点卡片中心没反应 —— 要沿 y 扫一遍找真命中点（本轮实测 y≈600 才中）；
+  ③ `adb shell input text` **打不了中文**（只能 ASCII）→ 想测「问账本」这类中文输入，
+     要么点页面上的示例 chip，要么用 root 把模拟器时间改到目标月份（`date MMDDhhmmYYYY.ss`，测完记得改回来）；
+  ④ MuMu 的 adb 端口是 `127.0.0.1:16384`（`adb connect` 后 `adb devices` 会列出多个 transport，留一个即可）。
 - **MIUI 上 `adb shell input tap` 会打偏**：uiautomator 给的语义节点常是**整张卡片**，
   按它的中心点可能落在按钮外 —— 在目标区域扫一遍 y（如 640–780）才稳；
   手机被人同时使用时，事件会落到别人的 App 上；`input` 被 `INJECT_EVENTS` 拦时需开「USB 调试（安全设置）」。
