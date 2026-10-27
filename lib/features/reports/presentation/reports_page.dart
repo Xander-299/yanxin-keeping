@@ -15,7 +15,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:yanxin/core/db/database.dart';
-import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/core/utils/money.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
@@ -301,15 +300,17 @@ class _EmptyMonth extends StatelessWidget {
           children: <Widget>[
             ToonDashedBorder(
               circle: true,
-              color: p.ink,
-              thickness: Tok.bw,
-              dash: 7,
-              gap: 5,
               background: p.brandTint,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 76,
                 height: 76,
-                child: Center(child: PigMascot(size: 52)),
+                child: Center(
+                  child: Icon(
+                    Icons.receipt_long_rounded,
+                    size: 34,
+                    color: p.brandInk,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 14),

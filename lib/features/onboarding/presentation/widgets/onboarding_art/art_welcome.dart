@@ -19,16 +19,9 @@ class WelcomeArt extends StatelessWidget {
             decoration: BoxDecoration(
               color: p.brandTint,
               shape: BoxShape.circle,
-              border: p.inkBorder(),
             ),
           ),
-          const PigMascot(size: 96, rotate: true),
-          const Positioned(top: 10, right: 82, child: Sparkle(size: 26)),
-          Positioned(
-            bottom: 18,
-            left: 78,
-            child: Sparkle(size: 17, fill: p.brandTint2),
-          ),
+          Icon(Icons.savings_rounded, size: 68, color: p.brandInk),
         ],
       ),
     );

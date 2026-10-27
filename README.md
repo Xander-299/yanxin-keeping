@@ -34,7 +34,7 @@
 
 ## 📱 项目预览
 
-实机截图（Redmi K50 · 卡通浅色主题）。粗描边与硬阴影都是代码画的，不引任何图片资源。
+实机截图（Redmi K50 · 浅色主题）。**2026-10-28 起改用 Material 3 皮肤**（旧截图为卡通版，样式已更新，图待重拍）。
 
 <table>
   <tr>
@@ -156,7 +156,7 @@ lib/
 ├── core/                        基础设施（不依赖任何 feature / data）
 │   ├── db/                      drift：tables / database / schema_v1 / schema_v2
 │   ├── providers/               data_epoch（写操作后的统一失效信号）
-│   ├── theme/                   tokens.dart（设计令牌）+ toon/（卡通通用件，按组件分文件）
+│   ├── theme/                   tokens.dart（M3 主题 + 几何令牌）+ toon/（通用组件，对外仍是 Toon* 名字）
 │   ├── utils/                   money / id / fingerprint / date / highlight
 │   └── constants/               preset.dart（预置分类、账户类型、默认账本名）
 ├── data/

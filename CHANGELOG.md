@@ -37,6 +37,20 @@
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 4 · 换 Material 3 皮肤（2026-10-28，纯视觉层，业务逻辑零改动）
+
+**用户要求**：「界面风格改成 Material Design 那种」。范围=整个 App；卡通元素（小猪 / 手绘虚线 / 硬描边）全去掉；主色沿用琥珀。
+
+| 层 | 改动 |
+|---|---|
+| 主题 | `buildToonTheme` 改为 Material 3：`ColorScheme.fromSeed(琥珀)` + M3 组件主题（Card / FilledButton / SegmentedButton / FilterChip / NavigationBar / InputDecoration），去掉墨色粗描边与零模糊硬阴影 |
+| 色板 | `ToonPalette` 不再是手写常量：`light` / `dark` 由 `_fromScheme(ColorScheme)` 派生（字段名不变，155 处 `context.toon` 不用改） |
+| 组件 | `ToonCard`→`Card`+elevation、`ToonButton`→Filled/Outlined、`ToonField`→ListTile 式行、`ToonSeg`→`SegmentedButton`、`ToonChip`→`FilterChip`、`ToonPress`→`InkWell`（ripple）、`ToonIconButton`→`IconButton`、虚线→实线 outline；**组件名与调用点全部保留**（432 处不动） |
+| 卡通件清理 | 删除 `mascot.dart`（小猪）/ 原 `avatar_ring.dart`；`ToonAvatar` 重写为 `CircleAvatar`、`ToonRing` 改用 `CircularProgressIndicator`；hero 贴纸、引导页小猪、各空态小猪统一换成 Material 图标 |
+| 测试 | `palette_contrast_test` 重写为 M3 语义配对（on* on *）；`toon_theme_test` 的「深浅差异」断言改为文字/纸色/分割线 |
+
+**门禁**：`flutter analyze` 0 issue；`flutter test --concurrency=1` **638 passed / 6 skipped**（零逻辑改动，测试全绿）。
+**真机**（MuMu 900×1600，浅色）：取样 hero `#FFDEAD`（primaryContainer 浅琥珀）、页面 `#FFFFFF`、卡片 `#FFF8F3`；深色：`#120D07` 底 / 同款浅琥珀 hero。
 ### 批次 3 · 首页聊天化：记一笔 / 问一句（2026-10-28，产品代码）
 
 **用户要求**：「截图记账和问账本不要放在『我的』，把首页『本月预算』部件替换掉；两个功能集成成一个聊天框，

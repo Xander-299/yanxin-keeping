@@ -1,6 +1,8 @@
 part of '../toon.dart';
 
-/// 行式表单字段（原型 `.field`）：`label | value | 附加 | ›`。
+/// 行式表单字段（Material 3）：`label | value | 附加 | ›`。
+///
+/// 旧版的「虚线分割」换成 M3 的 `Divider`（hairline）；文字权重从 w800 降到 w500/600。
 class ToonField extends StatelessWidget {
   const ToonField({
     super.key,
@@ -19,7 +21,10 @@ class ToonField extends StatelessWidget {
   final bool placeholder;
   final Widget? trailing;
   final VoidCallback? onTap;
+
+  /// 兼容旧名：现在画的是 M3 分割线（不是虚线）。
   final bool dashedTop;
+
   final Widget? child;
   final Color? valueColor;
 
@@ -27,16 +32,16 @@ class ToonField extends StatelessWidget {
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
     final Widget row = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 13),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Row(
         children: <Widget>[
           SizedBox(
-            width: 52,
+            width: 64,
             child: Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w500,
                 color: p.ink2,
               ),
             ),
@@ -49,8 +54,8 @@ class ToonField extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
                     color: valueColor ?? (placeholder ? p.ink3 : p.ink),
                   ),
                 ),
@@ -59,18 +64,18 @@ class ToonField extends StatelessWidget {
             trailing!,
             const SizedBox(width: 6),
           ],
-          Icon(Icons.chevron_right, size: 18, color: p.ink2),
+          if (onTap != null) Icon(Icons.chevron_right, size: 20, color: p.ink3),
         ],
       ),
     );
 
     final Widget body = onTap == null
         ? row
-        : ToonPress(onTap: onTap, child: row);
+        : InkWell(onTap: onTap, child: row);
     if (!dashedTop) return body;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[const ToonDashedLine(), body],
+      children: <Widget>[Divider(height: 1, color: p.line), body],
     );
   }
 }

@@ -441,10 +441,12 @@ class _EmptyDay extends StatelessWidget {
             dash: 7,
             gap: 5,
             background: p.brandTint,
-            child: const SizedBox(
+            child: SizedBox(
               width: 76,
               height: 76,
-              child: Center(child: PigMascot(size: 52)),
+              child: Center(
+                child: Icon(Icons.calendar_today_rounded, size: 32, color: p.brandInk),
+              ),
             ),
           ),
           const SizedBox(height: 14),

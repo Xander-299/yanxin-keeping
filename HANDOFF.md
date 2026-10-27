@@ -9,7 +9,7 @@
 |---|---|
 | 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行） |
 | 下一步 | **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / dotprod / 绑大核 / 流式 / 取消）+ `.gguf` 手动导入（`getExternalFilesDir` + sha256 校验） |
-| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
+| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 琥珀）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
 | 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1、阶段二任务 1、M1 **均未动 schema** |
 | 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **638 passed / 6 skipped**（首页聊天化后） |
 
@@ -97,18 +97,21 @@ android.overridePathCheck=true
 4. **金额一律 `int` 分**，禁止浮点。
 5. **go_router 实例放在 App State**，不能是顶层 `final`；且 `context.push().then`
    在 `StatefulShellRoute` 壳下**不兑现** → 保存后刷新由被推页面自己在 pop 前做。
-6. **色值一律走调色板 `context.toon`（`p.xxx`）**，产品代码里不出现裸 `Color(0x…)`。
+6. **色值一律走调色板 `context.toon`（`p.xxx`）** —— 2026-10-28 起色板是 **Material 3**：
+   `ToonPalette.light/dark` 由 `ColorScheme.fromSeed(ToonPalette.seed)` 派生，**改品牌色只改 `seed` 一处**。
+   组件库（`ToonCard` / `ToonButton` / …）名字保留、内部是 M3（Card / FilledButton / SegmentedButton / ripple），
+   所以**换皮肤不改业务页面**；新增 UI 请继续用 `Toon*`，别直接 `Card`/`FilledButton` 各写一套。。产品代码里不出现裸 `Color(0x…)`。
    F7.17 起 `Tok` **只剩几何量**（描边宽 / 圆角）；颜色是 `ThemeExtension<ToonPalette>` 的
    **实例字段**，靠 `Theme.of` 建立依赖 —— 这样才能随浅/深主题切换重建。
    **别把颜色改回 `const`**：`const` widget 会被 Element 判 `identical` 跳过重建，切主题不刷新。
-7. **对比度三条硬规则（F7.17 起，护护栏 `test/core/theme/palette_contrast_test.dart`）**
-   - **hero（恒琥珀底）只能用 hero 家族色**：减淡层 `veil@α`、描边 `inkOn(brand)`、字 `heroInk`。
-     用 `paper@α` 当减淡层会在深色下把气泡压暗（实测 2.12:1）。
-   - **描边跟着底色走**：`p.inkBorder(on: <底色>)`，亮底自动取 `decorInk`。
-     直接在琥珀底上写 `p.ink` 描边 → 深色下 `ink` 是暖白，描边整条消失（1.26:1）。
-   - **前景必须配对的底**：`onBrand`→`brand`、`brandInk`→浅底、`onRed`→实心红、`redInk`→`redTint`。
-     放错底（如 `onBrand` 放纸底）浅色看不出来，深色下直接看不见。
-   门槛：正文小字 **4.5:1**、描边/图形 **3.0:1**。
+7. **对比度规则（2026-10-28 换 M3 后重写，护栏 `test/core/theme/palette_contrast_test.dart`）**
+   - 色板是 M3 角色映射，**前景必须配对自己的底**：`onBrand`(onPrimary)→`brand`(primary)、
+     `brandInk`(onPrimaryContainer)→`brandTint`(primaryContainer)、`onRed`(onError)→`red`(error)、
+     `redInk`(onErrorContainer)→`redTint`(errorContainer)。配错在浅色下看不出来、深色下直接看不见。
+   - **hero 用 `brandTint` 底 + `heroInk`（= onPrimaryContainer）字**：hero 是品牌展示面，
+     用 primaryContainer 才有「琥珀感」；用 `brand`(primary) 会变成深褐色重块。
+   - 门槛：正文小字 **4.5:1**、描边/图形 **3.0:1**、发丝分割线只要可见（**1.4:1**）。
+   - 改 `ToonPalette.seed` 或改映射后，**必须跑这条护栏**（它会把每一项的实际比值打进失败信息）。
 8. **正式包不得出现 `INTERNET`（F8.1 起新增，实测踩到过）** —— ML Kit 的依赖链
    （`com.google.android.datatransport:transport-backend-cct`）**会自己合并进 `INTERNET` +
    `ACCESS_NETWORK_STATE`**，所以 `android/app/src/release/AndroidManifest.xml` 里用

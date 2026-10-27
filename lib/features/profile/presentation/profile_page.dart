@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/features/export/presentation/export_sheet.dart';
@@ -112,12 +113,12 @@ class _Head extends StatelessWidget {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: p.brand,
-              borderRadius: BorderRadius.circular(22),
-              border: p.inkBorder(on: p.brand),
-              boxShadow: p.hard(),
+              color: p.brandTint,
+              borderRadius: BorderRadius.circular(Tok.rLg),
             ),
-            child: const Center(child: PigMascot(size: 46)),
+            child: Center(
+              child: Icon(Icons.person_rounded, size: 32, color: p.brandInk),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(

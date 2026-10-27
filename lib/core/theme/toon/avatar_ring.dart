@@ -1,8 +1,11 @@
 part of '../toon.dart';
 
-// ────────────────────────────── 装饰件 ──────────────────────────────
+// ────────────────────────────── 头像 / 进度环 ──────────────────────────────
 
-/// 分类 / 账本用的字母头像（圆角方块 + 描边 + 硬阴影）。
+/// 圆形头像（Material 3 `CircleAvatar`）：一个字符或 emoji + 可选底色。
+///
+/// 旧版是「描边 + 硬阴影 + 手绘」，现在只用 M3 的 tonal 圆底 —— 视觉更轻，
+/// 但 API 不变，所以记一笔 / 报表 / 搜索结果里的 6 处调用点不用改。
 class ToonAvatar extends StatelessWidget {
   const ToonAvatar({
     super.key,
@@ -13,49 +16,37 @@ class ToonAvatar extends StatelessWidget {
   });
 
   final String text;
-
-  /// 底色；`null` = 品牌浅底（`p.brandTint`）。
   final Color? bg;
-
-  /// 文字色；`null` = 品牌深色（`p.brandDeep`）。
   final Color? fg;
-
   final bool small;
 
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    final double s = small ? 34 : 38;
-    return Container(
-      width: s,
-      height: s,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bg ?? p.brandTint,
-        borderRadius: BorderRadius.circular(small ? 12 : 13),
-        border: Border.all(color: p.ink, width: 2),
-        boxShadow: p.hard(d: 2),
-      ),
+    return CircleAvatar(
+      radius: small ? 17 : 19,
+      backgroundColor: bg ?? p.brandTint,
       child: Text(
         text,
+        maxLines: 1,
         style: TextStyle(
-          fontSize: small ? 13.5 : 15,
-          fontWeight: FontWeight.w800,
-          color: fg ?? p.brandDeep,
+          fontSize: small ? 12 : 13,
+          fontWeight: FontWeight.w600,
+          color: fg ?? p.brandInk,
         ),
       ),
     );
   }
 }
 
-/// 预算环形进度（原型 `.ring`：58 网格，外圈墨色描边靠底环露出）。
+/// 环形进度 + 中心文字（Material 3 `CircularProgressIndicator`）。
 class ToonRing extends StatelessWidget {
   const ToonRing({
     super.key,
     required this.progress,
     required this.color,
     required this.text,
-    this.size = 62,
+    this.size = 58,
   });
 
   final double progress;
@@ -72,86 +63,26 @@ class ToonRing extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
-          CustomPaint(
-            size: Size(size - 4, size - 4),
-            painter: _RingPainter(
-              progress: progress.clamp(0, 1),
+          SizedBox(
+            width: size,
+            height: size,
+            child: CircularProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              strokeWidth: 6,
               color: color,
-              ink: p.ink,
-              track: p.track,
+              backgroundColor: p.track,
             ),
           ),
           Text(
             text,
             style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: p.ink,
             ),
           ),
         ],
       ),
     );
   }
-}
-
-class _RingPainter extends CustomPainter {
-  const _RingPainter({
-    required this.progress,
-    required this.color,
-    required this.ink,
-    required this.track,
-  });
-
-  final double progress;
-  final Color color;
-  final Color ink;
-  final Color track;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Offset c = Offset(size.width / 2, size.height / 2);
-    final double r = (size.width - 8) / 2;
-    const double pi2 = math.pi * 2;
-
-    // 1) 墨色粗底环：彩色弧画上去后两侧自然露出 1.5px 描边
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 8
-        ..color = ink,
-    );
-    // 2) 底槽
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 5
-        ..color = track,
-    );
-    // 3) 进度弧
-    if (progress > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r),
-        -math.pi / 2,
-        pi2 * progress,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 5
-          ..strokeCap = StrokeCap.round
-          ..color = color,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress ||
-      old.color != color ||
-      old.ink != ink ||
-      old.track != track;
 }

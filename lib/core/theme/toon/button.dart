@@ -1,9 +1,12 @@
 part of '../toon.dart';
 
-/// 按钮形态：见原型 `.btn.primary / .tonal / .ghost / .danger`。
+/// 按钮形态：`primary`（Filled）/ `tonal`（Filled tonal）/ `ghost`（Outlined）/ `danger`（Filled + error）。
 enum ToonButtonKind { primary, tonal, ghost, danger }
 
-/// 胶囊按钮（48 高，small 为 36）。
+/// 按钮（Material 3）：胶囊形、48 高（`small` 36）。
+///
+/// 旧版是「描边 + 硬阴影 + 按下位移」，现在交给 M3 的 Filled/Outlined 方案：
+/// 文字与图标颜色由 `ButtonStyle` 统一给，调用点只关心 `kind`。
 class ToonButton extends StatelessWidget {
   const ToonButton({
     super.key,
@@ -24,70 +27,70 @@ class ToonButton extends StatelessWidget {
   final bool small;
   final bool block;
 
-  Color _bg(ToonPalette p) => switch (kind) {
-    ToonButtonKind.primary => p.brand,
-    ToonButtonKind.tonal => p.brandTint,
-    ToonButtonKind.ghost => p.paper,
-    ToonButtonKind.danger => p.redTint,
-  };
-
-  Color _fg(ToonPalette p) => switch (kind) {
-    // 亮琥珀底 → 用 onBrand（深浅两套都是深棕）；品牌浅底 → 用 brandInk
-    ToonButtonKind.primary => p.onBrand,
-    ToonButtonKind.tonal => p.brandDeep,
-    ToonButtonKind.ghost => p.ink,
-    ToonButtonKind.danger => p.red,
-  };
-
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    final double d = small ? 2.5 : 4;
-    final Color bg = _bg(p);
-    final Color fg = _fg(p);
-    final Widget body = Container(
-      height: small ? 36 : 48,
-      padding: EdgeInsets.symmetric(horizontal: small ? 15 : 20),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-        // 描边跟着**底色**走：primary 是琥珀底 → decorInk；其余底色的 ink 描边不变
-        border: p.inkBorder(on: kind == ToonButtonKind.primary ? p.brand : null),
-        boxShadow: p.hard(d: d),
+    final ButtonStyle base = ButtonStyle(
+      minimumSize: WidgetStatePropertyAll<Size>(
+        Size(block ? double.infinity : 0, small ? 36 : 48),
       ),
-      child: Row(
-        mainAxisSize: block ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          if (icon != null) ...<Widget>[
-            Icon(icon, size: small ? 16 : 18, color: fg),
-            if (label != null || child != null) const SizedBox(width: 6),
-          ],
-          if (child != null)
-            child!
-          else if (label != null)
-            Text(
-              label!,
-              style: TextStyle(
-                fontSize: small ? 13 : 15,
-                fontWeight: FontWeight.w800,
-                color: fg,
-              ),
-            ),
-        ],
+      padding: WidgetStatePropertyAll<EdgeInsetsGeometry>(
+        EdgeInsets.symmetric(horizontal: small ? 14 : 20),
       ),
+      textStyle: WidgetStatePropertyAll<TextStyle?>(
+        TextStyle(fontSize: small ? 13 : 14, fontWeight: FontWeight.w600),
+      ),
+      shape: const WidgetStatePropertyAll<OutlinedBorder>(StadiumBorder()),
     );
 
-    final Widget pressed = ToonPress(onTap: onPressed, child: body);
-    if (!block) return pressed;
-    return SizedBox(width: double.infinity, child: pressed);
+    final Widget content = Row(
+      mainAxisSize: block ? MainAxisSize.max : MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        if (icon != null) ...<Widget>[
+          Icon(icon, size: small ? 16 : 18),
+          if (label != null || child != null) const SizedBox(width: 8),
+        ],
+        if (child != null)
+          child!
+        else if (label != null)
+          Text(label!, overflow: TextOverflow.ellipsis),
+      ],
+    );
+
+    final Widget button = switch (kind) {
+      ToonButtonKind.primary => FilledButton(
+        onPressed: onPressed,
+        style: base,
+        child: content,
+      ),
+      ToonButtonKind.tonal => FilledButton.tonal(
+        onPressed: onPressed,
+        style: base,
+        child: content,
+      ),
+      ToonButtonKind.ghost => OutlinedButton(
+        onPressed: onPressed,
+        style: base,
+        child: content,
+      ),
+      ToonButtonKind.danger => FilledButton(
+        onPressed: onPressed,
+        style: base.copyWith(
+          backgroundColor: WidgetStatePropertyAll<Color>(p.redTint),
+          foregroundColor: WidgetStatePropertyAll<Color>(p.redInk),
+        ),
+        child: content,
+      ),
+    };
+
+    return block ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
 
-/// 40×40 图标按钮。
+/// 图标按钮（Material 3）：`boxed` → `IconButton.filledTonal`，否则纯图标。
 ///
-/// [boxed] = 卡片底 + 描边 + 小硬阴影（首页 header 那种）；
-/// [muted] = 虚线描边、三级灰（建设中占位）。
+/// `muted`（「建设中」占位）与 `size` / `iconSize` 保留为兼容参数。
 class ToonIconButton extends StatelessWidget {
   const ToonIconButton({
     super.key,
@@ -111,40 +114,22 @@ class ToonIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    final Color fg = muted ? p.ink3 : p.ink;
-    // 原型 `.hdr .iconbtn` = 卡片底实线墨框 + 硬阴影；
-    // `.hdr .iconbtn.muted` = 卡片底**虚线**墨框、无阴影（「建设中」入口）。
-    final bool dashed = boxed && muted;
-    Widget button = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: boxed && !muted ? p.paper : null,
-        borderRadius: BorderRadius.circular(13),
-        border: boxed && !dashed
-            ? Border.all(color: p.ink, width: 2)
-            : Border.all(color: Colors.transparent, width: 2),
-        boxShadow: boxed && !muted ? p.hard(d: 2.5) : null,
-      ),
-      child: Icon(icon, size: iconSize, color: fg),
+    final Color fg = muted ? p.ink3 : p.ink2;
+    final Widget button = IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, size: iconSize, color: fg),
+      tooltip: tooltip,
+      style: boxed
+          ? IconButton.styleFrom(
+              backgroundColor: p.canvas2,
+              foregroundColor: fg,
+              minimumSize: Size.square(size),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(Tok.rMd),
+              ),
+            )
+          : IconButton.styleFrom(foregroundColor: fg),
     );
-    if (dashed) {
-      button = ToonDashedBorder(
-        radius: 13,
-        color: p.ink3,
-        background: p.paper,
-        child: button,
-      );
-    }
-
-    final Widget tappable = ToonPress(
-      dx: 2,
-      dy: 2,
-      onTap: onPressed,
-      child: Center(child: button),
-    );
-    return tooltip == null
-        ? tappable
-        : Tooltip(message: tooltip!, child: tappable);
+    return button;
   }
 }

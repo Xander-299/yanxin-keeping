@@ -45,11 +45,11 @@ class MonthHero extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       decoration: BoxDecoration(
-        color: p.brand,
+        color: p.brandTint,
         borderRadius: BorderRadius.circular(Tok.rXl),
         // hero 恒为琥珀底：**描边必须走 decorInk（恒深）** —— 深色主题下 p.ink 是暖白，
         // 压在琥珀上只有 ~1.3:1，描边会整条消失。
-        border: p.inkBorder(w: 3, on: p.brand),
+        border: Border.all(color: p.line),
         boxShadow: p.hard(d: 6),
       ),
       clipBehavior: Clip.hardEdge,
@@ -71,19 +71,7 @@ class MonthHero extends StatelessWidget {
               ),
             ),
           ),
-          // 星贴纸 + 小猪（歪 6°）。**画在内容之前** —— 原型里也是内容压住小猪，
-          // 否则 64px 的小猪会盖掉右上角的翻月按钮。
-          const Positioned(right: 86, top: 12, child: Sparkle(size: 21)),
-          const Positioned(
-            right: 24,
-            bottom: 14,
-            child: Sparkle(size: 15, opacity: 0.9),
-          ),
-          const Positioned(
-            right: 2,
-            top: 22,
-            child: PigMascot(size: 64, rotate: true),
-          ),
+          // 卡通贴纸（星 + 小猪）已在 2026-10-28 换 Material 3 时移除
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 18, 16),
             child: Column(
@@ -191,8 +179,8 @@ class _RoundButton extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(
             color: enabled
-                ? p.inkOn(p.brand)
-                : p.inkOn(p.brand).withValues(alpha: 0.4),
+                ? p.inkOn(p.brandTint)
+                : p.inkOn(p.brandTint).withValues(alpha: 0.4),
             width: 2.5,
           ),
           boxShadow: p.hard(
@@ -234,7 +222,7 @@ class _HeroCell extends StatelessWidget {
         color: p.veil.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: p.inkOn(p.brand).withValues(alpha: 0.55),
+          color: p.inkOn(p.brandTint).withValues(alpha: 0.55),
           width: 2,
         ),
       ),
