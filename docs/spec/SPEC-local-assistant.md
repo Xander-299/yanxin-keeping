@@ -143,13 +143,62 @@
    已记入 [docs/handoff/open-issues.md](../handoff/open-issues.md)。
 3. **【记录】分类规则在真实数据上有偏差**：「手机充值-中国联通」被判成**居住**、「抖音生活服务」落**其他**、
    「发给…青年旅社」被判成**交通**。属 category_rules.dart 的问题（不是 M1），已记入 open-issues。
-4. **【工程】uiautomator 的坑**：dump 偶发返回 
-ull root node，此时若直接读上一次的文件，
+4. **【工程】uiautomator 的坑**：dump 偶发返回 `null root node`，此时若直接读上一次的文件，
    会拿**旧界面**当当前状态判断（本轮真踩到，误以为改代码没生效）。
-   	ool/ui_mumu.ps1 已改为：先删旧文件 → dump 后校验非空 → 最多重试 3 次，失败直接抛错。
+   `tool/ui_mumu.ps1` 已改为：先删旧文件 → dump 后校验非空 → 最多重试 3 次，失败直接抛错。
 
-## 8. 下一步
+## 8. 首页改版：记一笔 / 问一句（2026-10-28）
 
-2. **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / `dotprod` / 线程绑大核 / 流式 / 取消）+
+> 用户要求：「截图记账和问账本不要放在『我的』，把首页的『本月预算』部件替换掉；
+> 两个功能集成成一个聊天框，能发文字也能发账单图片。」两个取舍当场拍板：
+> **① 首页放入口卡、点开发送后进全屏聊天**；**② 预算降级成 hero 下方一行**。
+
+### 8.1 形态
+
+```
+首页：hero（本月支出）→ 预算一行条 → [记一笔 / 问一句] 入口卡 → 本月账单
+「我的」：删掉「截图记账」「问账本」两行
+入口卡：假输入框（整条可点）+ 📷（直接弹相册）+ 3 个示例 chip
+聊天页 /chat：消息流（文字问答卡 / 待确认账单卡 / 结果与提示）+ 底部「📷 + 输入框 + 发送」
+```
+
+### 8.2 文件级改动
+
+| 类型 | 文件 |
+|---|---|
+| 新增 | `features/chat/application/{answer_question,chat_controller}.dart`、`presentation/chat_page.dart`、`presentation/widgets/{chat_bubbles,receipt_card,chat_entry_card}.dart`、`ledger/presentation/widgets/budget_strip.dart` |
+| 删除 | `assistant/presentation/assistant_page.dart`、`assistant/application/assistant_controller.dart`、`receipt/presentation/receipt_page.dart`、`receipt/presentation/widgets/receipt_bits.dart`、`ledger/presentation/widgets/budget_card.dart` |
+| 修改 | `app.dart`（`/chat` 取代 `/assistant`、`/receipt`）、`home_page.dart`（预算条 + 入口卡）、`profile_page.dart`（删两行） |
+
+**没动的**：`feature/receipt/{data,application}`（OCR / 解析 / `writeReceipt` / 指纹去重）、
+`finance_intent` / `finance_answer` 纯函数、`TransactionRepository`、schema v3、零新依赖。
+
+### 8.3 口径与不变量（沿用）
+
+- 图片记账仍是 **OCR → `parseReceipt` → 用户确认 → `importTransaction(source:'screenshot')`**，
+  代码里没有第二条写库路径；识别结果只是「待确认卡」，**不确认不写库**；
+- 写后刷新只调 `refreshAfterWrite(ref)`（HANDOFF 不变量 #9）；
+- 文字问答口径与 §4 完全一致（区间半开、写清区间、没数据就说没数据、不认识给示例）。
+
+### 8.4 踩到并修掉的坑
+
+`sendImage` 里最初写的是 `ref.read(categoriesProvider).value ?? []` —— **首次读时 `AsyncValue.value` 还是 null**，
+分类/账户永远为空 → 卡片显示「请选择分类」，点确认永远失败。改 `await ref.read(...future)` 后正常。
+（测试 `chat_controller_test`「识别成功 → 确认后写库」就是这条的回归。）
+
+### 8.5 验收（本批）
+
+| # | 项 | 状态 |
+|---|---|---|
+| 1 | 首页顺序 hero → 预算一行 → 入口卡 → 账单列表 | ✅ 测试 + 走查 |
+| 2 | 「我的」无两个入口 | ✅ |
+| 3 | 聊天里文字问答与 M1 一致 | ✅ `chat_controller_test` / `chat_page_test` |
+| 4 | 发图 → 待确认卡 → 确认写库；重复/失败不写库 | ✅ 9 例图片用例 |
+| 5 | 预算可看可改（口径未变） | ✅ `budget_strip_test` 4 例 |
+| 6 | `analyze` 0 issue / 全量测试绿 | ✅ 638 passed / 6 skipped |
+
+## 9. 下一步
+
+1. **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / `dotprod` / 线程绑大核 / 流式 / 取消）+
    `.gguf` 手动导入（`getExternalFilesDir('models')` + sha256 校验）+ 设备内存门槛与降级；
 2. **M3**：可选下载器（独立 flavor）、多模型管理、性能与隐私说明。

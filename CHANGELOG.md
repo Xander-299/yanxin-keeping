@@ -30,14 +30,35 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
-## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1「问账本」）
+## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1 + 批次 3 首页聊天化）
 
 > **门禁**：`flutter analyze` → `No issues found!` ✅ ·
-> `flutter test --concurrency=1` → **636 passed / 6 skipped / 0 failed**（基线 588，本批 **+48**）✅
+> `flutter test --concurrency=1` → **638 passed / 6 skipped / 0 failed**（基线 588，本批 **+50**；批次 3 删 20 例旧页测试、加 22 例）✅
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 3 · 首页聊天化：记一笔 / 问一句（2026-10-28，产品代码）
+
+**用户要求**：「截图记账和问账本不要放在『我的』，把首页『本月预算』部件替换掉；两个功能集成成一个聊天框，
+能发文字也能发账单图片。」两个取舍当场拍板：**首页放入口卡（点开发送后进全屏聊天）** + **预算降级成 hero 下方一行**。
+
+| 层 | 内容 |
+|---|---|
+| 首页 | `BudgetStrip`（一行：预算 / 进度 / 剩余 / 每天可花，点击仍开原编辑弹层）+ `ChatEntryCard`（假输入框 + 📷 + 3 示例） |
+| 聊天 | `/chat`：`chat_controller`（文字问答 + 图片记账）+ `chat_page` + `chat_bubbles` + `receipt_card` |
+| 图片 | 选图 → 端上 OCR → `parseReceipt` → **待确认卡**（金额/分类/日期/账户/备注可改）→ 确认才 `importTransaction(source:'screenshot')`；重复指纹不重复入账；支付失败不写库 |
+| 清理 | 「我的」删两行入口；删旧页 `assistant_page`/`assistant_controller`/`receipt_page`/`receipt_bits`/`budget_card` 及其 4 个测试文件；路由 `/assistant`、`/receipt` 合并为 `/chat` |
+| 测试 | 新增 22 例（chat_controller 9 / chat_page 5 / chat_entry_card 3 / budget_strip 4，另加 `answer_question` 复用原编排断言） |
+
+**踩坑（已修）**：`sendImage` 里 `ref.read(categoriesProvider).value ?? []` 首次读是 null → 分类/账户永远为空、
+点确认永远失败；改成 `await ref.read(...future)`，并加了回归测试。
+
+**真机（MuMu 12 / Android 12）走查 5 条全过**：首页顺序（hero → 预算一行 → 入口卡 → 账单列表）✓ ·
+入口进聊天并答出真实数字（近 90 天 2,105.37 / 前 5 笔 925.40）✓ · 发图 → 待确认卡 → 确认 → 「已记账 · 支出 ¥36.00」
+且首页 10 月从 0.00 → 36.00 ✓ · 「我的」无两入口 ✓ · 预算条设 1000 → 显示 3.6% / 还剩 964 / 每天 241 ✓。
+
 ### 批次 2 · M1「问账本」（2026-10-27，产品代码）
+
 
 | 层 | 内容 |
 |---|---|

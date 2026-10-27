@@ -1,0 +1,156 @@
+/// 首页「本月预算」——**一行条**（原来是整张卡，腾位置给「记一笔 / 问一句」入口）。
+///
+/// 数字来源不变：
+/// - 预算金额 → [monthBudgetProvider]（当前账本 + 首页当前月份）
+/// - 已消费 → 首页已加载的当月流水（`ledger.summary`），所以记账后自动跟着变
+/// 口径不变：`buildBudgetView`（日均 / 剩余每日可消费都还是它算）。
+///
+/// 交互不变：点这一行 → 原预算编辑弹层（[showBudgetEditSheet]）。
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:yanxin/core/theme/tokens.dart';
+import 'package:yanxin/core/theme/toon.dart';
+import 'package:yanxin/core/utils/money.dart';
+
+import '../../application/budget_controller.dart';
+import '../../application/budget_metrics.dart';
+import '../../application/ledger_controller.dart';
+import 'budget_edit_sheet.dart';
+
+/// 一行预算条。
+class BudgetStrip extends ConsumerWidget {
+  const BudgetStrip({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ToonPalette p = context.toon;
+    final LedgerState? ledger = ref.watch(ledgerProvider).value;
+    final AsyncValue<int?> budgetAsync = ref.watch(monthBudgetProvider);
+    if (ledger == null) return const SizedBox.shrink();
+
+    final BudgetView view = buildBudgetView(
+      budgetCents: budgetAsync.value,
+      spentCents: ledger.summary.expenseCents,
+      year: ledger.year,
+      month: ledger.month,
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
+      child: ToonPress(
+        dx: 2,
+        dy: 2,
+        onTap: () => showBudgetEditSheet(context, ref, view: view),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
+          decoration: BoxDecoration(
+            color: p.paper,
+            borderRadius: BorderRadius.circular(Tok.rLg),
+            border: p.inkBorder(),
+            boxShadow: p.hard(d: 2),
+          ),
+          child: view.hasBudget
+              ? _Filled(view: view)
+              : Row(
+                  children: <Widget>[
+                    Icon(Icons.savings_outlined, size: 16, color: p.ink2),
+                    const SizedBox(width: 8),
+                    Text(
+                      '设本月预算',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: p.ink2,
+                      ),
+                    ),
+                    const Spacer(),
+                    Icon(Icons.chevron_right_rounded, size: 18, color: p.ink3),
+                  ],
+                ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Filled extends StatelessWidget {
+  const _Filled({required this.view});
+
+  final BudgetView view;
+
+  @override
+  Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    final double ratio = view.progress.clamp(0.0, 1.0);
+    final Color barColor = view.overspent ? p.red : p.brandDeep;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Icon(Icons.savings_outlined, size: 15, color: p.ink2),
+            const SizedBox(width: 6),
+            Text(
+              '预算 ¥${centsToYuan(view.budgetCents, group: true)}',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(width: 8),
+            // 进度条
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: Stack(
+                  children: <Widget>[
+                    Container(height: 6, color: p.track),
+                    FractionallySizedBox(
+                      widthFactor: ratio,
+                      child: Container(height: 6, color: barColor),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              view.percentText,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w800,
+                color: view.overspent ? p.redInk : p.ink2,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.chevron_right_rounded, size: 18, color: p.ink3),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Row(
+          children: <Widget>[
+            const SizedBox(width: 21),
+            Expanded(
+              child: Text(
+                view.overspent
+                    ? '已超支 ¥${centsToYuan(view.overspentCents)}'
+                        '${view.daysLeft != null ? ' · 本月还剩 ${view.daysLeft} 天' : ''}'
+                    : '还剩 ¥${centsToYuan(view.remainingCents)}'
+                        '${view.dailyRemainingCents != null ? ' · 每天可花 ¥${centsToYuan(view.dailyRemainingCents!)}' : ''}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: view.overspent ? p.redInk : p.ink3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}

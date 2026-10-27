@@ -16,12 +16,13 @@ import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/category_providers.dart';
 import 'package:yanxin/features/autobook/presentation/widgets/auto_book_banner.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
+import 'package:yanxin/features/chat/presentation/widgets/chat_entry_card.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/ledger_controller.dart';
-import 'widgets/budget_card.dart';
+import 'widgets/budget_strip.dart';
 import 'widgets/month_hero.dart';
 import 'widgets/tx_delete_dialog.dart';
 import 'widgets/tx_group_list.dart';
@@ -64,7 +65,10 @@ class HomePage extends ConsumerWidget {
                           ref.read(ledgerProvider.notifier).shiftMonth(1),
                     ),
                   ),
-                  const SliverToBoxAdapter(child: BudgetCard()),
+                  // 预算降级成一行（腾出首屏给「记一笔 / 问一句」入口；2026-10-28 改版）
+                  const SliverToBoxAdapter(child: BudgetStrip()),
+                  const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                  const SliverToBoxAdapter(child: ChatEntryCard()),
                   const SliverToBoxAdapter(child: SizedBox(height: 16)),
                   const SliverToBoxAdapter(child: _SectionHeader()),
                   if (state.items.isEmpty)

@@ -7,11 +7,11 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」已交付并真机走查通过**（`/assistant`，不依赖模型，48 例测试；MuMu + 真实微信账单 161 行） |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行） |
 | 下一步 | **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / dotprod / 绑大核 / 流式 / 取消）+ `.gguf` 手动导入（`getExternalFilesDir` + sha256 校验） |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
 | 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1、阶段二任务 1、M1 **均未动 schema** |
-| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **636 passed / 6 skipped**（M1 新增 48） |
+| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **638 passed / 6 skipped**（首页聊天化后） |
 
 ### F8.1 收口快照（2026-10-24）
 
@@ -194,6 +194,9 @@ android.overridePathCheck=true
   ④ **NDK 的 `clang++.cmd` 会丢 `-L<dir> -lxxx`**（`ld.lld: unable to find library -llama`，文件明明在）→
      改成把 `.so` 全路径传给编译器；
   ⑤ **llama.cpp 必须在库外编**（`D:\yanxin-llm-bench`）：仓库在中文路径下，且源码+产物 1–2 GB 不该进库。
+- **`ref.read(FutureProvider).value` 首次是 null**（2026-10-28 踩到）：聊天页发图时用
+  `ref.read(categoriesProvider).value ?? []` 取分类，结果永远是空 → 待确认卡显示「请选择分类」、
+  点确认永远失败。**要 `await ref.read(provider.future)`**。同类写法在别处也要查一遍。
 - **性能两条（同一台 K50 实测，别在 App 里忘了）**：worker 线程**绑大核**（不绑 −27%，开 8 线程 −50%）；
   编 ggml 开 `-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod`（首 token −45%，但只影响预填不影响生成）。
 
@@ -224,6 +227,13 @@ lib/
   入口「我的 → 截图记账」（路由 `/receipt`）。
   诊断工具 `tool/ocr_probe_main.dart`（`flutter build apk -t tool/ocr_probe_main.dart` 后启动即跑一遍
   OCR + 解析并打日志，用于**区分**「OCR/解析坏了」还是「UI/构建坏了」）。
+
+- **首页聊天化新增**（2026-10-28）：`lib/features/chat/`（`application/{answer_question,chat_controller}`
+  + `presentation/chat_page` + `presentation/widgets/{chat_bubbles,receipt_card,chat_entry_card}`）+
+  `ledger/presentation/widgets/budget_strip.dart`。首页顺序 = `hero → 预算一行 → 记一笔/问一句入口卡 → 本月账单`；
+  聊天页 `/chat` 同时处理**文字问账本**与**图片记账**（OCR → 待确认卡 → 确认才写库）。
+  ⚠️ 旧的 `assistant_page` / `assistant_controller` / `receipt_page` / `receipt_bits` / `budget_card` **已删除**，
+  但 `features/receipt/{data,application}`（OCR、解析、写库）与 `finance_intent`/`finance_answer` 纯函数**全部保留**。
 
 - **阶段二 M1 新增**（2026-10-27，**产品代码，只读不写库**）：`lib/features/assistant/`
   （`application/{finance_intent,finance_answer,assistant_controller}` + `presentation/assistant_page`），
