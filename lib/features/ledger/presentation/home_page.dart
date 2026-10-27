@@ -27,6 +27,13 @@ import 'widgets/month_hero.dart';
 import 'widgets/tx_delete_dialog.dart';
 import 'widgets/tx_group_list.dart';
 
+/// 首页竖向节奏（dp）—— 改首屏呼吸感只动这三个数，别在子组件里各写一份 margin。
+///
+/// hero 卡片带 4px 硬阴影，会在视觉上吃掉半格缝，所以「hero ↔ 预算条」给到 24（实测视觉缝 ≈17dp）。
+const double kHomeGapHeroToStrip = 24;
+const double kHomeGapStripToEntry = 20;
+const double kHomeGapEntryToSection = 20;
+
 /// 首页。
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -66,10 +73,12 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                   // 预算降级成一行（腾出首屏给「记一笔 / 问一句」入口；2026-10-28 改版）
+                  // 竖向节奏：hero →(24) 预算条 →(20) 入口卡 →(20) 本月账单
+                  const SliverToBoxAdapter(child: SizedBox(height: kHomeGapHeroToStrip)),
                   const SliverToBoxAdapter(child: BudgetStrip()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 10)),
+                  const SliverToBoxAdapter(child: SizedBox(height: kHomeGapStripToEntry)),
                   const SliverToBoxAdapter(child: ChatEntryCard()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  const SliverToBoxAdapter(child: SizedBox(height: kHomeGapEntryToSection)),
                   const SliverToBoxAdapter(child: _SectionHeader()),
                   if (state.items.isEmpty)
                     SliverToBoxAdapter(

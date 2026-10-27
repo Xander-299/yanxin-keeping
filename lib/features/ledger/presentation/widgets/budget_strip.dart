@@ -40,7 +40,8 @@ class BudgetStrip extends ConsumerWidget {
     );
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 2),
+      // 上/下外边距都不在这里加：竖向节奏统一由 home_page 的 kHomeGap* 控制（2026-10-28）
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: ToonPress(
         dx: 2,
         dy: 2,

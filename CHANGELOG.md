@@ -50,7 +50,11 @@
 | 清理 | 「我的」删两行入口；删旧页 `assistant_page`/`assistant_controller`/`receipt_page`/`receipt_bits`/`budget_card` 及其 4 个测试文件；路由 `/assistant`、`/receipt` 合并为 `/chat` |
 | 测试 | 新增 22 例（chat_controller 9 / chat_page 5 / chat_entry_card 3 / budget_strip 4，另加 `answer_question` 复用原编排断言） |
 
-**踩坑（已修）**：`sendImage` 里 `ref.read(categoriesProvider).value ?? []` 首次读是 null → 分类/账户永远为空、
+**间距修正（2026-10-28 当天反馈）**：预算条与 hero / 入口卡之间原本只有 ~10dp 视觉缝（hero 硬阴影还吃掉了半格），
+改为 **17.5dp**（`kHomeGapHeroToStrip = 24` 补偿阴影 + `kHomeGapStripToEntry = 20`），
+首页竖向节奏收敛成 `home_page.dart` 顶部的三个常量，不再散落在子组件的 margin 里。
+
+**踩坑（已修）**：`sendImage` 里' `ref.read(categoriesProvider).value ?? []` 首次读是 null → 分类/账户永远为空、
 点确认永远失败；改成 `await ref.read(...future)`，并加了回归测试。
 
 **真机（MuMu 12 / Android 12）走查 5 条全过**：首页顺序（hero → 预算一行 → 入口卡 → 账单列表）✓ ·
