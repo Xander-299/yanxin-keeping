@@ -37,6 +37,17 @@
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 11d · HANDOFF 对齐实际项目状态（2026-10-28）
+
+用户要求「交接文档基于实际项目情况」，逐项核对后修正 4 处过期 + 补 1 条不变量：
+
+- 现状表：schema v3 → **v4**（补 v4 内容与「零数据改动」证据）；门禁 638 → **665 passed**；
+  「下一步 M2」划掉 → **⏸ 已搁置** + 列出候选下一步（待用户拍板）
+- 目录导航：core/db 补 schema_v4、constants 补 category_icons、features 树补 category/
+- 不变量新增 **#10**：分类两个读取口径（含归档 vs 排除归档）不能混；ensurePresets 软删不复活
+
+另：用户确认全仓无 AGENTS.md / CLAUDE.md 等 Agent 规则文件（见本轮对话），项目规范
+由 HANDOFF.md + docs/spec/ + docs/handoff/ 承担，暂不新增 AGENTS.md。
 ### 批次 11c · 本地 AI 路线搁置 + F7.18 格式对齐（2026-10-28，用户裁定）
 
 - **⏸ 本地 AI 路线（M2 端上推理及后续）搁置**：`SPEC-local-ai.md` 头部加搁置声明（基准数据：

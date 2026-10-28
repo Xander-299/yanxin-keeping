@@ -8,10 +8,10 @@
 | 项 | 值 |
 |---|---|
 | 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行） |
-| 下一步 | **M2**：`LlmProvider` 抽象 + llama.cpp JNI（arm64 / dotprod / 绑大核 / 流式 / 取消）+ `.gguf` 手动导入（`getExternalFilesDir` + sha256 校验） |
+| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定，理由见 [SPEC-local-ai](docs/spec/SPEC-local-ai.md) 头部声明）**。候选下一步（待用户拍板）：导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、release 出包发版 |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 琥珀）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
-| 数据库 | schema **v3**（v2 加 `budgets`，v3 加 `accounts.icon` / `accounts.color`）—— F8.1、阶段二任务 1、M1 **均未动 schema** |
-| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **638 passed / 6 skipped**（首页聊天化后） |
+| 数据库 | schema **v4**（v2 加 `budgets`；v3 加 `accounts.icon/color`；**v4 加 `categories.parent_id / is_archived`**，F7.18 分类树）—— v4 迁移**只加列 + 加索引**，老库升级零数据改动（真机验证：154 笔账单分毫未动） |
+| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **665 passed / 6 skipped**（F7.18 分类树后；本地跑必须 `--concurrency=1`） |
 
 ### F8.1 收口快照（2026-10-24）
 
@@ -122,6 +122,11 @@ android.overridePathCheck=true
    ⚠️ **不要在 `src/main/` 里删**：debug 包需要 `INTERNET` 跑热重载（VM service 走 TCP）。
 9. **写后刷新只有一处实现**（F8.1 收口）：`lib/core/providers/after_write.dart`，
    `Ref` 与 `WidgetRef` 两个入口。**别再复制那五行** —— 三处复制就会漏一处（HANDOFF 不变量 #2 的成因）。
+10. **分类的两个读取口径不能混**（F7.18 起新增）：`categoriesProvider` **含归档**
+    （历史账单 / 统计 / 报表 / 搜索解析名字用）；`categoriesByKindProvider` **排除归档**
+    （记账选择器 / 导入映射用）。归档分类从「可用列表」消失但绝不能从「名字解析」里消失，
+    否则历史账单会显示成「未分类」。另：`ensurePresets()` **连软删行一起查** ——
+    用户删掉的预置分类不能被补装复活（真机踩过，回归测试在）。
 
 ## 最容易踩的坑（完整清单见 [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md)）
 
@@ -214,16 +219,18 @@ lib/
 ├── app.dart                 路由表（go_router：壳路由 + 全屏页）
 ├── main.dart                入口
 ├── core/                    基础设施（不依赖任何 feature / data）
-│   ├── db/                  drift：tables / database / schema_v1 / schema_v2
+│   ├── db/                  drift：tables / database / schema_v1 / schema_v2 / schema_v4（v4 = 分类两级+归档）
 │   ├── providers/           data_epoch（写操作后的统一失效信号）+ after_write（写后刷新的唯一实现）
 │   ├── theme/               palette.dart（调色板 · 浅/深两套）+ theme_mode.dart（外观三选一）
 │   │                        + tokens.dart（几何量 + buildToonTheme）+ toon.dart（卡通通用件）
 │   ├── utils/               money / id / fingerprint / date / highlight
-│   └── constants/           preset.dart
+│   └── constants/           preset.dart（PresetCategory 预置分类）+ category_icons.dart（图标/颜色目录）
 ├── data/
 │   ├── providers/           数据层 DI：database + book / account / category 等
 │   └── repositories/        6 个仓储
-└── features/                按业务垂直切分：application（逻辑）+ presentation（UI）
+├── features/                按业务垂直切分：application（逻辑）+ presentation（UI）
+│   └── category/            F7.18 分类树（application/category_actions + presentation 管理页/编辑弹层）
+└── （其余 feature 同构：chat / ledger / record / calendar / stats / reports / search / import / receipt / autobook / assets / book / profile …）
 ```
 
 - **F8.1 新增**：`lib/features/receipt/`（`data/{ocr_engine,mlkit_ocr_engine,receipt_rules,receipt_parse}`
