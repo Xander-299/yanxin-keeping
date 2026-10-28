@@ -268,7 +268,8 @@ class _BrandTip extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                'v0.7.17',
+                // 与 pubspec.yaml 的 version 对齐（0.8.1+2001）；改版本号时记得同步这里
+                'v0.8.1',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -279,7 +280,8 @@ class _BrandTip extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '已覆盖：记一笔 → 按月看账 → 导入账单 → 自动记账 → 统计 / 预算 / 资产 → 数据导出 → 浅色 / 深色 / 跟随系统',
+            '已覆盖：记一笔 → 按月看账 → 导入账单 → 自动记账 → 截图记账 / 问账本（首页入口）'
+            ' → 统计 / 预算 / 资产 → 数据导出 → 浅色 / 深色 / 跟随系统',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
