@@ -37,6 +37,11 @@
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 11b · F7.18 SPEC 补档（2026-10-28）
+
+- 新增 `docs/spec/SPEC-F7.18-category-tree.md`（事后补档，标注状态与 5 条偏差 D1–D5）
+- 新增 `docs/acceptance-F7.18-category-tree.md`（MuMu 真机验收，含 ensurePresets 复活 bug 的发现与复测）
+- PRD §3.5 FR-CAT 补齐 FR-CAT-03~08；HANDOFF 文档索引加两行
 ### 批次 11 · 分类系统 v4：两级分类 + 归档 + 迁移（2026-10-28，Prompt.md 任务）
 
 按 `Prompt.md` 完整实现分类管理（数据库 **schema v3 → v4**）：

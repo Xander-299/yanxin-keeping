@@ -271,7 +271,8 @@ lib/
 | [`docs/spec/SPEC-local-assistant.md`](docs/spec/SPEC-local-assistant.md) | **阶段二 · 本地财务问答（已签字）**：三层架构（T0 无模型 / T1 可选模型 / T2 云端不做）、为什么先做 M1、M1 文件级交付、口径表、验收 8 条、已知限制、M2 计划 |
 | [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md) | **阶段二任务 1 基准报告**：设备/构建/口径、3 模型 × 10 轮实测表、dotprod 与线程亲和性对比、质量抽查、已知限制、复现命令 |
 | [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 真机阻塞排查 / 已知限制）+ **§10 阶段二任务 1 记录** |
-| [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md) | **F8.1 真机验收报告**：7 项走查结果、3 个阻塞的根因与修法、复现命令 |
+| [`docs/spec/SPEC-F7.18-category-tree.md`](docs/spec/SPEC-F7.18-category-tree.md) | **F7.18 分类树（已实现，事后补档）**：schema v4（parent_id / is_archived）、Prompt.md 需求对照表、关键决策（老名字别名映射 / 上移下移排序）、5 条偏差、测试与真机证据索引 |
+| [`docs/acceptance-F7.18-category-tree.md`](docs/acceptance-F7.18-category-tree.md) | **F7.18 真机验收**：v3→v4 迁移 154 笔零丢失、管理页 8 步链路、迁移删除（7 笔购物→其他，总额不变）、ensurePresets 复活 bug 的发现与复测 || [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md) | **F8.1 真机验收报告**：7 项走查结果、3 个阻塞的根因与修法、复现命令 |
 | [`docs/handoff/reference.md`](docs/handoff/reference.md) | **开工前读**：环境事实 / 架构决策 / 关键资料 / 接手指南 |
 | [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md) | 盲区防护清单：踩过的坑与判据 |
 | [`docs/handoff/open-issues.md`](docs/handoff/open-issues.md) | 未解决问题、待确认事项 |
