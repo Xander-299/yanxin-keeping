@@ -37,6 +37,13 @@
 > **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
 > **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
 
+### 批次 9 · 数值淡入补齐两处（2026-10-28）
+
+- **统计页分类图例的百分比**：`ToonFadeValue(value: slice.percentText, …)`，切月份/切收支时跟着数字一起淡入；
+- **聊天页答案卡主数字**：新增 `ToonFadeValue(animateOnFirstBuild: true)` —— 新冒出来的答案卡
+  主数字从 0 淡入（列表类数字保持默认，进页面不会整体闪）。
+
+护栏扩到 4 条：值变淡入 / 值不变不动 / **首次出现（animateOnFirstBuild）淡入** / 放进 baseline Row 不抛异常。
 ### 批次 8 · 数值淡入铺开（2026-10-28）
 
 把「值一变就淡入」抽成公共组件 `ToonFadeValue`（`core/theme/toon/fade_value.dart`），用到：

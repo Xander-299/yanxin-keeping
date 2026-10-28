@@ -53,6 +53,64 @@ void main() {
     expect(opacity(), 1.0, reason: '值没变时不能动画');
   });
 
+  testWidgets('animateOnFirstBuild：首次出现也淡入（聊天新答案卡用）', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ToonFadeValue(
+            value: '¥36.00',
+            animateOnFirstBuild: true,
+            child: Text('¥36.00'),
+          ),
+        ),
+      ),
+    );
+    // 首帧：还没开始推进 → 完全透明
+    await tester.pump();
+    double opacity() => tester
+        .widget<FadeTransition>(
+          find.descendant(
+            of: find.byType(ToonFadeValue),
+            matching: find.byType(FadeTransition),
+          ),
+        )
+        .opacity
+        .value;
+    expect(opacity(), 0.0);
+
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(opacity(), greaterThan(0.0), reason: '首帧后应该开始淡入');
+    await tester.pumpAndSettle();
+    expect(opacity(), 1.0);
+  });
+
+  testWidgets('默认不在首次出现时动画（列表进页面不该整体闪）', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ToonFadeValue(value: '10.00', child: Text('10.00')),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FadeTransition>(
+            find.descendant(
+              of: find.byType(ToonFadeValue),
+              matching: find.byType(FadeTransition),
+            ),
+          )
+          .opacity
+          .value,
+      1.0,
+    );
+  });
+
   testWidgets('放进 baseline Row 不报错（说明没用 Stack 包）', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(

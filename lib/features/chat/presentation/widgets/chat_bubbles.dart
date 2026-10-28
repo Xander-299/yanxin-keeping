@@ -126,13 +126,18 @@ class _AnswerCard extends StatelessWidget {
           ),
           if (answer.headline != null) ...<Widget>[
             const SizedBox(height: 8),
-            Text(
-              answer.headline!,
-              style: TextStyle(
-                fontSize: 27,
-                fontWeight: FontWeight.w800,
-                color: p.ink,
-                height: 1.1,
+            // 新答案卡冒出来时主数字淡入（首次出现也动），不是硬蹦出来
+            ToonFadeValue(
+              value: answer.headline!,
+              animateOnFirstBuild: true,
+              child: Text(
+                answer.headline!,
+                style: TextStyle(
+                  fontSize: 27,
+                  fontWeight: FontWeight.w800,
+                  color: p.ink,
+                  height: 1.1,
+                ),
               ),
             ),
             if (answer.headlineNote != null) ...<Widget>[

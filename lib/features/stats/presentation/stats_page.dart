@@ -307,12 +307,15 @@ class _LegendRow extends StatelessWidget {
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
-          Text(
-            slice.percentText,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: muted,
+          ToonFadeValue(
+            value: slice.percentText,
+            child: Text(
+              slice.percentText,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: muted,
+              ),
             ),
           ),
           SizedBox(

@@ -15,6 +15,7 @@ class ToonFadeValue extends StatefulWidget {
     required this.value,
     required this.child,
     this.duration = const Duration(milliseconds: 150),
+    this.animateOnFirstBuild = false,
   });
 
   /// 用来判断「值变了没有」的标识（金额 / 百分比文本本身）。
@@ -23,6 +24,10 @@ class ToonFadeValue extends StatefulWidget {
   final Widget child;
 
   final Duration duration;
+
+  /// 首次出现也淡入（聊天里新冒出来的答案卡用；列表里的数字保持默认 false，
+  /// 否则每次进页面所有数字都会一起闪一下）。
+  final bool animateOnFirstBuild;
 
   @override
   State<ToonFadeValue> createState() => _ToonFadeValueState();
@@ -33,8 +38,19 @@ class _ToonFadeValueState extends State<ToonFadeValue>
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: widget.duration,
-    value: 1,
+    value: widget.animateOnFirstBuild ? 0 : 1,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animateOnFirstBuild) {
+      // 首帧从 0 开始，下一帧再 forward（避免 build 期间改动画值）
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _c.forward();
+      });
+    }
+  }
 
   @override
   void didUpdateWidget(covariant ToonFadeValue oldWidget) {
