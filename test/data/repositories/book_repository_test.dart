@@ -24,9 +24,9 @@ void main() {
     expect(accounts.first.name, '现金');
 
     final cats = await CategoryRepository(db).listByBook(book.id);
-    expect(cats.length, greaterThanOrEqualTo(15)); // 9 支出 + 6 收入
+    expect(cats.length, greaterThanOrEqualTo(18)); // 11 支出 + 7 收入（schema v4）
     final expenses = cats.where((c) => c.kind == 'expense').toList();
-    expect(expenses, hasLength(9));
+    expect(expenses, hasLength(11));
     expect(expenses.every((c) => c.isPreset == 1), isTrue);
   });
 

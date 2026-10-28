@@ -108,7 +108,7 @@ class StatsController extends AsyncNotifier<StatsState> {
       items: items,
       trendRows: trendRows,
       categoryNames: <String, String>{
-        for (final c in categories) c.id: c.name,
+        ...categoryNameMap(categories),
       },
     );
   }

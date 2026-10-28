@@ -138,15 +138,25 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('新建分类'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '打车');
-    await tester.tap(find.text('确定'));
-    // 先等对话框关掉：对话框淡出动画期间 EditableText 也匹配 '打车'，
-    // 直接断言会「找到 2 个」（与下面新建账本用例同一处理）。
+    // schema v4 起是「分类编辑弹层」（名称 + 父分类 + 图标 + 颜色），不再是单行对话框
+    await tester.enterText(find.byType(TextField).first, '打车');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    // 先等弹层关掉：淡出动画期间 EditableText 也匹配 '打车'，直接断言会「找到 2 个」
     for (var i = 0; i < 20 && find.byType(TextField).evaluate().isNotEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
-    await pumpUntil(tester, find.text('打车'));
+    await tester.pumpAndSettle();
 
+    // 新建在列表末尾（11 个预置之后），800×600 视口里 ListView 不会建到它 →
+    // 用滚动代替直接 find（这是 v4 预置变多带来的测试口径变化）。
+    await tester.scrollUntilVisible(
+      find.text('打车'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('打车'), findsOneWidget);
   });
 

@@ -19,6 +19,7 @@ import 'package:yanxin/features/chat/application/chat_controller.dart';
 import 'package:yanxin/features/receipt/data/mlkit_ocr_engine.dart';
 import 'package:yanxin/features/receipt/data/ocr_engine.dart';
 
+import '../../helpers/category_seed.dart';
 import '../../helpers/test_database.dart';
 
 final int _nowMs = DateTime(2026, 10, 25, 15).millisecondsSinceEpoch;
@@ -70,8 +71,9 @@ Future<({AppDatabase db, ProviderContainer container, Book book})> _seed({
   final AppDatabase db = openTestDatabase();
   final Book book = await BookRepository(db).ensureDefaultBook();
   final CategoryRepository cats = CategoryRepository(db);
-  final Category food = await cats.create(bookId: book.id, name: '餐饮', kind: 'expense');
-  final Category salary = await cats.create(bookId: book.id, name: '工资', kind: 'income');
+  // v4 起同级不允许重名：预置里已经有「餐饮 / 工资」，这里取现成的（没有才建）
+  final Category food = await ensureCategory(cats, book.id, '餐饮');
+  final Category salary = await ensureCategory(cats, book.id, '工资', kind: 'income');
   final Account acc = await AccountRepository(db).create(bookId: book.id, name: '现金');
   await TransactionRepository(db).create(
     bookId: book.id,

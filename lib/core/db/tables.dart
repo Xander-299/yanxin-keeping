@@ -87,7 +87,15 @@ class Accounts extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// 分类（预置分类 is_preset=1 不可删）。
+/// 分类（预置分类 is_preset=1；支持两级 + 归档）。
+///
+/// **schema v4 起**：
+/// - `parent_id`：二级分类指向一级（一级为 NULL）；层级**只允许两级**，由 Repository 校验；
+/// - `is_archived`：归档后不再出现在「新建账单」的分类选择里，但历史账单照常显示；
+/// - `icon` 存的是**稳定图标 key**（如 `food` / `transport`），不是 IconData.toString()
+///   或 hashCode —— 运行时 hash 不能跨版本复用。key → IconData 的映射见
+///   `core/constants/category_icons.dart`；
+/// - `color` 存 `#RRGGBB`（空串 = 跟随收支方向的默认色）。
 class Categories extends Table {
   TextColumn get id => text()();
 
@@ -98,6 +106,9 @@ class Categories extends Table {
   /// expense | income
   TextColumn get kind => text()();
 
+  /// 父分类 id；NULL = 一级分类。只允许两级。
+  TextColumn get parentId => text().nullable()();
+
   TextColumn get icon => text().withDefault(const Constant(''))();
 
   TextColumn get color => text().withDefault(const Constant(''))();
@@ -105,6 +116,9 @@ class Categories extends Table {
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
 
   IntColumn get isPreset => integer().withDefault(const Constant(0))();
+
+  /// 1 = 已归档：不可用于新账单，历史账单照常显示。
+  IntColumn get isArchived => integer().withDefault(const Constant(0))();
 
   TextColumn get ownerId => text().nullable()();
 

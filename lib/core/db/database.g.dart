@@ -1672,6 +1672,17 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _parentIdMeta = const VerificationMeta(
+    'parentId',
+  );
+  @override
+  late final GeneratedColumn<String> parentId = GeneratedColumn<String>(
+    'parent_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _iconMeta = const VerificationMeta('icon');
   @override
   late final GeneratedColumn<String> icon = GeneratedColumn<String>(
@@ -1710,6 +1721,18 @@ class $CategoriesTable extends Categories
   @override
   late final GeneratedColumn<int> isPreset = GeneratedColumn<int>(
     'is_preset',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _isArchivedMeta = const VerificationMeta(
+    'isArchived',
+  );
+  @override
+  late final GeneratedColumn<int> isArchived = GeneratedColumn<int>(
+    'is_archived',
     aliasedName,
     false,
     type: DriftSqlType.int,
@@ -1776,10 +1799,12 @@ class $CategoriesTable extends Categories
     bookId,
     name,
     kind,
+    parentId,
     icon,
     color,
     sortOrder,
     isPreset,
+    isArchived,
     ownerId,
     createdAt,
     updatedAt,
@@ -1827,6 +1852,12 @@ class $CategoriesTable extends Categories
     } else if (isInserting) {
       context.missing(_kindMeta);
     }
+    if (data.containsKey('parent_id')) {
+      context.handle(
+        _parentIdMeta,
+        parentId.isAcceptableOrUnknown(data['parent_id']!, _parentIdMeta),
+      );
+    }
     if (data.containsKey('icon')) {
       context.handle(
         _iconMeta,
@@ -1849,6 +1880,12 @@ class $CategoriesTable extends Categories
       context.handle(
         _isPresetMeta,
         isPreset.isAcceptableOrUnknown(data['is_preset']!, _isPresetMeta),
+      );
+    }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+        _isArchivedMeta,
+        isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
       );
     }
     if (data.containsKey('owner_id')) {
@@ -1910,6 +1947,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}kind'],
       )!,
+      parentId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}parent_id'],
+      ),
       icon: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}icon'],
@@ -1925,6 +1966,10 @@ class $CategoriesTable extends Categories
       isPreset: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}is_preset'],
+      )!,
+      isArchived: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}is_archived'],
       )!,
       ownerId: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
@@ -1962,10 +2007,16 @@ class Category extends DataClass implements Insertable<Category> {
 
   /// expense | income
   final String kind;
+
+  /// 父分类 id；NULL = 一级分类。只允许两级。
+  final String? parentId;
   final String icon;
   final String color;
   final int sortOrder;
   final int isPreset;
+
+  /// 1 = 已归档：不可用于新账单，历史账单照常显示。
+  final int isArchived;
   final String? ownerId;
   final int createdAt;
   final int updatedAt;
@@ -1976,10 +2027,12 @@ class Category extends DataClass implements Insertable<Category> {
     required this.bookId,
     required this.name,
     required this.kind,
+    this.parentId,
     required this.icon,
     required this.color,
     required this.sortOrder,
     required this.isPreset,
+    required this.isArchived,
     this.ownerId,
     required this.createdAt,
     required this.updatedAt,
@@ -1993,10 +2046,14 @@ class Category extends DataClass implements Insertable<Category> {
     map['book_id'] = Variable<String>(bookId);
     map['name'] = Variable<String>(name);
     map['kind'] = Variable<String>(kind);
+    if (!nullToAbsent || parentId != null) {
+      map['parent_id'] = Variable<String>(parentId);
+    }
     map['icon'] = Variable<String>(icon);
     map['color'] = Variable<String>(color);
     map['sort_order'] = Variable<int>(sortOrder);
     map['is_preset'] = Variable<int>(isPreset);
+    map['is_archived'] = Variable<int>(isArchived);
     if (!nullToAbsent || ownerId != null) {
       map['owner_id'] = Variable<String>(ownerId);
     }
@@ -2015,10 +2072,14 @@ class Category extends DataClass implements Insertable<Category> {
       bookId: Value(bookId),
       name: Value(name),
       kind: Value(kind),
+      parentId: parentId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentId),
       icon: Value(icon),
       color: Value(color),
       sortOrder: Value(sortOrder),
       isPreset: Value(isPreset),
+      isArchived: Value(isArchived),
       ownerId: ownerId == null && nullToAbsent
           ? const Value.absent()
           : Value(ownerId),
@@ -2041,10 +2102,12 @@ class Category extends DataClass implements Insertable<Category> {
       bookId: serializer.fromJson<String>(json['bookId']),
       name: serializer.fromJson<String>(json['name']),
       kind: serializer.fromJson<String>(json['kind']),
+      parentId: serializer.fromJson<String?>(json['parentId']),
       icon: serializer.fromJson<String>(json['icon']),
       color: serializer.fromJson<String>(json['color']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
       isPreset: serializer.fromJson<int>(json['isPreset']),
+      isArchived: serializer.fromJson<int>(json['isArchived']),
       ownerId: serializer.fromJson<String?>(json['ownerId']),
       createdAt: serializer.fromJson<int>(json['createdAt']),
       updatedAt: serializer.fromJson<int>(json['updatedAt']),
@@ -2060,10 +2123,12 @@ class Category extends DataClass implements Insertable<Category> {
       'bookId': serializer.toJson<String>(bookId),
       'name': serializer.toJson<String>(name),
       'kind': serializer.toJson<String>(kind),
+      'parentId': serializer.toJson<String?>(parentId),
       'icon': serializer.toJson<String>(icon),
       'color': serializer.toJson<String>(color),
       'sortOrder': serializer.toJson<int>(sortOrder),
       'isPreset': serializer.toJson<int>(isPreset),
+      'isArchived': serializer.toJson<int>(isArchived),
       'ownerId': serializer.toJson<String?>(ownerId),
       'createdAt': serializer.toJson<int>(createdAt),
       'updatedAt': serializer.toJson<int>(updatedAt),
@@ -2077,10 +2142,12 @@ class Category extends DataClass implements Insertable<Category> {
     String? bookId,
     String? name,
     String? kind,
+    Value<String?> parentId = const Value.absent(),
     String? icon,
     String? color,
     int? sortOrder,
     int? isPreset,
+    int? isArchived,
     Value<String?> ownerId = const Value.absent(),
     int? createdAt,
     int? updatedAt,
@@ -2091,10 +2158,12 @@ class Category extends DataClass implements Insertable<Category> {
     bookId: bookId ?? this.bookId,
     name: name ?? this.name,
     kind: kind ?? this.kind,
+    parentId: parentId.present ? parentId.value : this.parentId,
     icon: icon ?? this.icon,
     color: color ?? this.color,
     sortOrder: sortOrder ?? this.sortOrder,
     isPreset: isPreset ?? this.isPreset,
+    isArchived: isArchived ?? this.isArchived,
     ownerId: ownerId.present ? ownerId.value : this.ownerId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -2107,10 +2176,14 @@ class Category extends DataClass implements Insertable<Category> {
       bookId: data.bookId.present ? data.bookId.value : this.bookId,
       name: data.name.present ? data.name.value : this.name,
       kind: data.kind.present ? data.kind.value : this.kind,
+      parentId: data.parentId.present ? data.parentId.value : this.parentId,
       icon: data.icon.present ? data.icon.value : this.icon,
       color: data.color.present ? data.color.value : this.color,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
       isPreset: data.isPreset.present ? data.isPreset.value : this.isPreset,
+      isArchived: data.isArchived.present
+          ? data.isArchived.value
+          : this.isArchived,
       ownerId: data.ownerId.present ? data.ownerId.value : this.ownerId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -2126,10 +2199,12 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('bookId: $bookId, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('parentId: $parentId, ')
           ..write('icon: $icon, ')
           ..write('color: $color, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('isPreset: $isPreset, ')
+          ..write('isArchived: $isArchived, ')
           ..write('ownerId: $ownerId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -2145,10 +2220,12 @@ class Category extends DataClass implements Insertable<Category> {
     bookId,
     name,
     kind,
+    parentId,
     icon,
     color,
     sortOrder,
     isPreset,
+    isArchived,
     ownerId,
     createdAt,
     updatedAt,
@@ -2163,10 +2240,12 @@ class Category extends DataClass implements Insertable<Category> {
           other.bookId == this.bookId &&
           other.name == this.name &&
           other.kind == this.kind &&
+          other.parentId == this.parentId &&
           other.icon == this.icon &&
           other.color == this.color &&
           other.sortOrder == this.sortOrder &&
           other.isPreset == this.isPreset &&
+          other.isArchived == this.isArchived &&
           other.ownerId == this.ownerId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -2179,10 +2258,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> bookId;
   final Value<String> name;
   final Value<String> kind;
+  final Value<String?> parentId;
   final Value<String> icon;
   final Value<String> color;
   final Value<int> sortOrder;
   final Value<int> isPreset;
+  final Value<int> isArchived;
   final Value<String?> ownerId;
   final Value<int> createdAt;
   final Value<int> updatedAt;
@@ -2194,10 +2275,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     this.bookId = const Value.absent(),
     this.name = const Value.absent(),
     this.kind = const Value.absent(),
+    this.parentId = const Value.absent(),
     this.icon = const Value.absent(),
     this.color = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.isPreset = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.ownerId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2210,10 +2293,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     required String bookId,
     required String name,
     required String kind,
+    this.parentId = const Value.absent(),
     this.icon = const Value.absent(),
     this.color = const Value.absent(),
     this.sortOrder = const Value.absent(),
     this.isPreset = const Value.absent(),
+    this.isArchived = const Value.absent(),
     this.ownerId = const Value.absent(),
     required int createdAt,
     required int updatedAt,
@@ -2231,10 +2316,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? bookId,
     Expression<String>? name,
     Expression<String>? kind,
+    Expression<String>? parentId,
     Expression<String>? icon,
     Expression<String>? color,
     Expression<int>? sortOrder,
     Expression<int>? isPreset,
+    Expression<int>? isArchived,
     Expression<String>? ownerId,
     Expression<int>? createdAt,
     Expression<int>? updatedAt,
@@ -2247,10 +2334,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (bookId != null) 'book_id': bookId,
       if (name != null) 'name': name,
       if (kind != null) 'kind': kind,
+      if (parentId != null) 'parent_id': parentId,
       if (icon != null) 'icon': icon,
       if (color != null) 'color': color,
       if (sortOrder != null) 'sort_order': sortOrder,
       if (isPreset != null) 'is_preset': isPreset,
+      if (isArchived != null) 'is_archived': isArchived,
       if (ownerId != null) 'owner_id': ownerId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2265,10 +2354,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<String>? bookId,
     Value<String>? name,
     Value<String>? kind,
+    Value<String?>? parentId,
     Value<String>? icon,
     Value<String>? color,
     Value<int>? sortOrder,
     Value<int>? isPreset,
+    Value<int>? isArchived,
     Value<String?>? ownerId,
     Value<int>? createdAt,
     Value<int>? updatedAt,
@@ -2281,10 +2372,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       bookId: bookId ?? this.bookId,
       name: name ?? this.name,
       kind: kind ?? this.kind,
+      parentId: parentId ?? this.parentId,
       icon: icon ?? this.icon,
       color: color ?? this.color,
       sortOrder: sortOrder ?? this.sortOrder,
       isPreset: isPreset ?? this.isPreset,
+      isArchived: isArchived ?? this.isArchived,
       ownerId: ownerId ?? this.ownerId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2309,6 +2402,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (kind.present) {
       map['kind'] = Variable<String>(kind.value);
     }
+    if (parentId.present) {
+      map['parent_id'] = Variable<String>(parentId.value);
+    }
     if (icon.present) {
       map['icon'] = Variable<String>(icon.value);
     }
@@ -2320,6 +2416,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     }
     if (isPreset.present) {
       map['is_preset'] = Variable<int>(isPreset.value);
+    }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<int>(isArchived.value);
     }
     if (ownerId.present) {
       map['owner_id'] = Variable<String>(ownerId.value);
@@ -2349,10 +2448,12 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('bookId: $bookId, ')
           ..write('name: $name, ')
           ..write('kind: $kind, ')
+          ..write('parentId: $parentId, ')
           ..write('icon: $icon, ')
           ..write('color: $color, ')
           ..write('sortOrder: $sortOrder, ')
           ..write('isPreset: $isPreset, ')
+          ..write('isArchived: $isArchived, ')
           ..write('ownerId: $ownerId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -4685,10 +4786,12 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       required String bookId,
       required String name,
       required String kind,
+      Value<String?> parentId,
       Value<String> icon,
       Value<String> color,
       Value<int> sortOrder,
       Value<int> isPreset,
+      Value<int> isArchived,
       Value<String?> ownerId,
       required int createdAt,
       required int updatedAt,
@@ -4702,10 +4805,12 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<String> bookId,
       Value<String> name,
       Value<String> kind,
+      Value<String?> parentId,
       Value<String> icon,
       Value<String> color,
       Value<int> sortOrder,
       Value<int> isPreset,
+      Value<int> isArchived,
       Value<String?> ownerId,
       Value<int> createdAt,
       Value<int> updatedAt,
@@ -4743,6 +4848,11 @@ class $$CategoriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnFilters(column),
+  );
+
   ColumnFilters<String> get icon => $composableBuilder(
     column: $table.icon,
     builder: (column) => ColumnFilters(column),
@@ -4760,6 +4870,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<int> get isPreset => $composableBuilder(
     column: $table.isPreset,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get isArchived => $composableBuilder(
+    column: $table.isArchived,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4818,6 +4933,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get parentId => $composableBuilder(
+    column: $table.parentId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get icon => $composableBuilder(
     column: $table.icon,
     builder: (column) => ColumnOrderings(column),
@@ -4835,6 +4955,11 @@ class $$CategoriesTableOrderingComposer
 
   ColumnOrderings<int> get isPreset => $composableBuilder(
     column: $table.isPreset,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get isArchived => $composableBuilder(
+    column: $table.isArchived,
     builder: (column) => ColumnOrderings(column),
   );
 
@@ -4885,6 +5010,9 @@ class $$CategoriesTableAnnotationComposer
   GeneratedColumn<String> get kind =>
       $composableBuilder(column: $table.kind, builder: (column) => column);
 
+  GeneratedColumn<String> get parentId =>
+      $composableBuilder(column: $table.parentId, builder: (column) => column);
+
   GeneratedColumn<String> get icon =>
       $composableBuilder(column: $table.icon, builder: (column) => column);
 
@@ -4896,6 +5024,11 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<int> get isPreset =>
       $composableBuilder(column: $table.isPreset, builder: (column) => column);
+
+  GeneratedColumn<int> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<String> get ownerId =>
       $composableBuilder(column: $table.ownerId, builder: (column) => column);
@@ -4945,10 +5078,12 @@ class $$CategoriesTableTableManager
                 Value<String> bookId = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String> kind = const Value.absent(),
+                Value<String?> parentId = const Value.absent(),
                 Value<String> icon = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> isPreset = const Value.absent(),
+                Value<int> isArchived = const Value.absent(),
                 Value<String?> ownerId = const Value.absent(),
                 Value<int> createdAt = const Value.absent(),
                 Value<int> updatedAt = const Value.absent(),
@@ -4960,10 +5095,12 @@ class $$CategoriesTableTableManager
                 bookId: bookId,
                 name: name,
                 kind: kind,
+                parentId: parentId,
                 icon: icon,
                 color: color,
                 sortOrder: sortOrder,
                 isPreset: isPreset,
+                isArchived: isArchived,
                 ownerId: ownerId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -4977,10 +5114,12 @@ class $$CategoriesTableTableManager
                 required String bookId,
                 required String name,
                 required String kind,
+                Value<String?> parentId = const Value.absent(),
                 Value<String> icon = const Value.absent(),
                 Value<String> color = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
                 Value<int> isPreset = const Value.absent(),
+                Value<int> isArchived = const Value.absent(),
                 Value<String?> ownerId = const Value.absent(),
                 required int createdAt,
                 required int updatedAt,
@@ -4992,10 +5131,12 @@ class $$CategoriesTableTableManager
                 bookId: bookId,
                 name: name,
                 kind: kind,
+                parentId: parentId,
                 icon: icon,
                 color: color,
                 sortOrder: sortOrder,
                 isPreset: isPreset,
+                isArchived: isArchived,
                 ownerId: ownerId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

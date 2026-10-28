@@ -19,14 +19,18 @@ import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
 import 'package:yanxin/features/ledger/presentation/widgets/budget_strip.dart';
 
+import '../../helpers/category_seed.dart';
 import '../../helpers/test_database.dart';
 
 /// 当月记一笔（金额 = 1000.00 元）。
 Future<({AppDatabase db, Book book})> _seed({int? budgetCents}) async {
   final AppDatabase db = openTestDatabase();
   final Book book = await BookRepository(db).ensureDefaultBook();
-  final Category food =
-      await CategoryRepository(db).create(bookId: book.id, name: '餐饮', kind: 'expense');
+  final Category food = await ensureCategory(
+    CategoryRepository(db),
+    book.id,
+    '餐饮',
+  );
   final Account acc = await AccountRepository(db).create(bookId: book.id, name: '现金');
   final DateTime now = DateTime.now();
   await TransactionRepository(db).create(

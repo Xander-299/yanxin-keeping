@@ -14,8 +14,10 @@ library;
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import '../constants/preset.dart';
 import 'schema_v1.dart';
 import 'schema_v2.dart';
+import 'schema_v4.dart';
 import 'tables.dart';
 
 part 'database.g.dart';
@@ -27,7 +29,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -39,6 +41,9 @@ class AppDatabase extends _$AppDatabase {
             await customStatement(sql);
           }
           for (final sql in kSchemaV2Indexes) {
+            await customStatement(sql);
+          }
+          for (final sql in kSchemaV4Indexes) {
             await customStatement(sql);
           }
         },
@@ -60,6 +65,20 @@ class AppDatabase extends _$AppDatabase {
               await m.addColumn(accounts, accounts.color);
             }
           }
+          if (from < 4) {
+            // 分类两级 + 归档：同样**只加列**（parent_id 可空、is_archived 默认 0），
+            // 既有行一个字节都不改；随后按分类名回填图标 key（只写 icon 为空的行）。
+            if (!await _columnExists('categories', 'parent_id')) {
+              await m.addColumn(categories, categories.parentId);
+            }
+            if (!await _columnExists('categories', 'is_archived')) {
+              await m.addColumn(categories, categories.isArchived);
+            }
+            for (final sql in kSchemaV4Indexes) {
+              await customStatement(sql);
+            }
+            await _backfillCategoryIcons();
+          }
         },
       );
 
@@ -67,6 +86,33 @@ class AppDatabase extends _$AppDatabase {
   Future<bool> _columnExists(String table, String column) async {
     final rows = await customSelect('PRAGMA table_info($table)').get();
     return rows.any((row) => row.read<String>('name') == column);
+  }
+
+  /// v3 → v4：按**分类名**回填稳定 icon key（只写 icon 为空的行）。
+  ///
+  /// 老库的 `categories.icon` 一直是空串（v3 之前没人用），所以这里可以放心写；
+  /// 名字对不上（用户改过名 / 自定义分类）就保持空串 —— 界面会按收支方向给默认图标。
+  /// 老名字（理财 / 红包 / 人情）也一并映射，避免升级后图标全空。
+  Future<void> _backfillCategoryIcons() async {
+    const Map<String, String> oldNames = <String, String>{
+      '理财': 'invest',
+      '红包': 'redpacket',
+      '人情': 'social',
+    };
+    final List<(String name, String icon, String kind)> pairs =
+        <(String, String, String)>[
+          for (final PresetCategory c in presetExpense) (c.name, c.iconKey, 'expense'),
+          for (final PresetCategory c in presetIncome) (c.name, c.iconKey, 'income'),
+          for (final MapEntry<String, String> e in oldNames.entries)
+            (e.key, e.value, e.key == '人情' ? 'expense' : 'income'),
+        ];
+    for (final (String name, String icon, String kind) in pairs) {
+      await customStatement(
+        'UPDATE categories SET icon = ? WHERE name = ? AND kind = ? '
+        "AND (icon IS NULL OR icon = '')",
+        <Object?>[icon, name, kind],
+      );
+    }
   }
 }
 

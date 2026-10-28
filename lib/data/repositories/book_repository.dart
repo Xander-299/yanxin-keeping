@@ -61,19 +61,25 @@ class BookRepository {
         name: defaultAccountName,
         type: 'cash',
       );
-      for (final preset in presetExpense) {
+      for (final PresetCategory preset in presetExpense) {
         await categories.create(
           bookId: bookId,
-          name: preset,
+          name: preset.name,
           kind: 'expense',
+          icon: preset.iconKey,
+          color: preset.color,
+          sortOrder: presetExpense.indexOf(preset),
           isPreset: true,
         );
       }
-      for (final preset in presetIncome) {
+      for (final PresetCategory preset in presetIncome) {
         await categories.create(
           bookId: bookId,
-          name: preset,
+          name: preset.name,
           kind: 'income',
+          icon: preset.iconKey,
+          color: preset.color,
+          sortOrder: presetIncome.indexOf(preset),
           isPreset: true,
         );
       }

@@ -20,6 +20,7 @@ import 'package:yanxin/features/chat/presentation/chat_page.dart';
 import 'package:yanxin/features/receipt/data/mlkit_ocr_engine.dart';
 import 'package:yanxin/features/receipt/data/ocr_engine.dart';
 
+import '../../helpers/category_seed.dart';
 import '../../helpers/test_database.dart';
 
 class _FakePicker implements MediaPicker {
@@ -65,8 +66,11 @@ Future<void> pumpUntil(WidgetTester tester, Finder finder, {int maxFrames = 80})
 Future<AppDatabase> _seed() async {
   final AppDatabase db = openTestDatabase();
   final Book book = await BookRepository(db).ensureDefaultBook();
-  final Category food =
-      await CategoryRepository(db).create(bookId: book.id, name: '餐饮', kind: 'expense');
+  final Category food = await ensureCategory(
+    CategoryRepository(db),
+    book.id,
+    '餐饮',
+  );
   final Account acc = await AccountRepository(db).create(bookId: book.id, name: '现金');
   await TransactionRepository(db).create(
     bookId: book.id,

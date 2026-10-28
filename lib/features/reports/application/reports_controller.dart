@@ -167,7 +167,7 @@ class ReportsController extends AsyncNotifier<ReportsState> {
       tab: tab,
       items: items,
       categoryNames: <String, String>{
-        for (final Category c in categories) c.id: c.name,
+        ...categoryNameMap(categories),
       },
       accountNames: <String, String>{
         for (final Account a in accounts) a.id: a.name,
