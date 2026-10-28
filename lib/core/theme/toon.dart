@@ -26,3 +26,4 @@ part 'toon/chip_seg.dart';
 part 'toon/field.dart';
 part 'toon/avatar_ring.dart';
 part 'toon/section_title.dart';
+part 'toon/fade_value.dart';

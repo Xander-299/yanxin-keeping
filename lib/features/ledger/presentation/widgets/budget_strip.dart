@@ -88,6 +88,12 @@ class _Filled extends StatelessWidget {
     final ToonPalette p = context.toon;
     final double ratio = view.progress.clamp(0.0, 1.0);
     final Color barColor = view.overspent ? p.red : p.brandDeep;
+    // 先拼成一句话，再交给 ToonFadeValue 判断「变了没有」
+    final String detail = view.overspent
+        ? '已超支 ¥${centsToYuan(view.overspentCents)}'
+              '${view.daysLeft != null ? ' · 本月还剩 ${view.daysLeft} 天' : ''}'
+        : '还剩 ¥${centsToYuan(view.remainingCents)}'
+              '${view.dailyRemainingCents != null ? ' · 每天可花 ¥${centsToYuan(view.dailyRemainingCents!)}' : ''}';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -117,12 +123,15 @@ class _Filled extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              view.percentText,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w800,
-                color: view.overspent ? p.redInk : p.ink2,
+            ToonFadeValue(
+              value: view.percentText,
+              child: Text(
+                view.percentText,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: view.overspent ? p.redInk : p.ink2,
+                ),
               ),
             ),
             const SizedBox(width: 2),
@@ -134,18 +143,17 @@ class _Filled extends StatelessWidget {
           children: <Widget>[
             const SizedBox(width: 21),
             Expanded(
-              child: Text(
-                view.overspent
-                    ? '已超支 ¥${centsToYuan(view.overspentCents)}'
-                        '${view.daysLeft != null ? ' · 本月还剩 ${view.daysLeft} 天' : ''}'
-                    : '还剩 ¥${centsToYuan(view.remainingCents)}'
-                        '${view.dailyRemainingCents != null ? ' · 每天可花 ¥${centsToYuan(view.dailyRemainingCents!)}' : ''}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  color: view.overspent ? p.redInk : p.ink3,
+              child: ToonFadeValue(
+                value: detail,
+                child: Text(
+                  detail,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: view.overspent ? p.redInk : p.ink3,
+                  ),
                 ),
               ),
             ),

@@ -185,12 +185,15 @@ class _StatCell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 17.5,
-            fontWeight: FontWeight.w900,
-            color: color,
+        ToonFadeValue(
+          value: value,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 17.5,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
         ),
       ],
@@ -314,10 +317,13 @@ class _LegendRow extends StatelessWidget {
           ),
           SizedBox(
             width: 78,
-            child: Text(
-              centsToYuan(slice.cents, group: true),
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            child: ToonFadeValue(
+              value: centsToYuan(slice.cents, group: true),
+              child: Text(
+                centsToYuan(slice.cents, group: true),
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],

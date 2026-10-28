@@ -112,7 +112,7 @@ class MonthHero extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
                     Flexible(
-                      child: _FadeOnChange(
+                      child: ToonFadeValue(
                         value: summary.expenseYuan,
                         child: Text(
                           summary.expenseYuan,
@@ -244,7 +244,7 @@ class _HeroCell extends StatelessWidget {
           ),
           const SizedBox(width: 7),
           Flexible(
-            child: _FadeOnChange(
+            child: ToonFadeValue(
               value: value,
               child: Text(
                 value,
@@ -264,45 +264,3 @@ class _HeroCell extends StatelessWidget {
   }
 }
 
-/// 数字变化时做一次 150ms 淡入（不改变布局，也不打断 `baseline` 对齐）。
-///
-/// 为什么不用 `AnimatedSwitcher`：它内部是 `Stack`，会把 Row 的基线对齐打断；
-/// 这里只包一层 `FadeTransition`（RenderProxyBox 会透传基线），切换月份时旧数字直接换掉、
-/// 新数字从 0 → 1 淡进来 —— 比硬切柔和，也不会有两个数字叠在一起。
-class _FadeOnChange extends StatefulWidget {
-  const _FadeOnChange({required this.value, required this.child});
-
-  /// 用来判断「值变了没有」的标识（金额文本）。
-  final String value;
-  final Widget child;
-
-  @override
-  State<_FadeOnChange> createState() => _FadeOnChangeState();
-}
-
-class _FadeOnChangeState extends State<_FadeOnChange>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 150),
-    value: 1,
-  );
-
-  @override
-  void didUpdateWidget(covariant _FadeOnChange oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.value != widget.value) {
-      _c.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) =>
-      FadeTransition(opacity: _c, child: widget.child);
-}
