@@ -1,7 +1,7 @@
 /// 设计令牌 —— 几何量 + **Material 3** 主题构建。
 ///
 /// 历史：F7.6 是「卡通」主题（2.5dp 墨线描边 + 零模糊硬阴影 + 手绘装饰），F7.17 做了深浅两套。
-/// 2026-10-28 起改走 **Material 3**：色板从 `ColorScheme.fromSeed(琥珀)` 派生
+/// 2026-10-28 起改走 **Material 3**：色板从 `ColorScheme.fromSeed(森绿)` 派生
 /// （见 `palette.dart` 的 `_fromScheme`），组件走 M3 的 surface / elevation / 发丝描边。
 ///
 /// 约定不变：

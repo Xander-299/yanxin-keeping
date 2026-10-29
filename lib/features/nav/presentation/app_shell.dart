@@ -181,9 +181,9 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    // 图标画在**琥珀块**上 → onBrand（两套主题都是深棕）；
+    // 图标画在**品牌色块**上 → onBrand；
     // 但标签画在**纸底**上 —— 深色主题下纸底是近黑，用 onBrand 等于深棕压深黑（~1.1:1，看不见）。
-    // 标签改用 brandInk：浅色下与 onBrand 同值（视觉不变），深色下是亮琥珀。
+    // 标签改用 brandInk：浅色下与 onBrand 同值（视觉不变），深色下是亮绿。
     final Color iconColor = selected ? p.onBrand : p.ink3;
     final Color labelColor = selected ? p.brandInk : p.ink3;
     return ToonPress(
@@ -199,7 +199,7 @@ class _NavItem extends StatelessWidget {
                 ? BoxDecoration(
                     color: p.brand,
                     borderRadius: BorderRadius.circular(11),
-                    // 琥珀底 → 描边跟着底色走（深色下 p.ink 是暖白，会整条消失）
+                    // 实心底 → 描边跟着底色走（深色下 p.ink 是暖白，会整条消失）
                     border: p.inkBorder(w: 2, on: p.brand),
                     boxShadow: p.hard(d: 2),
                   )

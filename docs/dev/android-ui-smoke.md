@@ -44,7 +44,8 @@ python tool/ui_dump.py
 "$ADB" -s "$MUMU_SERIAL" shell input tap <x> <y>
 
 # 5) 截图留证（落在不入库的本地目录）
-"$ADB" -s "$MUMU_SERIAL" exec-out screencap -p > shots/xx.png
+"$ADB" -s "$MUMU_SERIAL" exec-out screencap -p > shots/xx.png   # bash 下可用；
+# PowerShell 下这行会把二进制当文本重定向 → PNG 损坏，改用 screencap + pull（见下节）
 ```
 
 **装机前先核验包是刚构建的那版**（否则会「改了没用」地怀疑代码）：
@@ -54,6 +55,73 @@ python tool/verify_apk_kernel.py <本次新增的独有字符串>
 ```
 
 它比对 APK 内 `assets/flutter_assets/kernel_blob.bin` 与盘上的 sha256，并 grep 指定文案。
+
+## 2026-10-29 实测：MuMu + debug 包 + QA 包名（PowerShell 可直接抄）
+
+> **先试这个**：[`tool/install_device.ps1`](../../tool/install_device.ps1) 把本节整段固化成了命令
+> （临时改 gradle.properties 并**按字节还原** → 构建 → 核验包名/版本/签名/文案 → 装机 → 启动）：
+>
+> ```powershell
+> .\tool\install_device.ps1                                   # 模拟器：debug + 并列包名
+> .\tool\install_device.ps1 -Serial 22041211AC -Qa -Grep 图标与颜色   # 真机走查
+> .\tool\install_device.ps1 -Serial 22041211AC -Mode release -Arm64Only  # 真机正式包
+> ```
+>
+> 下面是它内部做的事，用来排查「脚本在哪一步挂了」。
+
+> 设备：MuMu 12 / Android 12 / **x86_64** / 900×1600 @320 dpi（= 450×800 dp）。
+> 本机 `flutter.bat` / `adb.exe` 都没进 PATH，一律用绝对路径；命令全在**仓库根目录**执行。
+> 仓库现在在 `D:\new file\yanxin-flutter`（**纯 ASCII**），所以 HANDOFF 里那条
+> `android.overridePathCheck` **这次没用上**；只有仓库搬到中文路径才需要它。
+
+```powershell
+$flutter = "D:\Download\Flutter\flutter\bin\flutter.bat"
+$adb     = "D:\Download\Java\Android\platform-tools\adb.exe"
+$s       = "127.0.0.1:16384"
+$env:http_proxy=''; $env:https_proxy=''     # 构建/测试都直连（代理会劫持 flutter_tester）
+
+# 0) 先看内存：本机空闲 < 3G 时 Gradle 守护进程会崩（hs_err_pid*.log 里 malloc 失败）
+[int]((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1024)   # MB
+
+# 1) 临时改 android/gradle.properties：-Xmx8G/-XX:MaxMetaspaceSize=4G → 3G/1G，
+#    并追加 qaAppId=com.teacodeman.yanxin.qa（想和正式包并列装机时必须）
+$p = "android\gradle.properties"; Copy-Item $p "$env:TEMP\gp.orig" -Force
+#    ⚠️ 用环境变量 ORG_GRADLE_PROJECT_qaAppId 传**不生效**（实测 APK 仍是 com.teacodeman.yanxin），
+#       只能写进 gradle.properties；改完用 [IO.File]::WriteAllText 写回，构建完按字节还原
+#       （还原后 git diff android/ 必须为空）
+
+# 2) 出 debug 包（MuMu 是 x86_64，release 只打 ARM → 只能 debug；debug 才带 x86_64）
+& $flutter build apk --debug --no-pub        # --no-pub：防止隐式 pub get 改掉 pubspec.lock
+Copy-Item "$env:TEMP\gp.orig" $p -Force
+
+# 3) 核验「装的是刚构建的那版」
+& "D:\Download\Java\Android\build-tools\36.0.0\aapt.exe" dump badging `
+    build\app\outputs\flutter-apk\app-debug.apk | Select-String "package: name"
+python tool\verify_apk_kernel.py 图标与颜色      # 换成本轮新增的独有文案
+
+# 4) 装机（debug 包带 testOnly → 必须 -t）
+& $adb start-server | Out-Null; Start-Sleep 2; & $adb connect $s | Out-Null
+& $adb -s $s install -r -t build\app\outputs\flutter-apk\app-debug.apk
+
+# 5) 启动（装完先 force-stop 一次，见坑 #20「装包后手势不生效」）
+& $adb -s $s shell am force-stop com.teacodeman.yanxin.qa
+& $adb -s $s shell monkey -p com.teacodeman.yanxin.qa -c android.intent.category.LAUNCHER 1
+
+# 6) 走查：语义树 + 截图（截图**不要**用 PowerShell 重定向，见下）
+& .\tool\ui_mumu.ps1 -Action dump -Out "$env:TEMP\ui.txt"
+& $adb -s $s shell screencap -p /sdcard/s.png; & $adb -s $s pull /sdcard/s.png shots\x.png
+```
+
+**安装失败的两条（都实测踩过）**
+
+| 报错 | 原因 | 对策 |
+|---|---|---|
+| `INSTALL_FAILED_VERSION_DOWNGRADE` | 同名包已装且 versionCode 更高（走查机留的是 4001） | `install -r -t -d`（允许降级）；签名不符见下一行 |
+| `INSTALL_FAILED_UPDATE_INCOMPATIBLE … signatures do not match` | 旧 QA 包是 **release 签名**，debug 包是 debug 签名 | `adb uninstall com.teacodeman.yanxin.qa` 再装 —— **QA 包数据会清空，正式包 `com.teacodeman.yanxin` 绝对别卸** |
+
+**截图必须 `screencap` + `pull`，不能用 `exec-out … > x.png`**：PowerShell 的 `>` 是
+**UTF-16 文本重定向**，产物 PNG 直接打不开（PIL 报 `UnidentifiedImageError`）；同理
+`Get-Content` 读语义树要显式 `-Encoding UTF8`。
 
 ## 关键坑（都实际踩过）
 

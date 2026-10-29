@@ -36,7 +36,7 @@ Text _highlightText(
   if (hits.isEmpty) {
     return Text(text, style: style, maxLines: maxLines, overflow: overflow);
   }
-  // 命中子串的底色（浅琥珀 / 深色的暗琥珀）。只覆盖背景，字色 / 字重全部继承外层样式。
+  // 命中子串的底色（浅色 / 深色的暗品牌底）。只覆盖背景，字色 / 字重全部继承外层样式。
   final TextStyle hitStyle = TextStyle(backgroundColor: p.brandTint2);
   final List<InlineSpan> spans = <InlineSpan>[];
   var cursor = 0;

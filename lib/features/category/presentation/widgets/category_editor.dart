@@ -1,4 +1,12 @@
-/// 新增 / 编辑分类弹层（名称、类型、父分类、图标、颜色）。
+/// 新增 / 编辑分类弹层（名称、类型、父分类、图标 / 颜色入口）。
+///
+/// 尺寸约定（2026-10-29 任务书）：
+/// - 本体 = `showModalBottomSheet`，占屏幕高度 **30%**（`kCategoryEditorHeightFactor`）；
+/// - 图标 / 颜色不在这里铺开 —— 点图标预览后另开 **60%** 的
+///   [`showCategoryIconSheet`](category_icon_sheet.dart)（见 `kCategoryIconSheetHeightFactor`）。
+///
+/// 因为只有 30%，内部结构按「固定头 / 可滚动表单 / 固定按钮」三段排：
+/// 抓手 + 标题固定在上，`Expanded` 里滚表单，保存 / 取消钉在底部（矮屏也点得到）。
 ///
 /// 校验在仓储层（`CategoryException`，中文文案），这里只负责展示与回显；
 /// 所有写操作走 [CategoryActions]，UI 不直接碰数据库。
@@ -15,6 +23,10 @@ import 'package:yanxin/data/providers/category_providers.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 
 import '../../application/category_actions.dart';
+import 'category_icon_sheet.dart';
+
+/// 分类编辑弹层占屏比例（任务书：30%）。
+const double kCategoryEditorHeightFactor = 0.30;
 
 /// 打开分类编辑弹层；保存成功返回 true。
 Future<bool?> showCategoryEditor(
@@ -32,17 +44,28 @@ Future<bool?> showCategoryEditor(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
     ),
-    builder: (BuildContext _) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: _CategoryEditor(
-        bookId: bookId,
-        kind: kind,
-        editing: editing,
-        initialParentId: initialParentId,
-      ),
-    ),
+    builder: (BuildContext sheetContext) {
+      final MediaQueryData mq = MediaQuery.of(sheetContext);
+      return Padding(
+        // 键盘弹起时整块面板让出键盘高度（面板自身仍是 30%，不会压到输入框）。
+        padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+        child: SizedBox(
+          // 测试用固定 key：断言「占屏幕 30%」时直接量这块的高度。
+          key: const ValueKey<String>('category-editor-sheet'),
+          height: mq.size.height * kCategoryEditorHeightFactor,
+          // 手势条 / 导航栏挡住底部按钮：SafeArea 只吃底边（键盘弹起时它自动为 0）。
+          child: SafeArea(
+            top: false,
+            child: _CategoryEditor(
+              bookId: bookId,
+              kind: kind,
+              editing: editing,
+              initialParentId: initialParentId,
+            ),
+          ),
+        ),
+      );
+    },
   );
 }
 
@@ -157,186 +180,149 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
     final Category? parent = _parentId == null
         ? null
         : all.where((Category c) => c.id == _parentId).firstOrNull;
-    final Color chipBg = categoryColor(p, _color, kind: _kind);
-    final Color chipFg = categoryOnColor(p, _color, kind: _kind);
 
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Center(
-              child: Container(
-                width: 46,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(
-                  color: p.ink3,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
+    return Column(
+      children: <Widget>[
+        const SizedBox(height: 8),
+        Center(
+          child: Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: p.line,
+              borderRadius: BorderRadius.circular(2),
             ),
-            Text(
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
               _isEditing ? '编辑分类' : '新建分类',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 14),
-
-            // 预览 + 名称
-            Row(
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: chipBg,
-                    borderRadius: BorderRadius.circular(Tok.rMd),
-                  ),
-                  child: Icon(
-                    categoryIconData(_icon, kind: _kind),
-                    size: 24,
-                    color: chipFg,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                    controller: _name,
-                    autofocus: !_isEditing,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _save(all),
-                    maxLength: 12,
-                    decoration: const InputDecoration(
-                      labelText: '分类名称',
-                      counterText: '',
-                      hintText: '例如：早餐、打车、房租',
+                // 图标预览（点开 60% 的图标 / 颜色弹层）+ 名称
+                Row(
+                  children: <Widget>[
+                    _IconPreview(
+                      background: categoryColor(p, _color, kind: _kind),
+                      foreground: categoryOnColor(p, _color, kind: _kind),
+                      icon: categoryIconData(_icon, kind: _kind),
+                      onTap: _saving ? null : _openIconSheet,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // 类型（编辑时不可改：历史账单都挂在原方向上）
-            if (!_isEditing) ...<Widget>[
-              Text('收支类型', style: _labelStyle(p)),
-              const SizedBox(height: 8),
-              ToonSeg(
-                labels: const <String>['支出', '收入'],
-                index: _kind == 'income' ? 1 : 0,
-                onChanged: (int i) => setState(() {
-                  _kind = i == 1 ? 'income' : 'expense';
-                  _parentId = null; // 换方向后父分类不再适用
-                }),
-              ),
-              const SizedBox(height: 14),
-            ],
-
-            // 父分类
-            Text('父分类（可选）', style: _labelStyle(p)),
-            const SizedBox(height: 8),
-            // 用 Material 而不是 Container 包 ListTile：否则水波纹画在下面的层，
-            // Flutter 会断言「ListTile background color or ink splashes may be invisible」。
-            Material(
-              color: p.canvas2,
-              borderRadius: BorderRadius.circular(Tok.rMd),
-              clipBehavior: Clip.antiAlias,
-              child: ListTile(
-                title: Text(parent == null ? '无（一级分类）' : parent.name),
-                subtitle: const Text('二级分类会计入父分类的统计'),
-                trailing: const Icon(Icons.chevron_right_rounded),
-                onTap: _saving ? null : () => _pickParent(parents),
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            // 图标
-            Text('图标', style: _labelStyle(p)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: <Widget>[
-                for (final String key in kCategoryIconKeys)
-                  _IconCell(
-                    icon: categoryIconData(key, kind: _kind),
-                    selected: key == _icon,
-                    onTap: () => setState(() => _icon = key),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // 颜色
-            Text('颜色', style: _labelStyle(p)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: <Widget>[
-                for (final String hex in kCategoryColors)
-                  GestureDetector(
-                    onTap: () => setState(() => _color = hex),
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: parseHexColor(hex, p.brand),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: hex == _color ? p.ink : Colors.transparent,
-                          width: 2,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _name,
+                        autofocus: !_isEditing,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _save(all),
+                        maxLength: 12,
+                        style: const TextStyle(fontSize: 15),
+                        decoration: const InputDecoration(
+                          labelText: '分类名称',
+                          counterText: '',
+                          hintText: '例如：早餐、打车、房租',
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // 类型（编辑时不可改：历史账单都挂在原方向上）+ 父分类
+                Row(
+                  children: <Widget>[
+                    if (!_isEditing) ...<Widget>[
+                      ToonSeg(
+                        small: true,
+                        labels: const <String>['支出', '收入'],
+                        index: _kind == 'income' ? 1 : 0,
+                        onChanged: (int i) => setState(() {
+                          _kind = i == 1 ? 'income' : 'expense';
+                          _parentId = null; // 换方向后父分类不再适用
+                        }),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: _ParentField(
+                        label: parent?.name ?? '无（一级分类）',
+                        onTap: _saving ? null : () => _pickParent(parents),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_error != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: p.redInk,
+                    ),
                   ),
+                ],
               ],
             ),
-
-            if (_error != null) ...<Widget>[
-              const SizedBox(height: 12),
-              Text(
-                _error!,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: p.redInk,
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 12),
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                child: ToonButton(
+                  label: '取消',
+                  kind: ToonButtonKind.ghost,
+                  onPressed: _saving ? null : () => Navigator.of(context).pop(),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                flex: 2,
+                child: ToonButton(
+                  label: _saving ? '保存中…' : '保存',
+                  onPressed: _saving ? null : () => _save(all),
                 ),
               ),
             ],
-            const SizedBox(height: 18),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: ToonButton(
-                    label: '取消',
-                    kind: ToonButtonKind.ghost,
-                    onPressed: _saving ? null : () => Navigator.of(context).pop(),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: ToonButton(
-                    label: _saving ? '保存中…' : '保存',
-                    onPressed: _saving ? null : () => _save(all),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 
-  TextStyle _labelStyle(ToonPalette p) => TextStyle(
-    fontSize: 12.5,
-    fontWeight: FontWeight.w600,
-    color: p.ink2,
-  );
+  /// 打开图标 / 颜色弹层（占屏 60%），选中即时回写预览。
+  Future<void> _openIconSheet() async {
+    await showCategoryIconSheet(
+      context,
+      kind: _kind,
+      icon: _icon,
+      color: _color,
+      onChanged: (CategoryStylePick picked) {
+        if (!mounted) return;
+        setState(() {
+          _icon = picked.icon;
+          _color = picked.color;
+        });
+      },
+    );
+  }
 
   Future<void> _pickParent(List<Category> parents) async {
     final ToonPalette p = context.toon;
@@ -344,21 +330,62 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
     final String? picked = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: p.paper,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Tok.rXl)),
+      ),
       builder: (BuildContext sheetContext) => SafeArea(
-        child: ListView(
-          shrinkWrap: true,
-          children: <Widget>[
-            ListTile(
-              title: const Text('无（一级分类）'),
-              onTap: () => Navigator.of(sheetContext).pop(''),
-            ),
-            for (final Category c in parents)
-              ListTile(
-                leading: Icon(categoryIconData(c.icon, kind: c.kind)),
-                title: Text(c.name),
-                onTap: () => Navigator.of(sheetContext).pop(c.id),
+        // 内容用线性布局 Column（任务书要求）；矮屏可滚动，不溢出。
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const SizedBox(height: 8),
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: p.line,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-          ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '父分类',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: p.ink2,
+                    ),
+                  ),
+                ),
+              ),
+              _SheetRow(
+                leading: Icon(
+                  Icons.remove_circle_outline_rounded,
+                  size: 22,
+                  color: p.ink2,
+                ),
+                label: '无（一级分类）',
+                onTap: () => Navigator.of(sheetContext).pop(''),
+              ),
+              for (final Category c in parents)
+                _SheetRow(
+                  leading: Icon(
+                    categoryIconData(c.icon, kind: c.kind),
+                    size: 22,
+                    color: p.ink2,
+                  ),
+                  label: c.name,
+                  onTap: () => Navigator.of(sheetContext).pop(c.id),
+                ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -367,37 +394,147 @@ class _CategoryEditorState extends ConsumerState<_CategoryEditor> {
   }
 }
 
-class _IconCell extends StatelessWidget {
-  const _IconCell({
+/// 图标预览方块：点按 → 打开 60% 的图标 / 颜色弹层。
+class _IconPreview extends StatelessWidget {
+  const _IconPreview({
+    required this.background,
+    required this.foreground,
     required this.icon,
-    required this.selected,
     required this.onTap,
   });
 
+  final Color background;
+  final Color foreground;
   final IconData icon;
-  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    return Tooltip(
+      message: '选择图标和颜色',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Tok.rMd),
+        child: SizedBox(
+          width: 48,
+          height: 48,
+          child: Stack(
+            children: <Widget>[
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: BorderRadius.circular(Tok.rMd),
+                ),
+                child: Icon(
+                  icon,
+                  key: const ValueKey<String>('category-icon-preview'),
+                  size: 24,
+                  color: foreground,
+                ),
+              ),
+              // 右下角小铅笔：暗示「这块能点开改」
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 17,
+                  height: 17,
+                  decoration: BoxDecoration(
+                    color: p.paper,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: p.line),
+                  ),
+                  child: Icon(Icons.edit_rounded, size: 10, color: p.ink3),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 父分类选择行（紧凑一行，替代原来的整块 ListTile）。
+class _ParentField extends StatelessWidget {
+  const _ParentField({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    return Material(
+      color: p.canvas2,
+      borderRadius: BorderRadius.circular(Tok.rMd),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          child: Row(
+            children: <Widget>[
+              Icon(Icons.account_tree_outlined, size: 16, color: p.ink3),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: p.ink2,
+                  ),
+                ),
+              ),
+              Icon(Icons.expand_more_rounded, size: 16, color: p.ink3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 底部面板里的一行（父分类选择等）：图标 + 文字 + 可点。
+class _SheetRow extends StatelessWidget {
+  const _SheetRow({
+    required this.leading,
+    required this.label,
+    required this.onTap,
+  });
+
+  final Widget leading;
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        width: 42,
-        height: 42,
-        decoration: BoxDecoration(
-          color: selected ? p.brandTint : p.canvas2,
-          borderRadius: BorderRadius.circular(Tok.rSm),
-          border: Border.all(
-            color: selected ? p.brandDeep : Colors.transparent,
-            width: 2,
-          ),
-        ),
-        child: Icon(
-          icon,
-          size: 21,
-          color: selected ? p.brandInk : p.ink2,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: <Widget>[
+            leading,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: p.ink,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

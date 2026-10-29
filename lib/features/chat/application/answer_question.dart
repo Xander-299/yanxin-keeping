@@ -65,6 +65,11 @@ Future<FinanceAnswer> answerQuestion(
       categoryNames: <String, String>{
         for (final Category c in categories) c.id: c.name,
       },
+      // 二级 → 父级：问「餐饮」时要把「早餐 / 午餐」的账单也算进去（FR-CAT-03）。
+      categoryParents: <String, String>{
+        for (final Category c in categories)
+          if (c.parentId != null) c.id: c.parentId!,
+      },
       budgetCents: budget,
       nowMs: nowMs,
     ),

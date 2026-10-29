@@ -8,7 +8,7 @@
 /// 换皮肤只改这里，不动业务页面 —— 这是当初把这层抽出来的红利。
 ///
 /// 颜色仍一律来自 [ToonPalette]（`context.toon`），而调色板本身由
-/// `ColorScheme.fromSeed(琥珀)` 派生（见 `palette.dart`）。
+/// `ColorScheme.fromSeed(森绿)` 派生（见 `palette.dart`）。
 library;
 
 import 'package:flutter/material.dart';
@@ -27,3 +27,4 @@ part 'toon/field.dart';
 part 'toon/avatar_ring.dart';
 part 'toon/section_title.dart';
 part 'toon/fade_value.dart';
+part 'toon/float_button.dart';

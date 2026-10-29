@@ -21,6 +21,7 @@
 
 | 脚本 | 用途 |
 |---|---|
+| `install_device.ps1` | **一条命令出包 + 核验 + 装机 + 启动**（PowerShell）：临时改 gradle.properties（内存 / `qaAppId`）并**按字节还原**、核验包名/版本/签名/文案、`adb install`（debug 自动 `-t`、降级自动 `-d`）。`-Serial` 真机 / `-Qa` 并列包名 / `-Mode release` |
 | `verify_apk_kernel.py` | **装机前必跑**：比对 APK 内 `kernel_blob.bin` 与盘上的 sha256，并 grep 本次新增文案 —— 防止「装到上一版」而误判「改了没用」 |
 | `publish_release.py` | 走 GitHub REST API 发 Release；令牌从 git credential manager 现场取，不落盘 |
 

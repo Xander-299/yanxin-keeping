@@ -58,6 +58,24 @@ FinanceData _data({int? budget, List<TxRow>? rows}) => FinanceData(
   nowMs: _nowMs,
 );
 
+/// 同一个 10 月，额外多一笔「餐饮 → 早餐」的二级账单（¥20）。
+FinanceData _dataWithChild() => FinanceData(
+  rows: <TxRow>[
+    ..._rows,
+    _tx(
+      id: 'o5',
+      type: 'expense',
+      cents: 2000,
+      at: DateTime(2026, 10, 5),
+      categoryId: 'c-breakfast',
+      note: '包子',
+    ),
+  ],
+  categoryNames: <String, String>{..._names, 'c-breakfast': '早餐'},
+  categoryParents: <String, String>{'c-breakfast': 'c-food'},
+  nowMs: _nowMs,
+);
+
 final Period _oct = Period.month(2026, 10);
 final Period _sep = Period.month(2026, 9);
 
@@ -115,6 +133,24 @@ void main() {
       );
       expect(a.narrative, contains('没有「娱乐」'));
       expect(a.headline, isNull);
+    });
+
+    test('二级账单计入父级：问「餐饮」要把记在「早餐」上的钱算进来', () {
+      final FinanceAnswer a = buildFinanceAnswer(
+        CategorySpendingIntent(period: _oct, categoryName: '餐饮', kind: 'expense'),
+        _dataWithChild(),
+      );
+      expect(a.headline, '¥1,300.50', reason: '餐饮 1280.50 + 早餐 20.00');
+      expect(a.narrative, contains('2 笔'));
+    });
+
+    test('问二级分类只算它自己，不会倒推整个父级', () {
+      final FinanceAnswer a = buildFinanceAnswer(
+        CategorySpendingIntent(period: _oct, categoryName: '早餐', kind: 'expense'),
+        _dataWithChild(),
+      );
+      expect(a.headline, '¥20.00');
+      expect(a.narrative, contains('1 笔'));
     });
   });
 

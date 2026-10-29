@@ -70,18 +70,18 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   final Color canvas;
   final Color canvas2;
 
-  // ── 品牌琥珀 ──
+  // ── 品牌色 ──
 
-  /// 品牌主色（**两套主题共用**：琥珀是品牌锚点）。
+  /// 品牌主色（**两套主题共用**：森绿是品牌锚点）。
   final Color brand;
 
   /// 品牌深色：浅底上的品牌字 / 光标（深色主题下提亮）。
   final Color brandDeep;
 
-  /// **亮琥珀底上的字**（主按钮 / 选中 chip / 中央 +）：两套主题都是深棕。
+  /// **品牌实心底上的字**（主按钮 / 选中 chip / 中央 +）。
   final Color onBrand;
 
-  /// **品牌浅底（[brandTint]）上的字**：浅色深棕、深色浅琥珀。
+  /// **品牌浅底（[brandTint]）上的字**（深浅主题各取 M3 对应角色）。
   final Color brandInk;
 
   final Color brandTint;
@@ -120,7 +120,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   /// 环形进度 / 柱状 / 饼图的底槽。
   final Color track;
 
-  /// hero 卡上的深棕字色（hero 恒为琥珀底，故两套主题一致）。
+  /// hero 卡上的字色（hero 恒为品牌浅底，语义角色随主题切换）。
   final Color heroInk;
 
   /// 小猪鼻子的奶白。
@@ -186,8 +186,8 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
 
   // ─────────────────────────── 调色板本体 ───────────────────────────
 
-  /// 品牌主色（Material 3 的 seed）：沿用原来的琥珀，品牌识别不变。
-  static const Color seed = Color(0xFFFFB627);
+  /// 品牌主色（Material 3 的 seed）：2026-10-28 由琥珀改为森绿（方案 B）。
+  static const Color seed = Color(0xFF2E5E4E);
 
   /// 浅色 / 深色两套：**全部从 `ColorScheme.fromSeed` 派生**（M3 语义角色 → 旧字段名）。
   ///
@@ -238,13 +238,14 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   );
 
   /// 分类占比调色板的**源常量**（两套主题共用；测试与画笔也直接引用它）。
+  /// 2026-10-28 随换肤调整：品牌森绿打头，原首位的琥珀移到原亮绿位（保 9 色互异）。
   static const List<Color> pieColors = <Color>[
-    Color(0xFFFFB627),
+    Color(0xFF1F8F63),
     Color(0xFFFF6B8A),
     Color(0xFF4DC9C0),
     Color(0xFF5A8DFF),
     Color(0xFFB18CFF),
-    Color(0xFF5FD068),
+    Color(0xFFFFB627),
     Color(0xFFFF8A3D),
     Color(0xFFF06FC0),
     Color(0xFF9AA5B1),

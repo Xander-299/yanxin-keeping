@@ -1,7 +1,7 @@
 /// 月份选择子页：按年展示 12 个月的缩略日历，点某天即跳到该月该日。
 ///
 /// 视觉参考 docs/design/calendar_select.jpg（布局对齐）。
-/// 有账的日期用琥珀色标出；点任意日期 → 日历页切到该月并选中该日，随后返回。
+/// 有账的日期用品牌色标出；点任意日期 → 日历页切到该月并选中该日，随后返回。
 library;
 
 import 'package:flutter/material.dart';
@@ -121,7 +121,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: Text(
-                '琥珀色 = 这一天有记账；点某一天即跳到该月该日',
+                '绿色 = 这一天有记账；点某一天即跳到该月该日',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,

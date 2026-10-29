@@ -30,6 +30,70 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
+## [Unreleased] — 预置一级分类补二级（2026-10-29）
+
+### Added
+
+- **预置二级分类**：支出侧 10 个一级带二级（共 33 条）—— 餐饮（早餐/午餐/晚餐/饮料/零食）、
+  交通（地铁/公交/打车/共享单车/加油）、购物、居住、娱乐、医疗、教育、人情社交、旅行、通讯；
+  收入与「其他」刻意不带。二级 `is_preset=1`、颜色沿用父级，可改名 / 归档 / 删除（删了不复活）。
+- 图标目录追加 3 个稳定 key：`dinner`、`bus`、`bike`（只追加、不改名）。
+
+### Changed
+
+- `BookRepository.create()` 改为复用 `CategoryRepository.ensurePresets()` —— 预置写入只剩一处逻辑。
+- `ensurePresets()` 重写：一级只在 `parent_id IS NULL` 的行里匹配，二级只在**同一父级**下匹配；
+  父级被软删则整棵树不补。
+
+### Fixed
+
+- **问答漏算子分类**：`问「这个月餐饮花了多少」` 原来只统计直接记在「餐饮」上的钱，
+  记在「早餐 / 午餐」上的不算。现按「自己命中或父级命中」汇总，问二级时不会倒推父级。
+- 测试基建：新增 `test/helpers/pick_category.dart`（点一级 → 自动补点「不细分」），
+  修复 5 处因「一级带二级」而停在子列表、保存出无分类账单的用例。
+
+### 门禁
+
+`flutter analyze` 0 issue · `flutter test --concurrency=1` **675 passed / 6 skipped**（+4）。
+**本轮未做真机走查**（用户指定）。schema 仍 v4，无迁移。
+
+## [Unreleased] — 分类管理页交互升级（Collapse / Wrap / ActionSheet）
+
+### Changed
+
+- **一级分类改为 Collapse 交互**：点按根分类在其下方内联展开/收起二级分类
+  （`AnimatedSize` 220ms 过渡 + 旋转箭头指示），默认全部收起。
+- **二级分类改为 `Wrap` 流式排布**：chip 自适应宽度、自动换行，不再每项独占一行。
+- **三点溢出菜单升级为底部 ActionSheet**（`showModalBottomSheet`）：
+  一级 / 二级分类共用，操作集合与旧 PopupMenu 一致（编辑 / 添加子分类 / 上移 / 下移 / 归档 / 删除）。
+- 业务逻辑零改动：schema v4、归档/迁移/删除/排序流程与 `category_actions.dart` 全部复用。
+- 二级分类从彩色胶囊 Chip 改为**块状分类项**（纸底 + 发丝描边 + 分类色图标方块，宽随内容），
+  仍由 `Wrap` 流式换行；补「子分类块点击开 ActionSheet」回归测试（第二轮任务书）。
+- 「添加」作为网格末尾的**常驻块**（与子分类块同构对齐），点击直接进编辑器预置父分类；
+  「添加子分类」移出 ActionSheet；无子分类的一级分类同样可展开（展开即见「添加」块）。
+- **分类编辑层收成屏幕高度 30%**（`kCategoryEditorHeightFactor`）：三段式布局
+  （抓手 + 标题固定 / 表单可滚 / 保存·取消钉底），键盘弹起整块让位。
+- **图标 / 颜色改为独立弹层（屏幕高度 60%）**：编辑层只留图标预览，点开才铺 43 图标 + 9 颜色；
+  选中即时回写预览，下滑关闭不丢选择（`widgets/category_icon_sheet.dart`）。
+- **新增浮动入口 `ToonFloatMenu`**（Ant Design FloatButton 语义）：圆形 + 加号 + `trigger: click`，
+  固定在**右下角、距屏幕底部 15%** 处（圆心 = 屏高 85%）、不可拖动，点按**向上**展开
+  `F`（一级分类）/ `S`（二级分类）；二级入口先选父分类。原有 AppBar「＋」、列表末尾按钮、
+  展开网格的「添加」块全部保留。
+- **所有底部面板内容统一为线性布局 `Column`**：父分类选择 / 迁移目标两处 `ListView` 改 `Column`，
+  `ListTile` 换成自绘行（`_SheetTile` / `_SheetRow`）。
+- 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **671 passed / 6 skipped**（+3）。
+
+## [Unreleased] — 主题换肤（seed 琥珀 → 森绿）
+
+### Changed
+
+- **整体主题配色由琥珀改为森绿（方案 B）**：`ToonPalette.seed` `0xFFFFB627` → `0xFF2E5E4E`，
+  全部 M3 角色（primary / primaryContainer / error / tertiary / surface 系）仍由 seed 一处派生；
+  hero、按钮、支出红 / 收入绿等语义色随 seed 自动更新。
+- 分类占比圆环 9 色微调：品牌森绿打头，原首位的琥珀移到原亮绿位（保持 9 色互异）。
+- 同步更新用户可见文案与新手指引里的颜色指称（「琥珀方块」→「墨绿方块」、月份选择页图例等）。
+- 护栏：`test/core/theme/palette_contrast_test.dart`（M3 前景配对 4.5:1 / 3:0 / 1.4:1）全绿。
+
 ## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1 + 批次 3 首页聊天化）
 
 > **门禁**：`flutter analyze` → `No issues found!` ✅ ·

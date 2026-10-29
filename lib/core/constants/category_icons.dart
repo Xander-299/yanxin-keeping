@@ -17,9 +17,12 @@ const Map<String, IconData> kCategoryIcons = <String, IconData>{
   'food': Icons.restaurant_rounded, // 餐饮
   'breakfast': Icons.bakery_dining_rounded, // 早餐
   'lunch': Icons.rice_bowl_rounded, // 正餐
+  'dinner': Icons.dinner_dining_rounded, // 晚餐
   'coffee': Icons.local_cafe_rounded, // 咖啡 / 奶茶
   'snack': Icons.cookie_rounded, // 零食
   'transport': Icons.directions_subway_rounded, // 交通
+  'bus': Icons.directions_bus_rounded, // 公交
+  'bike': Icons.pedal_bike_rounded, // 共享单车
   'taxi': Icons.local_taxi_rounded, // 打车
   'fuel': Icons.local_gas_station_rounded, // 加油
   'shopping': Icons.shopping_bag_rounded, // 购物

@@ -93,8 +93,11 @@ class CategoryRepository {
 
   /// 幂等补齐预置分类（新建账本已写过，这里服务**老账本升级**）。
   ///
-  /// 命中规则：同名 **或** 命中别名（理财 / 红包 / 人情）就算已存在 —— 不重复插入；
-  /// 已存在但 `icon` 为空时顺手补上 icon key（只补空值，不改用户改过的图标）。
+  /// 命中规则（2026-10-29 起分两级判定，原来只按 `kind|name` 全局比对）：
+  /// - **一级**：只在「父级为空」的行里找 —— 同名或命中别名（理财 / 红包 / 人情）就算已存在；
+  /// - **二级**：只在**同一个父分类**下找 —— 不同一级下允许同名子分类（「红包」只属于人情社交）；
+  /// - 已存在但 `icon` 为空时顺手补上 icon key（只补空值，不改用户改过的图标）；
+  /// - **父分类被用户删掉（软删）→ 整棵树都不补**，不给一个已删的父级塞子分类。
   Future<void> ensurePresets(String bookId) async {
     // ⚠️ **连软删的行一起看**：用户删掉的预置分类不能被「补装」复活
     //    （真机实测踩到：删掉「购物」3 秒后，下一次 provider 刷新又冒出来一条）。
@@ -102,30 +105,39 @@ class CategoryRepository {
         await (_db.select(_db.categories)
               ..where((t) => t.bookId.equals(bookId)))
             .get();
-    final Set<String> seen = <String>{
-      for (final Category c in existing) '${c.kind}|${c.name}',
-    };
 
-    Future<void> ensureOne(
+    final Map<String, Category> roots = <String, Category>{};
+    final Map<String, Category> children = <String, Category>{};
+    for (final Category c in existing) {
+      if (c.parentId == null) {
+        roots['${c.kind}|${c.name}'] = c;
+      } else {
+        children['${c.parentId}|${c.name}'] = c;
+      }
+    }
+
+    /// 只补空图标（用户改过的图标不覆盖）。
+    Future<void> fillIcon(String id, String iconKey) => _db.customStatement(
+      'UPDATE categories SET icon = ? WHERE id = ? '
+      "AND (icon IS NULL OR icon = '')",
+      <Object?>[iconKey, id],
+    );
+
+    Future<Category> ensureRoot(
       PresetCategory preset,
       String kind,
       int index,
     ) async {
-      final bool has = <String>[preset.name, ...preset.aliases].any(
-        (String n) => seen.contains('$kind|$n'),
-      );
-      if (has) {
-        // 已存在：只补空的 icon（用户改过的图标不覆盖）
-        for (final String n in <String>[preset.name, ...preset.aliases]) {
-          await _db.customStatement(
-            'UPDATE categories SET icon = ? WHERE book_id = ? AND kind = ? '
-            "AND name = ? AND (icon IS NULL OR icon = '')",
-            <Object?>[preset.iconKey, bookId, kind, n],
-          );
-        }
-        return;
+      Category? hit;
+      for (final String n in <String>[preset.name, ...preset.aliases]) {
+        hit = roots['$kind|$n'];
+        if (hit != null) break;
       }
-      await create(
+      if (hit != null) {
+        await fillIcon(hit.id, preset.iconKey);
+        return hit;
+      }
+      final Category created = await create(
         bookId: bookId,
         name: preset.name,
         kind: kind,
@@ -134,14 +146,48 @@ class CategoryRepository {
         sortOrder: index,
         isPreset: true,
       );
-      seen.add('$kind|${preset.name}');
+      roots['$kind|${preset.name}'] = created;
+      return created;
+    }
+
+    Future<void> ensureChildren(
+      Category root,
+      PresetCategory preset,
+      String kind,
+    ) async {
+      if (root.deletedAt != null) return;
+      for (int i = 0; i < preset.children.length; i++) {
+        final PresetChild child = preset.children[i];
+        Category? hit;
+        for (final String n in <String>[child.name, ...child.aliases]) {
+          hit = children['${root.id}|$n'];
+          if (hit != null) break;
+        }
+        if (hit != null) {
+          await fillIcon(hit.id, child.iconKey);
+          continue;
+        }
+        final Category created = await create(
+          bookId: bookId,
+          name: child.name,
+          kind: kind,
+          parentId: root.id,
+          icon: child.iconKey,
+          color: preset.color, // 二级沿用一级的颜色，视觉上归组
+          sortOrder: i,
+          isPreset: true,
+        );
+        children['${root.id}|${child.name}'] = created;
+      }
     }
 
     for (int i = 0; i < presetExpense.length; i++) {
-      await ensureOne(presetExpense[i], 'expense', i);
+      final Category root = await ensureRoot(presetExpense[i], 'expense', i);
+      await ensureChildren(root, presetExpense[i], 'expense');
     }
     for (int i = 0; i < presetIncome.length; i++) {
-      await ensureOne(presetIncome[i], 'income', i);
+      final Category root = await ensureRoot(presetIncome[i], 'income', i);
+      await ensureChildren(root, presetIncome[i], 'income');
     }
   }
 

@@ -11,6 +11,7 @@ import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
 
+import 'helpers/pick_category.dart';
 import 'helpers/pump_app.dart';
 
 /// 等 DB 写库 + invalidate 触发的重建到位（写库是真实异步，pumpAndSettle 可能抢先返回）。
@@ -48,8 +49,7 @@ void main() {
     // 选分类
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
+    await pickCategory(tester, cat.name);
     // 保存：F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton；
     // F7.9 起按钮**吸底常驻**、位于 Scrollable 的兄弟节点 →
     // **不能**再 ensureVisible（`Scrollable.of` 返回 null 会直接报错）。
@@ -77,8 +77,7 @@ void main() {
     await tester.tap(find.text('1'));
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
+    await pickCategory(tester, cat.name);
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
     expect(find.text('-1.00'), findsNWidgets(2)); // hero 结余 + 列表金额

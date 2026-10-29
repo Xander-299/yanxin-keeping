@@ -1,12 +1,44 @@
 name: CI
 
-# 门禁与本地一致：analyze + test。本项目此前只有「本机手工门禁」，
-# 换机器 / 换会话就无法证明 README 声称的用例数 —— 这个 workflow 就是那条自动化的门禁。
+# ── 门禁清单（与本地一致：`fx-qa` = analyze + test）─────────────────────────
+#
+#   static : 生成物同步（build_runner 后 git diff 必须为空）+ flutter analyze
+#   test   : flutter test（CI 上允许默认并发；**本机**必须 --concurrency=1，见 HANDOFF）
+#   build  : flutter build apk --debug —— 证明「能打包」，analyze/test 证明不了 Gradle /
+#            Manifest / Kotlin / ML Kit 依赖链没坏
+#
+# 三个 job 并行跑：一个有红都能单独定位，不用等前面的跑完。
+#
+# ── 为什么没有「格式门禁」─────────────────────────────────────────────────
+# `dart format --set-exit-if-changed` 现在会报 149/223 个文件要改（历史代码没按 formatter
+# 跑过）。直接加 = 每次 PR 必红。要加得先做一次「纯格式化」提交，再开门禁 —— 那是独立改动，
+# 别混在功能 PR 里。
+#
+# ── 为什么没有 Dependabot / Renovate ──────────────────────────────────────
+# 本项目依赖是**锁死**的（drift 2.31.0 / sqlite3 2.9.4 / jni_flutter 1.0.1 …，
+# 升了 App 可能起不来）。自动提 PR 升版本与这条硬约束直接冲突。
+#
+# ── 分支保护（手动步骤，仓库设置里点一次即可）──────────────────────────────
+# Settings → Branches → Require status checks：勾 `analyze · 生成物同步` / `test` /
+# `build apk (debug)`；再勾 Require a pull request before merging。
+# ⚠️ 一旦勾了 required checks，就**不要**给本 workflow 加 paths-ignore —— 纯文档 PR 会因为
+#    检查永远不报告而卡死（GitHub 的经典坑）。
+
 on:
   push:
     branches: [master]
   pull_request:
   workflow_dispatch:
+
+# 同一分支连续 push 时取消上一次 —— 只关心最新提交，省 runner 也省等待
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# 最小权限：只读代码；actions: write 是给依赖缓存上传用的（缺了缓存会静默不保存）
+permissions:
+  contents: read
+  actions: write
 
 env:
   # ⚠️ pubspec.lock 里 116 个包的 url 都是 https://pub.flutter-io.cn（作者在国内开发，
@@ -15,10 +47,10 @@ env:
   PUB_HOSTED_URL: https://pub.flutter-io.cn
 
 jobs:
-  gate:
-    name: analyze + test
+  static:
+    name: analyze · 生成物同步
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
@@ -49,5 +81,77 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # 本机跑必须 --concurrency=1（内存不足会让 Dart VM OOM）；runner 上默认并发即可。
       - name: Test
         run: flutter test
+
+  build:
+    name: build apk (debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      # Gradle 缓存（依赖 + wrapper），第一次冷跑 6–8 分钟，之后 2–3 分钟
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      # runner 的 Android SDK 不一定带 compileSdk=36（项目 android.builder.sdkDownload=false，
+      # 缺了就直截失败）。这里补装一次；已经装了就是秒过。
+      - name: Ensure Android SDK 36
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKMANAGER" ]; then
+            yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+          else
+            echo "::warning::找不到 sdkmanager，跳过补装（依赖 runner 预装）"
+          fi
+
+      # 仓库里写的是 -Xmx8G；GitHub 私有仓库 runner 只有 ~7 GB 内存，8G 堆会让
+      # Gradle 守护进程起不来。与本地出包前的手工降配同源（HANDOFF「内存不足」那条）。
+      - name: Lower Gradle heap for runner
+        run: sed -i 's/-Xmx8G -XX:MaxMetaspaceSize=4G/-Xmx3G -XX:MaxMetaspaceSize=1G/' android/gradle.properties
+
+      # --no-pub：防止 flutter build 隐式跑 pub get 把 pubspec.lock 里的版本升上去
+      # 只打 arm64：release 本来就只有 ARM，x86_64 只是给模拟器用（本机装包时再验），
+      # 这样这一跳能稳在 10 分钟内。
+      - name: Build debug APK
+        run: flutter build apk --debug --no-pub --target-platform android-arm64

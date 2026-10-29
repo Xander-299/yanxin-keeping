@@ -101,7 +101,7 @@ class AssetsPage extends ConsumerWidget {
   }
 }
 
-/// 净资产卡：品牌浅琥珀底（原型 `.networth`）+ 大号金额 + 账户数。
+/// 净资产卡：品牌浅底（原型 `.networth`）+ 大号金额 + 账户数。
 class _NetWorthCard extends StatelessWidget {
   const _NetWorthCard({required this.summary});
 

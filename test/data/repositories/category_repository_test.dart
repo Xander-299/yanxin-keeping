@@ -5,6 +5,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/constants/preset.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
@@ -61,14 +62,98 @@ void main() {
   );
 
   group('预置分类', () {
-    test('新建账本：11 个支出 + 7 个收入，且带图标/颜色', () async {
+    test('新建账本：11 个支出 + 7 个收入一级，支出带二级（含任务书点名的两条）', () async {
       final List<Category> expense = await repo.listByBook(bookId, kind: 'expense');
       final List<Category> income = await repo.listByBook(bookId, kind: 'income');
-      expect(expense.length, 11);
-      expect(income.length, 7);
+      final List<Category> roots =
+          expense.where((Category c) => c.parentId == null).toList();
+      final List<Category> kids =
+          expense.where((Category c) => c.parentId != null).toList();
+
+      expect(roots.length, 11);
+      expect(income.length, 7, reason: '收入刻意不带二级，一级本身就是 7 条');
+      expect(kids.length, presetChildCount);
       expect(expense.every((Category c) => c.icon.isNotEmpty), isTrue);
       expect(expense.every((Category c) => c.color.startsWith('#')), isTrue);
-      expect(expense.map((Category c) => c.name), contains('通讯'));
+      expect(roots.map((Category c) => c.name), contains('通讯'));
+
+      // 任务书点名的两条：餐饮 → 早餐 / 午餐 / 晚餐；交通 → 地铁 / 公交 / 共享单车
+      final Category food = roots.firstWhere((Category c) => c.name == '餐饮');
+      expect(
+        kids.where((Category c) => c.parentId == food.id).map((Category c) => c.name),
+        containsAll(<String>['早餐', '午餐', '晚餐']),
+      );
+      final Category transport =
+          roots.firstWhere((Category c) => c.name == '交通');
+      expect(
+        kids
+            .where((Category c) => c.parentId == transport.id)
+            .map((Category c) => c.name),
+        containsAll(<String>['地铁', '公交', '共享单车']),
+      );
+
+      // 二级也是预置，且颜色跟随父级（视觉上归组）
+      expect(kids.every((Category c) => c.isPreset == 1), isTrue);
+      expect(
+        kids
+            .where((Category c) => c.parentId == food.id)
+            .every((Category c) => c.color == food.color),
+        isTrue,
+      );
+    });
+
+    test('老账本（只有一级）：补装只加二级，已删的二级不会被复活', () async {
+      final Category food = (await repo.listByBook(bookId, kind: 'expense'))
+          .firstWhere((Category c) => c.parentId == null && c.name == '餐饮');
+      // 模拟「上一版只有一级」：把餐饮的二级物理删掉
+      await db.customStatement(
+        'DELETE FROM categories WHERE parent_id = ?',
+        <Object?>[food.id],
+      );
+      expect(await repo.childrenOf(food.id), isEmpty);
+
+      await repo.ensurePresets(bookId);
+      final List<Category> kids = await repo.childrenOf(food.id);
+      expect(
+        kids.map((Category c) => c.name),
+        containsAll(<String>['早餐', '午餐', '晚餐', '饮料', '零食']),
+      );
+      expect(
+        (await repo.listByBook(bookId, kind: 'expense'))
+            .where((Category c) => c.parentId == null && c.name == '餐饮')
+            .length,
+        1,
+        reason: '补二级不能顺手把一级再插一遍',
+      );
+
+      // 用户删掉「零食」→ 再补装也不该回来
+      final Category snack =
+          kids.firstWhere((Category c) => c.name == '零食');
+      await repo.deleteIfUnused(snack.id);
+      await repo.ensurePresets(bookId);
+      expect(
+        (await repo.childrenOf(food.id)).where((Category c) => c.name == '零食'),
+        isEmpty,
+      );
+    });
+
+    test('一级被用户删掉后，不再给它的二级补装（整棵树都不复活）', () async {
+      final Category food = (await repo.listByBook(bookId, kind: 'expense'))
+          .firstWhere((Category c) => c.parentId == null && c.name == '餐饮');
+      for (final Category kid in await repo.childrenOf(food.id)) {
+        await repo.deleteIfUnused(kid.id);
+      }
+      await repo.deleteIfUnused(food.id);
+
+      await repo.ensurePresets(bookId);
+
+      expect(await repo.childrenOf(food.id), isEmpty);
+      expect(
+        (await repo.listByBook(bookId, kind: 'expense'))
+            .where((Category c) => c.name == '餐饮'),
+        isEmpty,
+        reason: '软删的一级既不能自己复活，也不能被塞回子分类',
+      );
     });
 
     test('ensurePresets 幂等：重复调用不会多出分类', () async {
@@ -81,6 +166,10 @@ void main() {
     test('用户删掉的预置分类不会被补装复活（真机实测踩到的坑）', () async {
       final Category comm = (await repo.listByBook(bookId, kind: 'expense'))
           .firstWhere((Category c) => c.name == '通讯');
+      // 通讯现在带二级（话费 / 宽带）：按「有子分类不能直接删」的规则，先删子分类
+      for (final Category kid in await repo.childrenOf(comm.id)) {
+        await repo.deleteIfUnused(kid.id);
+      }
       await repo.deleteIfUnused(comm.id);
 
       await repo.ensurePresets(bookId);
@@ -90,6 +179,11 @@ void main() {
         after.where((Category c) => c.name == '通讯'),
         isEmpty,
         reason: '软删的预置分类不该被 ensurePresets 重新插入',
+      );
+      expect(
+        after.where((Category c) => c.parentId == comm.id),
+        isEmpty,
+        reason: '父级已删，子分类也不该被补装回来',
       );
     });
 
@@ -126,17 +220,21 @@ void main() {
     test('可以建二级分类，parentId 指向一级', () async {
       final Category food = (await repo.listByBook(bookId, kind: 'expense'))
           .firstWhere((Category c) => c.name == '餐饮');
-      final Category breakfast = await mk('早餐', parentId: food.id);
-      expect(breakfast.parentId, food.id);
-      expect((await repo.childrenOf(food.id)).map((Category c) => c.name), contains('早餐'));
+      // 用非预置的名字：预置二级已经有「早餐」了（同级重名会被拒）
+      final Category night = await mk('夜宵', parentId: food.id);
+      expect(night.parentId, food.id);
+      expect(
+        (await repo.childrenOf(food.id)).map((Category c) => c.name),
+        contains('夜宵'),
+      );
     });
 
     test('最多两级：给二级分类再挂子分类会抛错', () async {
       final Category food = (await repo.listByBook(bookId, kind: 'expense'))
           .firstWhere((Category c) => c.name == '餐饮');
-      final Category breakfast = await mk('早餐', parentId: food.id);
+      final Category night = await mk('夜宵', parentId: food.id);
       expect(
-        () => mk('豆浆', parentId: breakfast.id),
+        () => mk('豆浆', parentId: night.id),
         throwsA(isA<CategoryException>()),
       );
     });
@@ -168,11 +266,11 @@ void main() {
           .firstWhere((Category c) => c.name == '餐饮');
       final Category transport = (await repo.listByBook(bookId, kind: 'expense'))
           .firstWhere((Category c) => c.name == '交通');
-      await mk('早餐', parentId: food.id);
-      expect(() => mk('早餐', parentId: food.id), throwsA(isA<CategoryException>()));
+      await mk('夜宵', parentId: food.id);
+      expect(() => mk('夜宵', parentId: food.id), throwsA(isA<CategoryException>()));
       // 换一个父级就允许同名
-      final Category other = await mk('早餐', parentId: transport.id);
-      expect(other.name, '早餐');
+      final Category other = await mk('夜宵', parentId: transport.id);
+      expect(other.name, '夜宵');
     });
 
     test('名称自动去掉首尾空格', () async {
@@ -259,9 +357,9 @@ void main() {
     test('归档父分类会连带归档子分类', () async {
       final Category food = (await repo.listByBook(bookId, kind: 'expense'))
           .firstWhere((Category c) => c.name == '餐饮');
-      final Category breakfast = await mk('早餐', parentId: food.id);
+      final Category night = await mk('夜宵', parentId: food.id);
       await repo.archive(food.id);
-      expect((await repo.getById(breakfast.id))!.isArchived, 1);
+      expect((await repo.getById(night.id))!.isArchived, 1);
     });
 
     test('迁移后删除：只改分类，金额/日期/备注/账户不变', () async {

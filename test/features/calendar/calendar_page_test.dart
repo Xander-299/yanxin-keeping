@@ -13,6 +13,7 @@ import 'package:yanxin/data/repositories/transaction_repository.dart';
 import 'package:yanxin/features/calendar/presentation/widgets/month_grid.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 
+import '../../helpers/pick_category.dart';
 import '../../helpers/pump_app.dart';
 
 /// 等异步写库 + provider 重建到位。
@@ -222,8 +223,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
+    await pickCategory(tester, cat.name);
     // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton；
     // F7.9 起吸底常驻（不在 Scrollable 内）→ 不能再 ensureVisible
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));

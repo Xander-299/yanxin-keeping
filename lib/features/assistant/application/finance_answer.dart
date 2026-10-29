@@ -67,6 +67,7 @@ class FinanceData {
   const FinanceData({
     this.rows = const <TxRow>[],
     this.categoryNames = const <String, String>{},
+    this.categoryParents = const <String, String>{},
     this.budgetCents,
     required this.nowMs,
   });
@@ -76,6 +77,12 @@ class FinanceData {
 
   /// 分类 id → 名称。
   final Map<String, String> categoryNames;
+
+  /// 二级分类 id → 父分类 id（一级分类不出现在这里）。
+  ///
+  /// 用来把二级账单计入父级：问「餐饮」时，记在「早餐 / 午餐」上的钱也要算进来
+  /// （PRD FR-CAT-03「二级计入父分类统计」）。
+  final Map<String, String> categoryParents;
 
   /// 该月预算（分）；null = 没设。
   final int? budgetCents;
@@ -218,15 +225,21 @@ FinanceAnswer _categorySpending(CategorySpendingIntent intent, FinanceData data)
   );
   final int total = slices.fold<int>(0, (int acc, CategorySlice s) => acc + s.cents);
 
-  CategorySlice? hit;
-  for (final CategorySlice s in slices) {
-    if (s.name == name) {
-      hit = s;
-      break;
-    }
+  // 二级账单要计入父级（PRD FR-CAT-03）：问「餐饮」时，记在「早餐 / 午餐」上的钱也算进来。
+  // 判据是「自己命中」或「父级命中」—— 问「早餐」只算早餐，不会把整个餐饮都算上。
+  // （2026-10-29 预置加二级后暴露：原来按分类名精确匹配，问「餐饮」永远漏掉子分类。）
+  int hitCents = 0;
+  int count = 0;
+  for (final TxRow t in periodRows) {
+    if (t.type != intent.kind || t.categoryId == null) continue;
+    final String? own = data.categoryNames[t.categoryId];
+    final String? parent = data.categoryNames[data.categoryParents[t.categoryId]];
+    if (own != name && parent != name) continue;
+    hitCents += t.amountCents;
+    count++;
   }
 
-  if (hit == null) {
+  if (count == 0) {
     return FinanceAnswer(
       title: '$period · $name',
       narrative: '$period没有「$name」的$kindWord记录。',
@@ -236,23 +249,18 @@ FinanceAnswer _categorySpending(CategorySpendingIntent intent, FinanceData data)
     );
   }
 
-  final int count = periodRows
-      .where((TxRow t) => t.type == intent.kind && t.categoryId != null)
-      .where((TxRow t) => data.categoryNames[t.categoryId] == name)
-      .length;
-
   return FinanceAnswer(
     title: '$period · $name',
-    headline: _yuan(hit.cents),
-    headlineNote: '占该期$kindWord ${_ratioText(hit.cents, total)}',
+    headline: _yuan(hitCents),
+    headlineNote: '占该期$kindWord ${_ratioText(hitCents, total)}',
     facts: <AnswerFact>[
-      AnswerFact('$name$kindWord', _yuan(hit.cents), note: '$count 笔'),
+      AnswerFact('$name$kindWord', _yuan(hitCents), note: '$count 笔'),
       AnswerFact('该期$kindWord合计', _yuan(total)),
-      AnswerFact('占比', _ratioText(hit.cents, total)),
+      AnswerFact('占比', _ratioText(hitCents, total)),
     ],
     narrative:
-        '$period「$name」$kindWord ${_yuan(hit.cents)}，共 $count 笔，'
-        '占该期全部$kindWord的 ${_ratioText(hit.cents, total)}。',
+        '$period「$name」$kindWord ${_yuan(hitCents)}，共 $count 笔，'
+        '占该期全部$kindWord的 ${_ratioText(hitCents, total)}。',
     suggestions: _defaultSuggestions(intent),
   );
 }

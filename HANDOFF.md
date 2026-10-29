@@ -10,11 +10,57 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行） |
-| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定，理由见 [SPEC-local-ai](docs/spec/SPEC-local-ai.md) 头部声明）**。候选下一步（待用户拍板）：导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、release 出包发版 |
-| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 琥珀）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
-| 数据库 | schema **v4**（v2 加 `budgets`；v3 加 `accounts.icon/color`；**v4 加 `categories.parent_id / is_archived`**，F7.18 分类树）—— v4 迁移**只加列 + 加索引**，老库升级零数据改动（真机验证：154 笔账单分毫未动） |
-| 门禁 | `flutter analyze` + `flutter test`，已在 CI 自动跑（`.github/workflows/ci.yml`）；本机实测 **665 passed / 6 skipped**（F7.18 分类树后；本地跑必须 `--concurrency=1`） |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行）。**F7.18 分类系统**后追加四轮交互迭代 + **预置二级分类**（2026-10-29，未发版、未真机走查，见 [SPEC §12–13](docs/spec/SPEC-F7.18-category-tree.md)） |
+| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定，理由见 [SPEC-local-ai](docs/spec/SPEC-local-ai.md) 头部声明）**。候选下一步（待用户拍板）：**分类相关的 4 个待拍板项**（见下「本轮遗留」）、导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、release 出包发版 |
+| 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 森绿 `0xFF2E5E4E`，同日由琥珀改定）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
+| 数据库 | schema **v4**（v2 加 `budgets`；v3 加 `accounts.icon/color`；**v4 加 `categories.parent_id / is_archived`**，F7.18 分类树）—— v4 迁移**只加列 + 加索引**，老库升级零数据改动（真机验证：154 笔账单分毫未动）。**预置二级分类不需要迁移**（是数据不是结构） |
+| 门禁 | 本地 = `flutter analyze` + `flutter test --concurrency=1`（**675 passed / 6 skipped**）；CI = `.github/workflows/ci.yml`，**三个并行 job**：① `analyze · 生成物同步`（跑 build_runner 后 `git diff lib/**/*.g.dart` 必须为空）② `test` ③ `build apk (debug)`（`--target-platform android-arm64`）。**分支保护需在 GitHub 设置里手动勾这三个 check**，说明写在 workflow 头部注释；本机跑测试**必须** `--concurrency=1`（内存不足会 OOM），CI 上用默认并发 |
+
+### 本轮交付（2026-10-29 · 分类管理 UI 四轮迭代 + 预置二级）
+
+> 全部落在**展示层 + 预置数据**：schema 仍 v4、仓储规则 / 归档·迁移·删除 / 写库路径一字未动。
+> 详细对照与设备实测数字见 [`docs/spec/SPEC-F7.18-category-tree.md`](docs/spec/SPEC-F7.18-category-tree.md) §12–13。
+
+| 批次 | 内容 | 关键文件 |
+|---|---|---|
+| ①② | 分类页改 Collapse + `Wrap` 块状二级 + 三点改 ActionSheet | `category_manage_page.dart` |
+| ③ | 「添加」块常驻网格末尾（二级入口维持现状） | 同上 |
+| ④ | 新建分类弹层 **30%**、图标选择另开 **60%** 弹层、右下角 **15%** 的 `FloatButton`（F/S 入口）、所有面板内容改 `Column` | `widgets/category_editor.dart`、`widgets/category_icon_sheet.dart`、`core/theme/toon/float_button.dart` |
+| ⑤ | **预置二级分类**（支出 10 个一级 / 33 条二级）+ `ensurePresets` 两级匹配 + 问答按父级汇总 | `core/constants/preset.dart`、`data/repositories/{category,book}_repository.dart`、`features/assistant/application/finance_answer.dart` |
+
+**装机/走查工具（本轮新增）**：`tool/install_device.ps1` —— 一条命令 = 临时改 gradle.properties
+（内存 3G + 可选 `qaAppId`，**无论成败按字节还原**）→ `flutter build apk --{debug|release} --no-pub`
+→ 核验（包名/版本码、release 比签名指纹、debug 用 `verify_apk_kernel.py` grep 新文案）→
+`adb install`（debug 自动 `-t`，撞 `VERSION_DOWNGRADE` 自动补 `-d`）→ force-stop + monkey 启动。
+
+```powershell
+.\tool\install_device.ps1                                          # 模拟器
+.\tool\install_device.ps1 -Serial 22041211AC -Qa -Grep 图标与颜色     # 真机走查
+.\tool\install_device.ps1 -Serial 22041211AC -Mode release -Arm64Only # 真机正式包
+```
+⚠️ 这个 `.ps1` 也必须 **UTF-8 with BOM**（PS 5.1 会把无 BOM 的中文当 ANSI → 语法错）；
+`write`/`edit` 改完记得补 BOM，再 `Parser::ParseFile` 验一遍语法。
+
+**这次最容易被误判成「代码没生效」的两处**：
+
+1. 加二级后，记账时点「餐饮」会**进子列表**而不是直接选中 —— 5 个老测试因此保存出没有分类的账单。
+   已抽 `test/helpers/pick_category.dart`（点一级 → 自动补点「不细分」），新写用例请用它。
+2. 30% 弹层在 800×600 测试视口里装不下全部字段：**第一行（名称）常驻，第二行要滚一点**，
+   按钮钉底。别把「要滚」当成布局坏了。
+
+#### 本轮遗留（4 条待拍板，都在 SPEC §13.5）
+1. 一级有子分类后记账**多一次点击**（可选长按直接选一级来缓解）；
+2. 预置没有 `preset_key` 列 → 用户把「早餐」改名成「早饭」后，补装会再插一条「早餐」（根治要 schema v5）；
+3. 统计 / 报表按「父 · 子」**分开列**，与编辑层文案「二级计入父级统计」不一致（只有问答按父级汇总）；
+4. 导入规则仍只落到一级（「地铁 / 公交」关键词 → 交通），要不要细到二级需用户确认。
+
+> ⚠️ **本轮没有做真机走查**（用户 2026-10-29 明确要求先不做）。上面第 ④ 批的 30% / 60% / 15%
+> 三个数字在 MuMu 上量过（见 SPEC §12.7），但**第 ⑤ 批（预置二级）只在单测里验证过**。
+> 发包前建议补一次真机：新建账本看二级、老账本看补装、问一句「这个月餐饮花了多少」。
+
+> 📱 **MuMu 现状（2026-10-29）**：`com.teacodeman.yanxin.qa` 是**本轮新装的 debug 包**
+> （签名与旧 QA 包不同 → 装之前 `adb uninstall` 过一次，**旧 QA 数据已清空**）。
+> 里面留了本轮走查的产物：一条自定义分类 `coffee`。`com.teacodeman.yanxin`（4001）没动。
 
 ### F8.1 收口快照（2026-10-24）
 
@@ -112,7 +158,7 @@ android.overridePathCheck=true
      `brandInk`(onPrimaryContainer)→`brandTint`(primaryContainer)、`onRed`(onError)→`red`(error)、
      `redInk`(onErrorContainer)→`redTint`(errorContainer)。配错在浅色下看不出来、深色下直接看不见。
    - **hero 用 `brandTint` 底 + `heroInk`（= onPrimaryContainer）字**：hero 是品牌展示面，
-     用 primaryContainer 才有「琥珀感」；用 `brand`(primary) 会变成深褐色重块。
+     用 primaryContainer 才有「品牌浅底的呼吸感」；用 `brand`(primary) 会变成深色重块。
    - 门槛：正文小字 **4.5:1**、描边/图形 **3.0:1**、发丝分割线只要可见（**1.4:1**）。
    - 改 `ToonPalette.seed` 或改映射后，**必须跑这条护栏**（它会把每一项的实际比值打进失败信息）。
 8. **正式包不得出现 `INTERNET`（F8.1 起新增，实测踩到过）** —— ML Kit 的依赖链
@@ -130,6 +176,10 @@ android.overridePathCheck=true
     （记账选择器 / 导入映射用）。归档分类从「可用列表」消失但绝不能从「名字解析」里消失，
     否则历史账单会显示成「未分类」。另：`ensurePresets()` **连软删行一起查** ——
     用户删掉的预置分类不能被补装复活（真机踩过，回归测试在）。
+    **2026-10-29 起补装分两级匹配**：一级只在 `parent_id IS NULL` 的行里比对；二级只在
+    **同一个父级**下比对（全局 `kind|name` 集合会串味：一级「红包礼金」的别名就是二级「红包」）。
+    **父级被软删 → 整棵树都不补**；预置写入只剩 `ensurePresets()` 一处（`BookRepository.create`
+    也调它），别再往新建账本里手写一份预置循环。
 
 ## 最容易踩的坑（完整清单见 [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md)）
 
@@ -144,6 +194,12 @@ android.overridePathCheck=true
   800×600 视口很矮，断言长页面靠下的元素前先滚动。
 - 改了 UI 入口后，**全仓无上限地** grep 旧断言（`保存` / `ensureVisible` /
   `widgetWithText(AppBar`）—— 曾因 grep 加了上限而漏掉一个文件，用户终端直接挂。
+- **一级分类有子分类后，`tap(一级名)` 是「进子列表」不是「选中」**（2026-10-29 踩到，一次挂了 5 个测试）：
+  widget 测试里选分类一律用 `test/helpers/pick_category.dart` 的 `pickCategory(tester, '餐饮')`，
+  它会自动补点「餐饮（不细分）」；要断言真正落到二级就用 `pickSubCategory(tester, '餐饮', '早餐')`。
+- **改预置分类清单要先想「补装会不会重复插」**：`ensurePresets` 只按「名字 / 别名」认领，
+  用户改过名的那条认不出来 → 会再插一条原名（预置没有 `preset_key` 列）。给新预置起名时，
+  别名表要覆盖老叫法。
 - 真机走查见 [`docs/dev/android-ui-smoke.md`](docs/dev/android-ui-smoke.md)：
   语义树是「有没有 / 在哪」的真值，截图才是「颜色 / 遮挡」的真值，**两者交叉验证**。
 - **出 release 包必须走 ASCII 副本**：项目在中文路径下，`gen_snapshot` 会因路径含非 ASCII
@@ -225,14 +281,16 @@ lib/
 │   ├── db/                  drift：tables / database / schema_v1 / schema_v2 / schema_v4（v4 = 分类两级+归档）
 │   ├── providers/           data_epoch（写操作后的统一失效信号）+ after_write（写后刷新的唯一实现）
 │   ├── theme/               palette.dart（调色板 · 浅/深两套）+ theme_mode.dart（外观三选一）
-│   │                        + tokens.dart（几何量 + buildToonTheme）+ toon.dart（卡通通用件）
+│   │                        + tokens.dart（几何量 + buildToonTheme）+ toon.dart（通用件；
+│   │                          含 float_button.dart = `ToonFloatMenu`，Ant Design FloatButton 语义）
 │   ├── utils/               money / id / fingerprint / date / highlight
-│   └── constants/           preset.dart（PresetCategory 预置分类）+ category_icons.dart（图标/颜色目录）
+│   └── constants/           preset.dart（PresetCategory + PresetChild 预置两级分类）
+│                            + category_icons.dart（图标 key / 颜色目录，44 个 key）
 ├── data/
 │   ├── providers/           数据层 DI：database + book / account / category 等
 │   └── repositories/        6 个仓储
 ├── features/                按业务垂直切分：application（逻辑）+ presentation（UI）
-│   └── category/            F7.18 分类树（application/category_actions + presentation 管理页/编辑弹层）
+│   └── category/            F7.18 分类树（application/category_actions + presentation 管理页/编辑弹层 30%/图标弹层 60%/浮动入口）
 └── （其余 feature 同构：chat / ledger / record / calendar / stats / reports / search / import / receipt / autobook / assets / book / profile …）
 ```
 
@@ -281,7 +339,7 @@ lib/
 | [`docs/spec/SPEC-local-assistant.md`](docs/spec/SPEC-local-assistant.md) | **阶段二 · 本地财务问答（已签字）**：三层架构（T0 无模型 / T1 可选模型 / T2 云端不做）、为什么先做 M1、M1 文件级交付、口径表、验收 8 条、已知限制、M2 计划 |
 | [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md) | **阶段二任务 1 基准报告**：设备/构建/口径、3 模型 × 10 轮实测表、dotprod 与线程亲和性对比、质量抽查、已知限制、复现命令 |
 | [`docs/spec/SPEC-local-ai.md`](docs/spec/SPEC-local-ai.md) | **F8 本地 AI 路线的总 SPEC**：阶段零架构分析 + 阶段一文件级计划 + **§9 实施记录**（交付清单 / 偏差 / 门禁 / 真机阻塞排查 / 已知限制）+ **§10 阶段二任务 1 记录** |
-| [`docs/spec/SPEC-F7.18-category-tree.md`](docs/spec/SPEC-F7.18-category-tree.md) | **F7.18 分类树（已实现，事后补档）**：schema v4（parent_id / is_archived）、任务书需求对照表（原文已存档 `docs/spec/prompts/`）、关键决策（老名字别名映射 / 上移下移排序）、5 条偏差、测试与真机证据索引 |
+| [`docs/spec/SPEC-F7.18-category-tree.md`](docs/spec/SPEC-F7.18-category-tree.md) | **F7.18 分类树（已实现，事后补档）**：schema v4（parent_id / is_archived）、任务书需求对照表（原文已存档 `docs/spec/prompts/`）、关键决策（老名字别名映射 / 上移下移排序）、5 条偏差、测试与真机证据索引；**§12 是 2026-10-29 的四轮交互迭代**（Collapse / 块状二级 / 30%-60% 弹层 / 浮动入口 / 设备实测数字）、**§13 是预置二级分类**（清单、补装规则、问答 bug、4 条待拍板） |
 | [`docs/acceptance-F7.18-category-tree.md`](docs/acceptance-F7.18-category-tree.md) | **F7.18 真机验收**：v3→v4 迁移 154 笔零丢失、管理页 8 步链路、迁移删除（7 笔购物→其他，总额不变）、ensurePresets 复活 bug 的发现与复测 || [`docs/acceptance-F8.1-receipt.md`](docs/acceptance-F8.1-receipt.md) | **F8.1 真机验收报告**：7 项走查结果、3 个阻塞的根因与修法、复现命令 |
 | [`docs/handoff/reference.md`](docs/handoff/reference.md) | **开工前读**：环境事实 / 架构决策 / 关键资料 / 接手指南 |
 | [`docs/handoff/pitfalls.md`](docs/handoff/pitfalls.md) | 盲区防护清单：踩过的坑与判据 |

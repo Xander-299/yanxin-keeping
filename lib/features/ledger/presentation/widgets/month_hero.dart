@@ -1,6 +1,6 @@
 /// 首页结余主卡：品牌色 hero + 本月支出大数字 + 收入/结余 + 月份切换 ‹ ›。
 ///
-/// 视觉对齐页面原型 `.hero`：实心琥珀底 + 3px 墨色描边 + 6px 硬阴影 +
+/// 视觉对齐页面原型 `.hero`：实心品牌底 + 3px 墨色描边 + 6px 硬阴影 +
 /// 右上角装饰圆 + 小猪存钱罐 + 四角星贴纸。
 ///
 /// 原型的 hero 上还有「小猪摇摆」循环动画，这里**故意不做**：
@@ -47,8 +47,8 @@ class MonthHero extends StatelessWidget {
       decoration: BoxDecoration(
         color: p.brandTint,
         borderRadius: BorderRadius.circular(Tok.rXl),
-        // hero 恒为琥珀底：**描边必须走 decorInk（恒深）** —— 深色主题下 p.ink 是暖白，
-        // 压在琥珀上只有 ~1.3:1，描边会整条消失。
+        // hero 恒为实心底：**描边必须走 decorInk（恒深）** —— 深色主题下 p.ink 是暖白，
+        // 压在实心底上只有 ~1.3:1，描边会整条消失。
         border: Border.all(color: p.line),
         boxShadow: p.hard(d: 6),
       ),
@@ -194,7 +194,7 @@ class _RoundButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            // 禁用态：钮底是浅琥珀（veil 叠出来的），字必须走 decorInk 才够 3:1
+            // 禁用态：钮底是浅色（veil 叠出来的），字必须走 decorInk 才够 3:1
             color: enabled ? p.ink : p.decorInk.withValues(alpha: 0.75),
             fontSize: 17,
             height: 1,
@@ -219,7 +219,7 @@ class _HeroCell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
       decoration: BoxDecoration(
-        // 气泡底 = veil 叠在琥珀上（两套主题下都是「浅琥珀」），配 heroInk 深棕字 ≈6:1。
+        // 气泡底 = veil 叠在实心底上（两套主题下都是「浅底」），配 heroInk 深字 ≈6:1。
         // 原来是 paper@0.55：深色主题下 paper 近黑 → 气泡被压成 #88662B，
         // 而 heroInk 恒为深棕 → **2.12:1**（浅色 6.00），这就是「深色下看不清」的主因。
         color: p.veil.withValues(alpha: 0.55),

@@ -61,28 +61,9 @@ class BookRepository {
         name: defaultAccountName,
         type: 'cash',
       );
-      for (final PresetCategory preset in presetExpense) {
-        await categories.create(
-          bookId: bookId,
-          name: preset.name,
-          kind: 'expense',
-          icon: preset.iconKey,
-          color: preset.color,
-          sortOrder: presetExpense.indexOf(preset),
-          isPreset: true,
-        );
-      }
-      for (final PresetCategory preset in presetIncome) {
-        await categories.create(
-          bookId: bookId,
-          name: preset.name,
-          kind: 'income',
-          icon: preset.iconKey,
-          color: preset.color,
-          sortOrder: presetIncome.indexOf(preset),
-          isPreset: true,
-        );
-      }
+      // 预置分类（含二级）只有一处写入逻辑 —— 复用幂等补齐，避免「新建账本」和
+      // 「老账本补装」两套代码各写一遍、慢慢长歪（2026-10-29 加二级时踩到的重复点）。
+      await categories.ensurePresets(bookId);
       return book;
     });
   }
