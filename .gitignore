@@ -88,5 +88,18 @@ __pycache__/
 
 # 本地任务书（只给本机的 agent 看，不进版本库；docs/spec/ 里的 SPEC 才是入库的那份）
 /Prompt.md
-# ���ܲ���ԭʼ���ݣ�ÿ���ܶ���������ֻ�������� docs/perf/��
+
+# ── 2026-10-29 审计补充 ─────────────────────────────────────────────
+# 性能测试原始数据（每次跑都会新增，只留报告在 docs/perf/）
 /performance-results/
+
+# 根级 local.properties（Android 惯例是 android/ 下，这里兜底）
+/local.properties
+
+# 构建产物：兜住手工丢到别处的包
+*.apk
+*.aab
+*.ipa
+
+# JVM 崩溃转储（Gradle / JVM 崩了会在工作目录留下）
+*.hprof
