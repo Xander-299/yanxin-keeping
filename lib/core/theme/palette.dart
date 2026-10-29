@@ -18,6 +18,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'theme_seed.dart';
 import 'tokens.dart';
 
 /// 一整套卡通视觉色板。
@@ -187,18 +188,36 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   // ─────────────────────────── 调色板本体 ───────────────────────────
 
   /// 品牌主色（Material 3 的 seed）：2026-10-28 由琥珀改为森绿（方案 B）。
+  ///
+  /// 这只是**默认**种子；用户可在「设置 → 主题色」里换（[ToonSeed]），
+  /// 换完由 [lightOf] / [darkOf] 现算调色板。
   static const Color seed = Color(0xFF2E5E4E);
 
-  /// 浅色 / 深色两套：**全部从 `ColorScheme.fromSeed` 派生**（M3 语义角色 → 旧字段名）。
+  static final Map<ToonSeed, ToonPalette> _lightCache = <ToonSeed, ToonPalette>{};
+  static final Map<ToonSeed, ToonPalette> _darkCache = <ToonSeed, ToonPalette>{};
+
+  /// 指定主题色的浅色板（按 seed 缓存：`fromSeed` 调一次约 1ms，别在 build 里重算）。
+  static ToonPalette lightOf(ToonSeed s) => _lightCache.putIfAbsent(
+    s,
+    () => _fromScheme(
+      ColorScheme.fromSeed(seedColor: s.seed, brightness: Brightness.light),
+    ),
+  );
+
+  /// 指定主题色的深色板。
+  static ToonPalette darkOf(ToonSeed s) => _darkCache.putIfAbsent(
+    s,
+    () => _fromScheme(
+      ColorScheme.fromSeed(seedColor: s.seed, brightness: Brightness.dark),
+    ),
+  );
+
+  /// 浅色 / 深色两套（默认森绿）：**全部从 `ColorScheme.fromSeed` 派生**（M3 语义角色 → 旧字段名）。
   ///
   /// 为什么保留旧字段名：全仓 155 处 `context.toon`、432 处 `Toon*` 调用都按旧名取色；
   /// 换风格时改「色板怎么来」比改「谁在用」便宜得多。
-  static final ToonPalette light = _fromScheme(
-    ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.light),
-  );
-  static final ToonPalette dark = _fromScheme(
-    ColorScheme.fromSeed(seedColor: seed, brightness: Brightness.dark),
-  );
+  static ToonPalette get light => lightOf(ToonSeed.forest);
+  static ToonPalette get dark => darkOf(ToonSeed.forest);
 
   static ToonPalette _fromScheme(ColorScheme s) => ToonPalette(
     ink: s.onSurface,
@@ -234,7 +253,8 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
     decorInk: s.onSurface,
     shadow: s.shadow,
     veil: s.surface,
-    pie: pieColors,
+    // 第一瓣跟品牌色走，换主题时图表也跟着协调；其余 8 色固定（要保证互异）
+    pie: <Color>[s.primary, ...pieColors.skip(1)],
   );
 
   /// 分类占比调色板的**源常量**（两套主题共用；测试与画笔也直接引用它）。

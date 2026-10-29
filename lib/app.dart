@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/theme/theme_mode.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/features/assets/presentation/assets_page.dart';
 import 'package:yanxin/features/autobook/presentation/auto_book_page.dart';
@@ -132,10 +133,20 @@ class _YanxinAppState extends ConsumerState<YanxinApp> {
     // 还没读出来时按默认「跟随系统」渲染（首帧前 main() 已预热，正常不会走到这里）
     final ToonThemeMode mode =
         ref.watch(themeModeProvider).value ?? ToonThemeMode.system;
+    // 主题色（2026-10-29）：换 seed → 整套 M3 色板跟着换，页面代码一行不用动
+    final ToonSeed seed = ref.watch(themeSeedProvider).value ?? ToonSeed.forest;
     return MaterialApp.router(
       title: '颜芯记账',
-      theme: buildToonTheme(ToonPalette.light, Brightness.light),
-      darkTheme: buildToonTheme(ToonPalette.dark, Brightness.dark),
+      theme: buildToonTheme(
+        ToonPalette.lightOf(seed),
+        Brightness.light,
+        seed: seed.seed,
+      ),
+      darkTheme: buildToonTheme(
+        ToonPalette.darkOf(seed),
+        Brightness.dark,
+        seed: seed.seed,
+      ),
       themeMode: mode.materialMode,
       routerConfig: _router,
     );

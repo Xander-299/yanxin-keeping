@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/theme/theme_mode.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
 import 'package:yanxin/features/settings/application/theme_controller.dart';
@@ -75,6 +76,53 @@ void main() {
       );
       addTearDown(container.dispose);
       expect(await container.read(themeModeProvider.future), ToonThemeMode.system);
+    });
+  });
+
+  // 2026-10-29：主题色（品牌 seed）
+  group('ThemeSeedController', () {
+    test('默认 = 森绿，且不写库（老用户不会被动换色）', () async {
+      final db = openTestDatabase();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(themeSeedProvider.future), ToonSeed.forest);
+      expect(await AppMetaRepository(db).get(kThemeSeedKey), isNull);
+    });
+
+    test('select 先切 UI 再落库；冷启动读回同一个值', () async {
+      final db = openTestDatabase();
+      addTearDown(db.close);
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(themeSeedProvider.future);
+      await container.read(themeSeedProvider.notifier).select(ToonSeed.indigo);
+      expect(container.read(themeSeedProvider).value, ToonSeed.indigo);
+      expect(await AppMetaRepository(db).get(kThemeSeedKey), 'indigo');
+
+      final cold = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(cold.dispose);
+      expect(await cold.read(themeSeedProvider.future), ToonSeed.indigo);
+    });
+
+    test('脏值 / 未知名字 → 回落森绿', () async {
+      final db = openTestDatabase();
+      addTearDown(db.close);
+      await AppMetaRepository(db).set(kThemeSeedKey, 'neon-pink');
+
+      final container = ProviderContainer(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+      );
+      addTearDown(container.dispose);
+      expect(await container.read(themeSeedProvider.future), ToonSeed.forest);
     });
   });
 }

@@ -11,14 +11,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/theme/theme_mode.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
+import 'package:yanxin/features/settings/application/theme_controller.dart';
 import 'package:yanxin/features/settings/presentation/settings_page.dart';
 
 import '../../helpers/test_database.dart';
 
 Key rowKey(ToonThemeMode m) => ValueKey<String>('themeMode_${m.name}');
+
+/// 主题色圆点的 key（`themeSeed_<name>`）。
+Key seedKey(ToonSeed s) => ValueKey<String>('themeSeed_${s.name}');
 
 /// 当前选中态（实心对勾）落在哪一行。
 Finder selectedMark(ToonThemeMode m) => find.descendant(
@@ -46,6 +51,16 @@ Future<String?> pumpUntilStored(WidgetTester tester, AppDatabase db) async {
   for (int i = 0; i < 20 && value == null; i++) {
     await tester.pump(const Duration(milliseconds: 50));
     value = await AppMetaRepository(db).get(kThemeModeKey);
+  }
+  return value;
+}
+
+/// 同上，读主题色那个键。
+Future<String?> pumpUntilSeedStored(WidgetTester tester, AppDatabase db) async {
+  String? value;
+  for (int i = 0; i < 20 && value == null; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+    value = await AppMetaRepository(db).get(kThemeSeedKey);
   }
   return value;
 }
@@ -90,5 +105,30 @@ void main() {
     await pumpSettings(tester, db);
     expect(selectedMark(ToonThemeMode.light), findsOneWidget);
     expect(selectedMark(ToonThemeMode.system), findsNothing);
+  });
+
+  // 2026-10-29：主题色（seed）切换
+  testWidgets('主题色：五个色点都在，默认选中森绿；点琥珀 → 选中态 + 落库', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await pumpSettings(tester, db);
+
+    expect(find.text('主题色'), findsOneWidget);
+    for (final ToonSeed s in ToonSeed.values) {
+      expect(find.byKey(seedKey(s)), findsOneWidget, reason: '缺色点：${s.label}');
+    }
+    // 默认森绿：只有它带对勾
+    expect(find.descendant(of: find.byKey(seedKey(ToonSeed.forest)), matching: find.byIcon(Icons.check_rounded)), findsOneWidget);
+    expect(find.descendant(of: find.byKey(seedKey(ToonSeed.amber)), matching: find.byIcon(Icons.check_rounded)), findsNothing);
+
+    await tester.tap(find.byKey(seedKey(ToonSeed.amber)));
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(of: find.byKey(seedKey(ToonSeed.amber)), matching: find.byIcon(Icons.check_rounded)), findsOneWidget);
+    expect(find.descendant(of: find.byKey(seedKey(ToonSeed.forest)), matching: find.byIcon(Icons.check_rounded)), findsNothing);
+
+    expect(await pumpUntilSeedStored(tester, db), 'amber');
   });
 }

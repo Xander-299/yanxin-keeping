@@ -30,6 +30,33 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
+## [Unreleased] — 主题色（2026-10-29）
+
+### Added
+
+- **设置 → 主题色**：五套品牌配色可切换 —— **森绿**（默认，2026-10-28 换肤后的品牌锚点）、
+  **琥珀**（换肤前的 F7.6 配色）、**黛蓝**、**藕粉**、**墨紫**。
+  只换 seed（`ColorScheme.fromSeed` 的种子色）：hero / 按钮 / 选中态 / 图表配色整族跟着变，
+  **版式与页面代码一行不用改**。
+- 落库键 `theme_seed`（`schema_meta` 一行 KV，**不动 schema**）；未知值 / 读库失败回落森绿，
+  老用户不会被动换色。
+
+### Changed
+
+- `ToonPalette.light/dark` 由 `static final` 改成 `get lightOf(seed)` / `darkOf(seed)`（按 seed 缓存），
+  原 `light` / `dark` 保留为森绿别名（调用点零改动）。
+- `buildToonTheme(p, brightness, {seed})` 支持传入当前 seed，保证 `Theme.of` 的 `colorScheme`
+  与 `context.toon` 同源。
+- 分类占比图首瓣（`pie.first`）改成跟当前品牌色走，其余 8 色固定（要保证互异）。
+
+### 测试
+
+- 对比度护栏（`palette_contrast_test`）从 2 套扩到 **5 seed × 浅/深 = 10 套**（70 条断言全绿）——
+  以后加配色，先过这条才能进。
+- 新增：设置页五色点 + 点选落库、`ThemeSeedController` 默认/落库/脏值 3 例、
+  色板按 seed 缓存与饼图首瓣 3 例。
+- 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **740 passed / 6 skipped**。
+
 ## [Unreleased] — 日历页：分段加载 / 不能翻未来月 / 选中日与可见月解耦（2026-10-29）
 
 ### Changed

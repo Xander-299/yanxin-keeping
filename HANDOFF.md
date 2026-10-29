@@ -14,7 +14,7 @@
 | 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定，理由见 [SPEC-local-ai](docs/spec/SPEC-local-ai.md) 头部声明）**。候选下一步（待用户拍板）：**分类相关的 4 个待拍板项**（见下「本轮遗留」）、导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、release 出包发版 |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 森绿 `0xFF2E5E4E`，同日由琥珀改定）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
 | 数据库 | schema **v4**（v2 加 `budgets`；v3 加 `accounts.icon/color`；**v4 加 `categories.parent_id / is_archived`**，F7.18 分类树）—— v4 迁移**只加列 + 加索引**，老库升级零数据改动（真机验证：154 笔账单分毫未动）。**预置二级分类不需要迁移**（是数据不是结构） |
-| 门禁 | 本地 = `flutter analyze` + `flutter test --concurrency=1`（**675 passed / 6 skipped**）；CI = `.github/workflows/ci.yml`，**三个并行 job**：① `analyze · 生成物同步`（跑 build_runner 后 `git diff lib/**/*.g.dart` 必须为空）② `test` ③ `build apk (debug)`（`--target-platform android-arm64`）。**分支保护需在 GitHub 设置里手动勾这三个 check**，说明写在 workflow 头部注释；本机跑测试**必须** `--concurrency=1`（内存不足会 OOM），CI 上用默认并发 |
+| 门禁 | 本地 = `flutter analyze` + `flutter test --concurrency=1`（**740 passed / 6 skipped**）；CI = `.github/workflows/ci.yml`，**三个并行 job**：① `analyze · 生成物同步`（跑 build_runner 后 `git diff lib/**/*.g.dart` 必须为空）② `test` ③ `build apk (debug)`（`--target-platform android-arm64`）。**分支保护需在 GitHub 设置里手动勾这三个 check**，说明写在 workflow 头部注释；本机跑测试**必须** `--concurrency=1`（内存不足会 OOM），CI 上用默认并发 |
 
 ### 本轮交付（2026-10-29 · 分类管理 UI 四轮迭代 + 预置二级）
 
@@ -28,6 +28,7 @@
 | ④ | 新建分类弹层 **30%**、图标选择另开 **60%** 弹层、右下角 **15%** 的 `FloatButton`（F/S 入口）、所有面板内容改 `Column` | `widgets/category_editor.dart`、`widgets/category_icon_sheet.dart`、`core/theme/toon/float_button.dart` |
 | ⑤ | **预置二级分类**（支出 10 个一级 / 33 条二级）+ `ensurePresets` 两级匹配 + 问答按父级汇总 | `core/constants/preset.dart`、`data/repositories/{category,book}_repository.dart`、`features/assistant/application/finance_answer.dart` |
 | ⑥ | **日历页**：分段加载（网格 → 当日账单 → 月标注）、不能翻未来月、翻月不改选中日 | `features/calendar/application/calendar_controller.dart`（`Notifier` 同步 state + 两段 `AsyncValue`）、`presentation/calendar_page.dart`、`month_picker_page.dart` |
+| ⑦ | **主题色**（设置 → 主题色五选一：森绿 / 琥珀 / 黛蓝 / 藕粉 / 墨紫） | `core/theme/theme_seed.dart`（`ToonSeed`）、`palette.dart`（`lightOf/darkOf` 按 seed 缓存）、`settings/application/theme_controller.dart`（`theme_seed` KV）、`settings_page.dart` |
 
 > ⑥ 的三个约束都是 2026-10-29 用户口头要求，已落到 PRD **FR-CAL-06/07/08**；
 > 关键实现点：`CalendarState` 里「可见年月」与「选中日（完整日期）」是**两个独立字段**，

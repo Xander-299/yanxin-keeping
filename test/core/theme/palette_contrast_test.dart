@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/theme/palette.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 
 /// WCAG 对比度。
 double contrast(Color a, Color b) {
@@ -34,9 +35,13 @@ void expectPair(Color fg, Color bg, double min, String why) {
 }
 
 void main() {
+  // 2026-10-29 起色板按「主题色」派生：护栏必须**每套主题色都过**，
+  // 否则用户切到一个配色就能把可读性切坏（这也是加新配色的准入条件）。
   final Map<String, ToonPalette> palettes = <String, ToonPalette>{
-    '浅色': ToonPalette.light,
-    '深色': ToonPalette.dark,
+    for (final ToonSeed s in ToonSeed.values) ...<String, ToonPalette>{
+      '${s.label}·浅色': ToonPalette.lightOf(s),
+      '${s.label}·深色': ToonPalette.darkOf(s),
+    },
   };
 
   group('文字层级（onSurface / onSurfaceVariant / outline）', () {

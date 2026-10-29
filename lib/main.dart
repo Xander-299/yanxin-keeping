@@ -12,7 +12,10 @@ Future<void> main() async {
   // 读库失败 / 超时都不阻断启动 —— 主题控制器内部已回落「跟随系统」。
   final ProviderContainer container = ProviderContainer();
   try {
-    await container.read(themeModeProvider.future);
+    await Future.wait(<Future<Object?>>[
+      container.read(themeModeProvider.future),
+      container.read(themeSeedProvider.future),
+    ]);
   } catch (_) {
     // 外观是低风险偏好，读不到就用默认值
   }

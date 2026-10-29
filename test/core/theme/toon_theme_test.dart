@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/theme/palette.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 
 /// 起一棵只有 [themeMode] 不同的树，返回根 context 解析到的调色板。
@@ -88,5 +89,38 @@ void main() {
       ),
     );
     expect(read!.canvas, ToonPalette.light.canvas);
+  });
+
+  // 2026-10-29：主题色可切换（设置页五选一）—— 换 seed 必须真的换色板
+  group('主题色（seed）', () {
+    test('不同 seed 给出不同品牌色；饼图首瓣跟品牌色走', () {
+      final ToonPalette forest = ToonPalette.lightOf(ToonSeed.forest);
+      final ToonPalette amber = ToonPalette.lightOf(ToonSeed.amber);
+      expect(forest.brand, isNot(amber.brand));
+      expect(forest.pie.first, forest.brand);
+      expect(amber.pie.first, amber.brand);
+    });
+
+    test('按 seed 缓存：取两次是同一个实例（fromSeed 不便宜，别在 build 里重算）', () {
+      expect(
+        identical(
+          ToonPalette.lightOf(ToonSeed.rose),
+          ToonPalette.lightOf(ToonSeed.rose),
+        ),
+        isTrue,
+      );
+      expect(
+        identical(
+          ToonPalette.darkOf(ToonSeed.rose),
+          ToonPalette.lightOf(ToonSeed.rose),
+        ),
+        isFalse,
+      );
+    });
+
+    test('默认 light/dark 仍是森绿（不改老行为）', () {
+      expect(ToonPalette.light.brand, ToonPalette.lightOf(ToonSeed.forest).brand);
+      expect(ToonPalette.dark.brand, ToonPalette.darkOf(ToonSeed.forest).brand);
+    });
   });
 }

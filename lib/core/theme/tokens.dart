@@ -29,14 +29,18 @@ abstract final class Tok {
 /// 构建一套 Material 3 主题（浅色 / 深色同一份结构，色板来自 [p]）。
 ///
 /// 关键点：
-/// - `colorScheme` 用同一个 seed 生成，**和 [p] 同源**，所以 `Theme.of(context).colorScheme`
-///   与 `context.toon` 不会互相打架；
+/// - `colorScheme` 用**同一个 seed** 生成，**和 [p] 同源**，所以 `Theme.of(context).colorScheme`
+///   与 `context.toon` 不会互相打架；换主题色时把 [seed] 换成用户选的那个即可；
 /// - `extensions: [p]` —— 155 处 `context.toon` 靠它取色；
 /// - 卡片/按钮/输入框/弹层的形状统一走 M3（无描边 + 轻 elevation + 胶囊按钮）。
-ThemeData buildToonTheme(ToonPalette p, Brightness brightness) {
+ThemeData buildToonTheme(
+  ToonPalette p,
+  Brightness brightness, {
+  Color seed = ToonPalette.seed,
+}) {
   final bool isDark = brightness == Brightness.dark;
   final ColorScheme scheme = ColorScheme.fromSeed(
-    seedColor: ToonPalette.seed,
+    seedColor: seed,
     brightness: brightness,
   );
   final ThemeData base = ThemeData(
