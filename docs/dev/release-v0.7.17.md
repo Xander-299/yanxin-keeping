@@ -79,6 +79,6 @@ python tool/publish_release.py --tag v0.7.17 --name "颜芯记账 v0.7.17" \
 
 ## 6. 本次结果
 
-- Release：https://github.com/Xander-299/yanxin-flutter/releases/tag/v0.7.17
+- Release：https://github.com/Xander-299/yanxin-keeping/releases/tag/v0.7.17
 - 两个资产均 200 可下载（64.4 MB / 21.9 MB）
 - master 与 origin 已同步（0/0）；`upstream` 远端（旧仓库名残留）已删除
