@@ -27,6 +27,12 @@
 | ③ | 「添加」块常驻网格末尾（二级入口维持现状） | 同上 |
 | ④ | 新建分类弹层 **30%**、图标选择另开 **60%** 弹层、右下角 **15%** 的 `FloatButton`（F/S 入口）、所有面板内容改 `Column` | `widgets/category_editor.dart`、`widgets/category_icon_sheet.dart`、`core/theme/toon/float_button.dart` |
 | ⑤ | **预置二级分类**（支出 10 个一级 / 33 条二级）+ `ensurePresets` 两级匹配 + 问答按父级汇总 | `core/constants/preset.dart`、`data/repositories/{category,book}_repository.dart`、`features/assistant/application/finance_answer.dart` |
+| ⑥ | **日历页**：分段加载（网格 → 当日账单 → 月标注）、不能翻未来月、翻月不改选中日 | `features/calendar/application/calendar_controller.dart`（`Notifier` 同步 state + 两段 `AsyncValue`）、`presentation/calendar_page.dart`、`month_picker_page.dart` |
+
+> ⑥ 的三个约束都是 2026-10-29 用户口头要求，已落到 PRD **FR-CAL-06/07/08**；
+> 关键实现点：`CalendarState` 里「可见年月」与「选中日（完整日期）」是**两个独立字段**，
+> 所以选中日可以不在可见月里（此时 `selectedDayInGrid` 返回 0 = 网格不高亮）。
+> 翻月只重查整月聚合（`_loadMonth`），切日只重查那天（`_loadDay`）—— 两边互不牵连。
 
 **装机/走查工具（本轮新增）**：`tool/install_device.ps1` —— 一条命令 = 临时改 gradle.properties
 （内存 3G + 可选 `qaAppId`，**无论成败按字节还原**）→ `flutter build apk --{debug|release} --no-pub`

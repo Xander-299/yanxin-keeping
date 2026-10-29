@@ -1,157 +1,239 @@
-/// 日历页状态：当前账本 + 当前月份 + 选中日 + 该月流水。
+/// 日历页状态：**可见年月** 与 **选中日** 解耦，数据分两段加载。
 ///
-/// 与首页的 `ledgerProvider` **刻意分离**：日历翻月/选日不应把首页的月份一起带走，
-/// 两个 tab 各自记住自己的位置。数据源同为 `transactionRepositoryProvider.listByMonth`。
+/// 三条产品约束（2026-10-29 用户要求）决定了这个结构：
+/// 1. **先日历、再账单、最后标注**：打开页面时网格要立刻出来（它不依赖任何数据），
+///    选中日的账单单独查一次，整月的「日标注 + 月结余」再补上 —— 不要整页等齐才显示；
+/// 2. **不能翻到未来月**：与首页 `canGoNext` 同一口径；
+/// 3. **翻月不动选中日**：翻到 9 月时下面仍是「10月12日」那批账单，
+///    只有用户真的点了别的日子，账单才换。
+///
+/// 所以 `selectedDate` 是**完整日期**（可能不在 `year/month` 里），
+/// 网格高亮用它 + 可见月一起判断（[CalendarState.selectedDayInGrid]，不在本月就给 0）。
+///
+/// 与首页的 `ledgerProvider` **刻意分离**：日历翻月/选日不应把首页的月份一起带走。
 library;
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/database.dart';
+import 'package:yanxin/features/ledger/application/ledger_controller.dart'
+    show canGoNext;
 import 'package:yanxin/features/ledger/application/month_summary.dart';
 
 import 'calendar_aggregate.dart';
 
-/// 日历页状态快照。
-class CalendarState {
-  const CalendarState({
-    required this.bookId,
-    required this.year,
-    required this.month,
-    required this.selectedDay,
-    required this.items,
+/// 一个月的聚合结果（只服务网格标注与月汇总条，不含具体流水）。
+class MonthAgg {
+  const MonthAgg({
+    required this.byDay,
+    required this.summary,
+    required this.dailyAvgExpenseCents,
   });
 
-  final String bookId;
-
-  final int year;
-
-  /// 1-12。
-  final int month;
-
-  /// 选中的「当月第几天」（1-31）。
-  final int selectedDay;
-
-  /// 该月全部流水（发生时间倒序）。
-  final List<TxRow> items;
+  /// 按「当月第几天」聚合的收支，供日历格子标注。
+  final Map<int, DayAgg> byDay;
 
   /// 月度汇总（月结余 = 收入 - 支出）。
-  MonthSummary get summary => summarize(items);
+  final MonthSummary summary;
 
-  /// 按天聚合，供日历格子标注每天的支出/收入。
-  Map<int, DayAgg> get byDay => aggregateByDay(items);
+  /// 日均支出（分）；当月按已过天数折算。
+  final int dailyAvgExpenseCents;
 
-  /// 日均支出（分）。当月按已过天数折算。
-  int get dailyAvgExpenseCents => dailyAverageExpenseCents(
-    expenseCents: summary.expenseCents,
-    year: year,
-    month: month,
-    nowMs: DateTime.now().millisecondsSinceEpoch,
-  );
-
-  /// 选中日期的流水（当天、倒序）。
-  List<TxRow> get selectedItems {
-    return items
-        .where(
-          (TxRow t) =>
-              DateTime.fromMillisecondsSinceEpoch(t.occurredAt).day == selectedDay,
-        )
-        .toList(growable: false);
+  static MonthAgg of(List<TxRow> items, {required int year, required int month}) {
+    final MonthSummary summary = summarize(items);
+    return MonthAgg(
+      byDay: aggregateByDay(items),
+      summary: summary,
+      dailyAvgExpenseCents: dailyAverageExpenseCents(
+        expenseCents: summary.expenseCents,
+        year: year,
+        month: month,
+        nowMs: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
   }
 
-  /// 选中日期的 0 点毫秒（记一笔默认日期用）。
-  int get selectedDayMs =>
-      DateTime(year, month, selectedDay).millisecondsSinceEpoch;
-
-  CalendarState copyWith({int? selectedDay}) => CalendarState(
-    bookId: bookId,
-    year: year,
-    month: month,
-    selectedDay: selectedDay ?? this.selectedDay,
-    items: items,
+  static const MonthAgg empty = MonthAgg(
+    byDay: <int, DayAgg>{},
+    summary: MonthSummary(incomeCents: 0, expenseCents: 0, balanceCents: 0),
+    dailyAvgExpenseCents: 0,
   );
 }
 
-/// 日历页 controller。
-final calendarProvider =
-    AsyncNotifierProvider<CalendarController, CalendarState>(
-      CalendarController.new,
-    );
+/// 日历页状态快照。
+class CalendarState {
+  const CalendarState({
+    required this.year,
+    required this.month,
+    required this.selectedDate,
+    required this.day,
+    required this.monthAgg,
+  });
 
-class CalendarController extends AsyncNotifier<CalendarState> {
+  /// 网格当前显示的年。
+  final int year;
+
+  /// 网格当前显示的月（1-12）。
+  final int month;
+
+  /// 选中的**完整日期**；翻月不改变它，所以它可能不在 [year]/[month] 里。
+  final DateTime selectedDate;
+
+  /// 选中日的账单（第一段数据）。
+  final AsyncValue<List<TxRow>> day;
+
+  /// 可见月的聚合（第二段数据：日标注 + 月结余 + 日均）。
+  final AsyncValue<MonthAgg> monthAgg;
+
+  /// 选中日是否落在当前可见月里。
+  bool get selectionInVisibleMonth =>
+      selectedDate.year == year && selectedDate.month == month;
+
+  /// 网格高亮用：不在可见月 → 0（0 永远不会命中任何一天，等于不高亮）。
+  int get selectedDayInGrid => selectionInVisibleMonth ? selectedDate.day : 0;
+
+  /// 选中日的流水。
+  List<TxRow> get selectedItems => day.value ?? const <TxRow>[];
+
+  /// 选中日 0 点毫秒（记一笔默认日期、空态按钮用）。
+  int get selectedDayMs =>
+      DateTime(selectedDate.year, selectedDate.month, selectedDate.day)
+          .millisecondsSinceEpoch;
+
+  /// 月汇总（未加载时给空数据，汇总条自己显示占位）。
+  MonthSummary get summary => monthAgg.value?.summary ?? MonthAgg.empty.summary;
+
+  /// 日标注（未加载时为空表 = 不画标注）。
+  Map<int, DayAgg> get byDay => monthAgg.value?.byDay ?? const <int, DayAgg>{};
+
+  /// 日均支出（分）。
+  int get dailyAvgExpenseCents =>
+      monthAgg.value?.dailyAvgExpenseCents ?? 0;
+
+  CalendarState copyWith({
+    int? year,
+    int? month,
+    DateTime? selectedDate,
+    AsyncValue<List<TxRow>>? day,
+    AsyncValue<MonthAgg>? monthAgg,
+  }) => CalendarState(
+    year: year ?? this.year,
+    month: month ?? this.month,
+    selectedDate: selectedDate ?? this.selectedDate,
+    day: day ?? this.day,
+    monthAgg: monthAgg ?? this.monthAgg,
+  );
+}
+
+/// 日历页 controller（**同步 state**：首帧就能画网格）。
+final calendarProvider = NotifierProvider<CalendarController, CalendarState>(
+  CalendarController.new,
+);
+
+class CalendarController extends Notifier<CalendarState> {
+  /// 防止并发重入（切日 + 翻月几乎同时触发时只保留最早的加载链）。
+  bool _busy = false;
+
+  /// provider 被释放（重建 / 换账本）后，迟到的异步结果不能再写 state。
+  bool _disposed = false;
+
   @override
-  Future<CalendarState> build() async {
-    final bookId = await ref.watch(activeBookIdProvider.future);
-    if (bookId == null) {
-      throw StateError('当前账本未就绪');
-    }
-    final now = DateTime.now();
-    return _load(bookId, now.year, now.month);
-  }
-
-  Future<CalendarState> _load(
-    String bookId,
-    int year,
-    int month, {
-    int? selectedDay,
-  }) async {
-    final items = await ref
-        .read(transactionRepositoryProvider)
-        .listByMonth(bookId, year, month);
-    return CalendarState(
-      bookId: bookId,
-      year: year,
-      month: month,
-      selectedDay: selectedDay ?? _defaultDay(year, month, items),
-      items: items,
+  CalendarState build() {
+    _disposed = false;
+    ref.onDispose(() => _disposed = true);
+    final DateTime now = DateTime.now();
+    // 首帧：网格 + 选中今天；两段数据都是 loading。
+    // 真正的加载放在 build 之后（不能在这里 await，否则首帧又变成整页转圈）。
+    final CalendarState initial = CalendarState(
+      year: now.year,
+      month: now.month,
+      selectedDate: DateTime(now.year, now.month, now.day),
+      day: const AsyncValue<List<TxRow>>.loading(),
+      monthAgg: const AsyncValue<MonthAgg>.loading(),
     );
+    Future<void>.microtask(() {
+      if (_disposed) return;
+      unawaited(refresh());
+    });
+    return initial;
   }
 
-  /// 默认选中日：当月 → 今天；其他月 → 该月最后一个有账的日子；都没有 → 1 号。
-  int _defaultDay(int year, int month, List<TxRow> items) {
-    final now = DateTime.now();
-    if (year == now.year && month == now.month) return now.day;
-    if (items.isEmpty) return 1;
-    var maxDay = 1;
-    for (final t in items) {
-      final d = DateTime.fromMillisecondsSinceEpoch(t.occurredAt).day;
-      if (d > maxDay) maxDay = d;
-    }
-    return maxDay;
-  }
+  Future<String?> _bookId() => ref.read(activeBookIdProvider.future);
 
-  Future<void> _reload(String bookId, int year, int month, {int? selectedDay}) async {
-    // 翻月时**不切 loading**：页面继续显示上一屏（否则会先闪一下转圈、内容瞬切 ——
-    // 用户报的「很生硬」就是它）。新数据到了再一次性替换，过渡动画由页面播。
-    // 只有首次加载（还没有任何数据）才看得到 loading。
+  /// 一段：选中日账单。只查这一天（[startMs, endMs)）。
+  Future<void> _loadDay() async {
+    final String? bookId = await _bookId();
+    if (bookId == null) return;
+    final CalendarState s = state;
+    final DateTime d = s.selectedDate;
+    final int startMs = DateTime(d.year, d.month, d.day).millisecondsSinceEpoch;
+    final int endMs = DateTime(d.year, d.month, d.day + 1).millisecondsSinceEpoch;
+    state = s.copyWith(day: const AsyncValue<List<TxRow>>.loading());
     try {
-      final CalendarState next = await _load(
-        bookId,
-        year,
-        month,
-        selectedDay: selectedDay,
-      );
-      state = AsyncData<CalendarState>(next);
+      final List<TxRow> rows = await ref
+          .read(transactionRepositoryProvider)
+          .listByRange(bookId, startMs, endMs);
+      state = state.copyWith(day: AsyncValue<List<TxRow>>.data(rows));
     } catch (e, st) {
-      state = AsyncError<CalendarState>(e, st);
+      state = state.copyWith(day: AsyncValue<List<TxRow>>.error(e, st));
     }
   }
 
-  /// 选中某一天（只改选中态，不重新查库）。
+  /// 二段：整月聚合（日标注 / 月结余 / 日均）。
+  Future<void> _loadMonth() async {
+    final String? bookId = await _bookId();
+    if (bookId == null) return;
+    final CalendarState s = state;
+    final int y = s.year;
+    final int m = s.month;
+    try {
+      final List<TxRow> rows = await ref
+          .read(transactionRepositoryProvider)
+          .listByMonth(bookId, y, m);
+      // 查询期间可能已经翻到别的月 —— 结果过期就丢掉
+      if (state.year != y || state.month != m) return;
+      state = state.copyWith(monthAgg: AsyncValue<MonthAgg>.data(MonthAgg.of(rows, year: y, month: m)));
+    } catch (e, st) {
+      if (state.year != y || state.month != m) return;
+      state = state.copyWith(monthAgg: AsyncValue<MonthAgg>.error(e, st));
+    }
+  }
+
+  /// 两段都重来（打开页面 / 记完一笔 / 删完一笔）：**先账单，后标注**。
+  Future<void> refresh() async {
+    if (_busy) return;
+    _busy = true;
+    try {
+      await _loadDay();
+      if (_disposed) return;
+      await _loadMonth();
+    } finally {
+      _busy = false;
+    }
+  }
+
+  /// 选中某一天（只重查那天的账单；月份标注不变，不重查）。
   void selectDay(int day) {
-    final current = state.value;
-    if (current == null) return;
-    if (current.selectedDay == day) return;
-    state = AsyncData(current.copyWith(selectedDay: day));
+    final CalendarState s = state;
+    final DateTime next = DateTime(s.year, s.month, day);
+    if (next == s.selectedDate) return;
+    state = s.copyWith(selectedDate: next);
+    unawaited(_loadDay());
   }
 
   /// 翻月：delta = -1 上一月，+1 下一月。
+  ///
+  /// **不改变选中日**（任务书 §3）：下面继续显示原来那天的账单，
+  /// 只是网格换了月、并且本月之外不再高亮。**不能越过当前真实月**（任务书 §2）。
   Future<void> shiftMonth(int delta) async {
-    final current = state.value;
-    if (current == null) return;
-    var y = current.year;
-    var m = current.month + delta;
+    final CalendarState s = state;
+    if (delta > 0 && !canGoNext(s.year, s.month)) return;
+    var y = s.year;
+    var m = s.month + delta;
     if (m < 1) {
       m = 12;
       y--;
@@ -159,25 +241,33 @@ class CalendarController extends AsyncNotifier<CalendarState> {
       m = 1;
       y++;
     }
-    await _reload(current.bookId, y, m);
+    state = s.copyWith(year: y, month: m);
+    await _loadMonth();
   }
 
   /// 直接跳到指定年月（月份选择子页用），可同时指定选中日。
+  ///
+  /// 未来月一律忽略（与 [canGoNext] 同口径）；同月的未来日也挡掉。
   Future<void> jumpTo(int year, int month, {int? day}) async {
-    final current = state.value ?? await future;
-    await _reload(current.bookId, year, month, selectedDay: day);
-  }
-
-  /// 重新加载当前账本当前月（记一笔保存后刷新用）。
-  Future<void> refresh() async {
-    final current = state.value;
-    if (current == null) return;
-    await _reload(
-      current.bookId,
-      current.year,
-      current.month,
-      selectedDay: current.selectedDay,
+    final DateTime now = DateTime.now();
+    if (year * 12 + month > now.year * 12 + now.month) return;
+    var target = day;
+    if (target != null &&
+        year == now.year &&
+        month == now.month &&
+        target > now.day) {
+      target = now.day;
+    }
+    final CalendarState s = state;
+    state = s.copyWith(
+      year: year,
+      month: month,
+      selectedDate: target == null
+          ? s.selectedDate
+          : DateTime(year, month, target),
     );
+    await _loadDay();
+    await _loadMonth();
   }
 
   /// 软删除一笔并刷新（不物理删，DB 里 deleted_at 非空）。
@@ -190,17 +280,19 @@ class CalendarController extends AsyncNotifier<CalendarState> {
 /// 某一年里「每个月有账的日期集合」：`{月: {日, ...}}`。
 ///
 /// 供月份选择子页在缩略图上标出有账的日期。一次查全年，避免 12 次查询。
-final yearDayIndexProvider =
-    FutureProvider.family<Map<int, Set<int>>, int>((ref, int year) async {
-      final bookId = await ref.watch(activeBookIdProvider.future);
-      if (bookId == null) return const <int, Set<int>>{};
-      final rows = await ref
-          .watch(transactionRepositoryProvider)
-          .listByYear(bookId, year);
-      final map = <int, Set<int>>{};
-      for (final r in rows) {
-        final d = DateTime.fromMillisecondsSinceEpoch(r.occurredAt);
-        (map[d.month] ??= <int>{}).add(d.day);
-      }
-      return map;
-    });
+final yearDayIndexProvider = FutureProvider.family<Map<int, Set<int>>, int>((
+  ref,
+  int year,
+) async {
+  final bookId = await ref.watch(activeBookIdProvider.future);
+  if (bookId == null) return const <int, Set<int>>{};
+  final rows = await ref
+      .watch(transactionRepositoryProvider)
+      .listByYear(bookId, year);
+  final map = <int, Set<int>>{};
+  for (final r in rows) {
+    final d = DateTime.fromMillisecondsSinceEpoch(r.occurredAt);
+    (map[d.month] ??= <int>{}).add(d.day);
+  }
+  return map;
+});
