@@ -9,9 +9,11 @@
 /// - 一级分类 = Collapse：点根分类内联展开/收起二级分类（AnimatedSize 过渡），
 ///   二级分类用 `Wrap` 流式排布；行内三点菜单升级为底部 ActionSheet
 ///   （`showModalBottomSheet`），操作集合与旧 PopupMenu 一致。
-/// - **添加分类的入口三个并存**（2026-10-29 任务书）：
-///   ① AppBar 的「＋」；② 列表末尾的 ghost 按钮；③ **右下角、屏高 15%（自底算）** 固定的
-///   [ToonFloatMenu]（圆形 / 加号 / `trigger: click` / 向上展开 `F` 一级、`S` 二级）。
+/// - **添加分类的入口两个**（2026-10-29）：
+///   ① **右下角、屏高 15%（自底算）** 固定的 [ToonFloatMenu]（圆形 / 加号 /
+///   `trigger: click` / 向上展开 `F` 一级、`S` 二级）—— 新建的主入口；
+///   ② 列表末尾的 ghost 按钮（滚到底顺手能点，空态也有一个同款）。
+///   AppBar 原来还有个「＋」，与浮动按钮功能完全重复，已移除。
 ///   展开网格末尾的「添加」块（二级入口）保持原样不动。
 /// - **所有底部面板的内容都是线性布局 `Column`**（不用 `ListView` / `PopupMenu`）：
 ///   操作面板、父分类选择、迁移目标、分类编辑层、图标层一致。
@@ -64,17 +66,9 @@ class _CategoryManagePageState extends ConsumerState<CategoryManagePage> {
       children: <Widget>[
         Scaffold(
           backgroundColor: p.paper,
-          appBar: AppBar(
-            title: const Text('分类管理'),
-            actions: <Widget>[
-              IconButton(
-                tooltip: '新建分类',
-                onPressed: _create,
-                icon: const Icon(Icons.add_rounded),
-              ),
-              const SizedBox(width: 4),
-            ],
-          ),
+          // AppBar 不再放「＋」：新建入口收敛到右下角的浮动按钮
+          //（两者功能完全重复，2026-10-29 用户要求只留悬浮按钮）。
+          appBar: AppBar(title: const Text('分类管理')),
           body: async.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (Object e, StackTrace _) => Center(child: Text('加载失败：$e')),

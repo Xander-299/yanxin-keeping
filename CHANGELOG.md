@@ -77,8 +77,9 @@
   选中即时回写预览，下滑关闭不丢选择（`widgets/category_icon_sheet.dart`）。
 - **新增浮动入口 `ToonFloatMenu`**（Ant Design FloatButton 语义）：圆形 + 加号 + `trigger: click`，
   固定在**右下角、距屏幕底部 15%** 处（圆心 = 屏高 85%）、不可拖动，点按**向上**展开
-  `F`（一级分类）/ `S`（二级分类）；二级入口先选父分类。原有 AppBar「＋」、列表末尾按钮、
-  展开网格的「添加」块全部保留。
+  `F`（一级分类）/ `S`（二级分类）；二级入口先选父分类。列表末尾按钮与展开网格的「添加」块保留。
+- **AppBar 的「新建分类」按钮移除**：与浮动按钮功能完全重复（2026-10-29 用户要求只留悬浮按钮）；
+  新建入口 = 浮动按钮（主）+ 列表末尾 ghost 按钮（滚到底顺手能点）。
 - **所有底部面板内容统一为线性布局 `Column`**：父分类选择 / 迁移目标两处 `ListView` 改 `Column`，
   `ListTile` 换成自绘行（`_SheetTile` / `_SheetRow`）。
 - 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **671 passed / 6 skipped**（+3）。

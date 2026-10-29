@@ -46,7 +46,11 @@ void main() {
     await bootApp(tester);
     final double h = screenHeight(tester);
 
-    await tester.tap(find.byTooltip('新建分类'));
+    // 新建入口只剩浮动按钮（AppBar 的「＋」已移除）
+    expect(find.byTooltip('新建分类'), findsNothing);
+    await tester.tap(find.byTooltip('添加分类'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加一级分类'));
     await tester.pumpAndSettle();
 
     expect(

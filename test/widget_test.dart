@@ -135,7 +135,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('分类管理'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('新建分类'));
+    // 入口是右下角的浮动按钮（AppBar 的「＋」已移除，2026-10-29）
+    await tester.tap(find.byTooltip('添加分类'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('添加一级分类'));
     await tester.pumpAndSettle();
     // schema v4 起是「分类编辑弹层」（名称 + 父分类 + 图标 + 颜色），不再是单行对话框
     await tester.enterText(find.byType(TextField).first, '打车');
