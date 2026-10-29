@@ -126,7 +126,7 @@ class _Head extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 const Text(
-                  '颜芯记账用户',
+                  '小耄记账用户',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 4),

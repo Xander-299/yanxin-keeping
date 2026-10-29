@@ -59,7 +59,7 @@ object AutoBookNotifier {
             context,
             count = count,
             title = "识别到 $count 笔支付通知",
-            text = "打开颜芯记账即可自动记入",
+            text = "打开小耄记账即可自动记入",
             lines = emptyList(),
             batchId = null,
         )

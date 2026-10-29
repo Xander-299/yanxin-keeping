@@ -136,7 +136,7 @@ class _YanxinAppState extends ConsumerState<YanxinApp> {
     // 主题色（2026-10-29）：换 seed → 整套 M3 色板跟着换，页面代码一行不用动
     final ToonSeed seed = ref.watch(themeSeedProvider).value ?? ToonSeed.forest;
     return MaterialApp.router(
-      title: '颜芯记账',
+      title: '小耄记账',
       theme: buildToonTheme(
         ToonPalette.lightOf(seed),
         Brightness.light,

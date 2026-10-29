@@ -34,7 +34,7 @@ Future<String?> readMarker(WidgetTester tester, AppDatabase db) async {
 /// 首启场景：等引导首页稳定出现。
 Future<void> openFirstRun(WidgetTester tester, AppDatabase db) async {
   await pumpApp(tester, database: db, onboardingDone: false);
-  await pumpUntil(tester, find.text('认识一下颜芯记账'));
+  await pumpUntil(tester, find.text('认识一下小耄记账'));
   await tester.pumpAndSettle();
 }
 
@@ -43,7 +43,7 @@ void main() {
     final AppDatabase db = openTestDatabase();
     await openFirstRun(tester, db);
 
-    expect(find.text('认识一下颜芯记账'), findsOneWidget);
+    expect(find.text('认识一下小耄记账'), findsOneWidget);
     expect(find.text('下一步'), findsOneWidget);
     expect(find.text('跳过'), findsOneWidget);
     // PageView 只建当前页 → 末页文案不该在树上
@@ -58,7 +58,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('中间歪着的方块 = 记一笔'), findsOneWidget);
-    expect(find.text('认识一下颜芯记账'), findsNothing);
+    expect(find.text('认识一下小耄记账'), findsNothing);
   });
 
   testWidgets('连点到末页 → 按钮变「开始记账」→ 点它回首页并写标记', (WidgetTester tester) async {
@@ -98,7 +98,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
-    expect(find.text('认识一下颜芯记账'), findsNothing);
+    expect(find.text('认识一下小耄记账'), findsNothing);
     expect(find.text('默认账本'), findsOneWidget);
   });
 
@@ -112,7 +112,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pumpAndSettle();
 
-    expect(find.text('认识一下颜芯记账'), findsNothing);
+    expect(find.text('认识一下小耄记账'), findsNothing);
     expect(find.text('默认账本'), findsOneWidget);
     // 老用户不算「看过」—— 不写标记，便于将来排查
     expect(await AppMetaRepository(db).get(kOnboardingDoneKey), isNull);
@@ -128,7 +128,7 @@ void main() {
 
     await tester.tap(find.text('新手引导'));
     await tester.pumpAndSettle();
-    expect(find.text('认识一下颜芯记账'), findsOneWidget);
+    expect(find.text('认识一下小耄记账'), findsOneWidget);
 
     await tester.tap(find.text('跳过'));
     await tester.pumpAndSettle();

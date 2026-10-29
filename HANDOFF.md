@@ -1,4 +1,4 @@
-# HANDOFF — 颜芯记账（Flutter）
+# HANDOFF — 小耄记账（Flutter）
 
 本地优先的个人记账 App，目标平台 **Android**。本文件是**接手入口**：现状、硬约束、
 去哪找细节。历史过程与完整参考都在 `docs/handoff/`，不必通读。
