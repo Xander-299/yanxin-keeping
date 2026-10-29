@@ -119,6 +119,16 @@ Write-Host ("    空闲内存：{0} MB" -f $freeMb)
 $apk = $null
 if (-not $NoBuild) {
   Write-Step "构建 $Mode 包"
+  # 本机默认 JAVA_HOME 是 JDK 25；这个 Android 工程按 HANDOFF 用 JDK 17 构建。
+  # 只改本次进程，构建完还原。
+  $jdk = 'D:\Download\Java\jdk-17.0.20.1+1'
+  $oldJavaHome = $env:JAVA_HOME
+  if (Test-Path (Join-Path $jdk 'bin\java.exe')) {
+    $env:JAVA_HOME = $jdk
+    Write-Note "构建 JDK：$jdk（不是系统默认的 $oldJavaHome）"
+  } else {
+    Write-Note "没找到 JDK 17（$jdk），沿用系统 JAVA_HOME=$oldJavaHome"
+  }
   $origBytes = [IO.File]::ReadAllBytes($GradleProps)
   $patched = $false
   try {
@@ -163,6 +173,7 @@ if (-not $NoBuild) {
         Write-Note 'android/gradle.properties 还原后与备份不一致！请立刻 `git checkout -- android/gradle.properties`'
       }
     }
+    $env:JAVA_HOME = $oldJavaHome
   }
 
   if (-not (Test-Path $ApkDir)) { Fail "构建产物目录不存在：$ApkDir" }

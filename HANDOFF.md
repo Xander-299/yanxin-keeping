@@ -29,6 +29,7 @@
 | ⑤ | **预置二级分类**（支出 10 个一级 / 33 条二级）+ `ensurePresets` 两级匹配 + 问答按父级汇总 | `core/constants/preset.dart`、`data/repositories/{category,book}_repository.dart`、`features/assistant/application/finance_answer.dart` |
 | ⑥ | **日历页**：分段加载（网格 → 当日账单 → 月标注）、不能翻未来月、翻月不改选中日 | `features/calendar/application/calendar_controller.dart`（`Notifier` 同步 state + 两段 `AsyncValue`）、`presentation/calendar_page.dart`、`month_picker_page.dart` |
 | ⑦ | **主题色**（设置 → 主题色五选一：森绿 / 琥珀 / 黛蓝 / 藕粉 / 墨紫） | `core/theme/theme_seed.dart`（`ToonSeed`）、`palette.dart`（`lightOf/darkOf` 按 seed 缓存）、`settings/application/theme_controller.dart`（`theme_seed` KV）、`settings_page.dart` |
+| ⑧ | **真机性能基准体系**（脚本 8 个 + 基线报告）：冷/热启动、PSS/CPU、APK 体积；帧率因 SurfaceView 统计不到记为「未测量」 | `scripts/performance/*.ps1`、`docs/perf/baseline-2026-10-29.md`（原始数据 `performance-results/` 已 gitignore） |
 
 > ⑥ 的三个约束都是 2026-10-29 用户口头要求，已落到 PRD **FR-CAL-06/07/08**；
 > 关键实现点：`CalendarState` 里「可见年月」与「选中日（完整日期）」是**两个独立字段**，

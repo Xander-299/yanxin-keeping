@@ -25,6 +25,36 @@ function Write-Ok([string]$Msg)   { Write-Host "    [OK] $Msg" -ForegroundColor 
 function Write-Note([string]$Msg) { Write-Host "    [!]  $Msg" -ForegroundColor Yellow }
 function Fail-Perf([string]$Msg)  { Write-Host ''; Write-Host "[FAIL] $Msg" -ForegroundColor Red; exit 1 }
 
+# 本机默认 JDK：系统 JAVA_HOME 是 JDK 25，这个 Android 工程用 JDK 17 构建（HANDOFF 的发布硬约束）。
+# 只影响「本次构建进程」，用完还原，不改系统环境变量。
+$script:DefaultJdk17 = 'D:\Download\Java\jdk-17.0.20.1+1'
+
+function Resolve-JdkHome([string]$Explicit) {
+  if ($Explicit -and (Test-Path (Join-Path $Explicit 'bin\java.exe'))) { return $Explicit }
+  if (Test-Path (Join-Path $script:DefaultJdk17 'bin\java.exe')) { return $script:DefaultJdk17 }
+  if ($env:JAVA_HOME -and (Test-Path (Join-Path $env:JAVA_HOME 'bin\java.exe'))) {
+    Write-Note "没找到 JDK 17，退回系统 JAVA_HOME=$env:JAVA_HOME"
+    return $env:JAVA_HOME
+  }
+  throw '找不到可用的 JDK（指定 -JdkHome）'
+}
+
+# 在指定 JDK 下执行一段构建；结束后还原 JAVA_HOME。
+function Invoke-WithJdk([string]$JdkHome, [scriptblock]$Body) {
+  $old = $env:JAVA_HOME
+  $env:JAVA_HOME = $JdkHome
+  try {
+    $javaExe = Join-Path $JdkHome 'bin\java.exe'
+    $ver = (& $javaExe -version 2>&1 | Out-String)
+    $label = if ($ver -match 'version "([^"]+)"') { $Matches[1] } else { '?' }
+    Write-Ok "构建 JDK：$JdkHome（java $label）"
+    & $Body
+  }
+  finally {
+    $env:JAVA_HOME = $old
+  }
+}
+
 function Get-AdbDevices([string]$Adb) {
   $raw = & $Adb devices 2>&1 | Out-String
   $list = @()

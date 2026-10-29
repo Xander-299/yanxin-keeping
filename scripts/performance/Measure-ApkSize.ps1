@@ -22,7 +22,8 @@ param(
   [switch]$Arm64Only,
   [string]$RunId = '',
   [string]$Adb = 'D:\Download\Java\Android\platform-tools\adb.exe',
-  [string]$Flutter = 'D:\Download\Flutter\flutter\bin\flutter.bat'
+  [string]$Flutter = 'D:\Download\Flutter\flutter\bin\flutter.bat',
+  [string]$JdkHome = ''            # 空 = 自动找 D:\Download\Java\jdk-17.0.20.1+1
 )
 
 $ErrorActionPreference = 'Continue'
@@ -32,6 +33,13 @@ $adb = Get-Tool $Adb 'adb'
 $flutter = Get-Tool $Flutter 'flutter'
 $runId = if ($RunId) { $RunId } else { Get-Timestamp }
 $dir = New-RunDir $runId 'apk-size'
+
+# ⚠️ 本机系统 JAVA_HOME 是 JDK 25，但这个 Android 工程按 HANDOFF 用 JDK 17 构建。
+#    只改本次进程的 JAVA_HOME，退出时还原。
+$jdk = Resolve-JdkHome $JdkHome
+$oldJavaHome = $env:JAVA_HOME
+$env:JAVA_HOME = $jdk
+Write-Ok "构建 JDK：$jdk"
 
 $gradleProps = Join-Path $script:RepoRoot 'android\gradle.properties'
 $origBytes = [IO.File]::ReadAllBytes($gradleProps)
@@ -79,6 +87,7 @@ finally {
     $same = [Convert]::ToBase64String([IO.File]::ReadAllBytes($gradleProps)) -eq [Convert]::ToBase64String($origBytes)
     if ($same) { Write-Ok 'android/gradle.properties 已按字节还原' } else { Write-Note 'gradle.properties 还原不一致，请 git checkout' }
   }
+  $env:JAVA_HOME = $oldJavaHome
 }
 
 # 已安装包的占用（可选）：只在设备在线且包存在时测
@@ -105,7 +114,7 @@ try {
 
 Write-CsvFile $rows (Join-Path $dir 'apk-size.csv')
 Write-JsonFile ([ordered]@{
-  scenario = 'apk-size'; runId = $runId; generatedAt = (Get-Date).ToString('o')
+  scenario = 'apk-size'; runId = $runId; generatedAt = (Get-Date).ToString('o'); jdk = $jdk
   modes = $Modes; arm64Only = [bool]$Arm64Only; qaAppId = $QaAppId
   apks = $rows; installed = $installed
   caveat = 'release 若缺 android/key.properties 会退化成 debug 签名（不影响体积，但不能覆盖正式包）'
