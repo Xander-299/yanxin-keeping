@@ -11,10 +11,32 @@
 | 项 | 值 |
 |---|---|
 | 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行）。**F7.18 分类系统**后追加四轮交互迭代 + **预置二级分类**（2026-10-29，未发版、未真机走查，见 [SPEC §12–13](docs/spec/SPEC-F7.18-category-tree.md)） |
-| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定，理由见 [SPEC-local-ai](docs/spec/SPEC-local-ai.md) 头部声明）**。候选下一步（待用户拍板）：**分类相关的 4 个待拍板项**（见下「本轮遗留」）、导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、release 出包发版 |
+| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定）**。**最近的下一步：发 v0.8.2**（现 v0.8.1 包内还是旧图标 + 旧名；版号 2002，重打 release + 换 README 链接）。其它候选（待拍板）：分类相关的 4 项遗留、导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、帧率采集（adb 两条路都测不到 Flutter SurfaceView，需 DevTools 或 integration_test） |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 森绿 `0xFF2E5E4E`，同日由琥珀改定）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
 | 数据库 | schema **v4**（v2 加 `budgets`；v3 加 `accounts.icon/color`；**v4 加 `categories.parent_id / is_archived`**，F7.18 分类树）—— v4 迁移**只加列 + 加索引**，老库升级零数据改动（真机验证：154 笔账单分毫未动）。**预置二级分类不需要迁移**（是数据不是结构） |
 | 门禁 | 本地 = `flutter analyze` + `flutter test --concurrency=1`（**740 passed / 6 skipped**）；CI = `.github/workflows/ci.yml`，**三个并行 job**：① `analyze · 生成物同步`（跑 build_runner 后 `git diff lib/**/*.g.dart` 必须为空）② `test` ③ `build apk (debug)`（`--target-platform android-arm64`）。**分支保护需在 GitHub 设置里手动勾这三个 check**，说明写在 workflow 头部注释；本机跑测试**必须** `--concurrency=1`（内存不足会 OOM），CI 上用默认并发 |
+| 仓库 | **GitHub `Xander-299/yanxin-keeping`（public）** · Pages <https://xander-299.github.io/yanxin-keeping/> · 规则集 `check-ci`：required checks = `analyze · 生成物同步` / `test` / `build apk (debug)`，approvals 0，禁 force-push / 禁删默认分支（**直推 master 会被挡，必须走 PR**；管理员可 bypass） |
+
+### 本轮交付（2026-10-30 · 仓库迁移 + 改名换图标 + 安全收口）
+
+> 仓库已从 `yanxin-flutter` 迁到 **`yanxin-keeping`**（public），旧库**已删除**；
+> 迁移前做了一次 **git 历史重写**（旧 keystore 口令与本机路径全量替换），新库全历史 0 命中。
+
+| 事项 | 结果 |
+|---|---|
+| 仓库迁移 | 新库 `Xander-299/yanxin-keeping`：master + 18 tags 全推；规则集 `check-ci` 重建；Pages 已开（Deploy from branch → `master` / `docs`）|
+| 历史清理 | `git filter-repo`：`4076630.aa` → `***REMOVED***`、`C:\Users\<user>` → `<USER_HOME>`；新旧库全历史 0 命中；旧库连同其 `refs/pull/*` 一起删除 |
+| keystore 口令 | **2026-10-29 轮换为 24 位随机值**（旧值作废、验证打不开）。值**不入库**，只在本机 `android/key.properties`（gitignored）。证书指纹未变（`d46b65a4…e86567`）→ 已发布包签名不受影响。旧 `.jks.bak` 与仓库外口令文件均已删除 |
+| App 改名 | 「颜芯记账」→ **「小耄记账」**：manifest label（应用 + 自动记账服务）/ `MaterialApp.title` / 新手引导 / 我的页 / 通知文案 / 导出文件名前缀 / pubspec / README / 网页版。**Dart 包名 `yanxin` 不动** |
+| 新图标 | 用户提供的橙底小猫图（`#EB7118`）：legacy 5 档 + adaptive 前景 5 档 + 网页 favicon。**没走** `gen_launcher_icons.py` 的抠底 —— 主体色距背景仅 84（阈值 100）会被抠穿，改用「整图缩进 66/108 安全区 + 底色同源」|
+| 发布 | 新库已发 **v0.8.1**：`yanxin-v0.8.1-universal-release.apk`（46.44 MB，upload key 签名）；README 下载区指向它 |
+| 未生效 | ⚠️ **已发布的 v0.8.1 包内仍是旧图标 + 旧名** —— 新图标/新名只在 `master` 源码与真机 QA 包里；要真正发出去需出 **v0.8.2** |
+
+**下个 session 必读三条**：
+1. `android/key.properties` 是**唯一**存签名口令的地方（仓库外的口令文件已按用户要求删除）；要出包先确认它在。
+2. 构建一律 **JDK 17**（`D:\Download\Java\jdk-17.0.20.1+1`）；系统 `JAVA_HOME` 是 JDK 25。
+   `tool/install_device.ps1` 与 `scripts/performance/Measure-ApkSize.ps1` 已内置「临时切 JDK17 + 还原」。
+3. 直推 master 会被规则集挡（要 PR + 3 个 check）；force-push 只有管理员能 bypass。
 
 ### 本轮交付（2026-10-29 · 分类管理 UI 四轮迭代 + 预置二级）
 
