@@ -174,12 +174,12 @@
           账单导入、自动记账、统计预算全部在本地完成；卸载即彻底删除，想留档自己导出。
         </p>
         <div class="cta">
-          <a class="btn" href="https://github.com/Xander-299/yanxin-keeping/releases/download/v0.7.16/yanxin-v0.7.16-universal-release.apk">⬇ 下载 APK（64 MB）</a>
+          <a class="btn" href="https://github.com/Xander-299/yanxin-keeping/releases/download/v0.8.1/yanxin-v0.8.1-universal-release.apk">⬇ 下载 APK（46 MB）</a>
           <a class="btn ghost" href="https://github.com/Xander-299/yanxin-keeping">看源码</a>
         </div>
         <div class="facts">
           <span>Flutter 3.47.2</span><span>Android 7.0+</span>
-          <span>drift / SQLite</span><span>52 个测试文件</span><span>16 个版本</span>
+          <span>drift / SQLite</span><span>75 个测试文件</span><span>18 个版本</span>
         </div>
       </div>
 
@@ -219,7 +219,7 @@
         <div class="card">
           <div class="chip c-green">📅</div>
           <h3>日历</h3>
-          <p>支出红 / 收入绿标注，长按格子记那一天的账，左右滑翻月。</p>
+          <p>支出红 / 收入绿标注，长按记那一天的账，左右滑翻月；先出网格再加载账单，且翻不到未来月。</p>
         </div>
         <div class="card">
           <div class="chip c-purple">📊</div>
@@ -241,6 +241,16 @@
           <h3>自动记账</h3>
           <p>监听支付通知自动入账，三层采集兜底，可一键撤销，附活性诊断页。</p>
         </div>
+        <div class="card">
+          <div class="chip c-brand">🗂</div>
+          <h3>两级分类</h3>
+          <p>一级点开收起二级；预置分类自带 33 条二级（餐饮→早餐/午餐/晚餐，交通→地铁/公交/共享单车）。</p>
+        </div>
+        <div class="card">
+          <div class="chip c-purple">🎨</div>
+          <h3>五套主题色</h3>
+          <p>设置里一键换色：森绿 / 琥珀 / 黛蓝 / 藕粉 / 墨紫，整族色板跟着变，含深色模式。</p>
+        </div>
       </div>
     </div>
   </section>
@@ -250,7 +260,7 @@
     <div class="wrap">
       <div class="sec-head">
         <h2>实际界面</h2>
-        <p>Redmi K50 实机截图，卡通浅色主题；粗描边与硬阴影都是代码画的，不引任何图片资源。</p>
+        <p>Redmi K50 实机截图，Material 3 主题（森绿 seed，可切五套配色）；界面元素全部代码绘制，不引图片资源。</p>
       </div>
       <div class="shots">
         <figure>
@@ -309,10 +319,10 @@
         <p>数字取自仓库本身，可复算。</p>
       </div>
       <div class="stats">
-        <div class="stat"><b>123</b><span>Dart 源文件（含 27 个 part）</span></div>
-        <div class="stat"><b>19.6k</b><span>Dart 行数</span></div>
-        <div class="stat"><b>52</b><span>测试文件 / 近 500 用例</span></div>
-        <div class="stat"><b>16</b><span>版本 tag（v0.7.1 → v0.7.16）</span></div>
+        <div class="stat"><b>151</b><span>Dart 源文件</span></div>
+        <div class="stat"><b>30.2k</b><span>Dart 行数</span></div>
+        <div class="stat"><b>75</b><span>测试文件 / 668 处用例</span></div>
+        <div class="stat"><b>18</b><span>版本 tag（v0.7.1 → v0.8.1）</span></div>
       </div>
     </div>
   </section>
@@ -340,7 +350,7 @@ flutter test
 flutter build apk --release --target-platform android-arm,android-arm64,android-x64</code></pre>
       <p style="margin-top:14px;font-size:13px;color:var(--ink2)">
         详细步骤（签名、模拟器走查、发布）
-        → <a href="https://github.com/Xander-299/yanxin-keeping#-部署与体验教程">README 部署教程</a>
+        → <a href="https://github.com/Xander-299/yanxin-keeping#-从源码构建">README 构建说明</a>
         ·
         <a href="https://github.com/Xander-299/yanxin-keeping/tree/master/docs/dev">开发运维手册</a>
       </p>
@@ -354,7 +364,7 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
     <span>· 仅供学习与个人使用</span>
     <span class="sp">
       <a href="https://github.com/Xander-299/yanxin-keeping">GitHub</a> ·
-      <a href="https://github.com/Xander-299/yanxin-keeping/releases/tag/v0.7.16">Release</a> ·
+      <a href="https://github.com/Xander-299/yanxin-keeping/releases/tag/v0.8.1">Release</a> ·
       <a href="https://github.com/Xander-299/yanxin-keeping/blob/master/CHANGELOG.md">CHANGELOG</a>
     </span>
   </div>
