@@ -32,7 +32,8 @@
 > 与 `lib/armeabi-v7a/libapp.so`（= 构建时带了 `--target-platform android-arm64`，只打进了 arm64 的
 > Dart/引擎）。也就是说 v0.8.1 在 32 位 arm 机上是**装得上、起不来**。本次 `--release` 不带
 > `--target-platform`、`abiFilters` 同时含 arm64-v8a + armeabi-v7a，两个 ABI 的引擎与 `libapp.so` 齐活，
-> 所以是 66 MB 的**真通用包**。想回小包就显式 `--target-platform android-arm64`（约 22 MB，只能 arm64）。
+> 所以是 66 MB 的**真通用包**。想回小包就用 `--split-per-abi`（或 `--target-platform android-arm64`，
+> 体积更小，但 32 位 arm 机就装不了了）。
 >
 > ⚠️ **`tool/verify_apk_kernel.py` 只对 debug 包有效**（它读 `assets/flutter_assets/kernel_blob.bin`）；
 > release 包是 AOT，核验要读 `lib/arm64-v8a/libapp.so`，且中文是 **UTF-16LE** 存的（按 UTF-8 搜会假阴性）。
