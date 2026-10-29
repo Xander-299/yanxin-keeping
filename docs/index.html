@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>颜芯记账 · 本地优先的 Android 记账 App</title>
 <meta name="description" content="颜芯记账：一个把数据完全留在手机里的 Android 记账 App。Flutter + drift，无账号、无服务器、无网络请求。">
 <!-- 单文件、零外部依赖（字体 / 图片 / JS 全内联）—— 与 App 的「不联网」保持同一个立场 -->
@@ -45,10 +47,8 @@
   header .wrap{display:flex; align-items:center; gap:14px; height:62px}
   .logo{display:flex; align-items:center; gap:9px; font-weight:900; font-size:17px}
   .logo .mark{
-    width:30px;height:30px;border-radius:10px;background:var(--brand);
-    border:2px solid var(--ink); box-shadow:0 2px 0 var(--ink);
-    display:grid;place-items:center;font-size:15px;
-    transform:rotate(-4deg);
+    width:30px;height:30px;border-radius:9px;display:block;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);
   }
   nav{margin-left:auto; display:flex; gap:18px; font-size:14px; font-weight:700}
   nav a{color:var(--ink2)}
@@ -150,7 +150,7 @@
 
 <header>
   <div class="wrap">
-    <div class="logo"><span class="mark">¥</span> 颜芯记账</div>
+    <div class="logo"><img class="mark" src="icon-192.png" width="30" height="30" alt="颜芯记账图标"> 颜芯记账</div>
     <nav>
       <a href="#features">功能</a>
       <a href="#shots">截图</a>
