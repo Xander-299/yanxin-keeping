@@ -1,5 +1,15 @@
 # 当前状态
 
+- **✅ v0.8.2 已发布（2026-10-30）**：改名「小耄记账」+ 橙底小猫图标**首次进正式包**，
+  并把 v0.8.1 之后一直挂 `[Unreleased]` 的交付（F7.18 分类树四轮迭代 / 预置二级 / 主题色五选一 /
+  日历分段加载 / 问账本与聊天化）一并发出去。版本 `0.8.2+2002`（versionCode 只增不减）。
+  构建走 **ASCII 副本** `D:\yanxin-build`（中文路径下 `gen_snapshot` 会挂）+ JDK17 + `--no-pub`。
+  核验：label `小耄记账`、`versionCode 2002`、ABI 双、**无 `INTERNET`**、签名指纹未变
+  （`d46b65a4…e86567`）、`color/ic_launcher_background = #ffeb7118`。
+  **顺带查出一个旧问题**：v0.8.1 那个 46 MB「通用包」缺 `armeabi-v7a` 的 `libflutter.so` /
+  `libapp.so`（等于 32 位 arm 机装得上、起不来）；本版 66 MB 才是真双 ABI。
+  门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **740 passed / 6 skipped**。
+
 - **✅ F7.17 深色模式 已交付（2026-10-20 转正 `v0.7.17`）**：
   用户三条需求（三选项 · 默认跟随系统 · 放设置里）全部满足。SPEC：`docs/spec/SPEC-F7.17-dark-mode.md`。
   **根因**是 F7.6 把色值做成了 `Tok` 的**编译期常量**（613 处 / 64 文件）：只改 `themeMode` 不生效，
