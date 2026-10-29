@@ -1,23 +1,26 @@
 # 发布记录：v0.7.17 release 包（2026-10-21）
 
 > 记录「怎么在本机出正式签名 release 包并发布」。**关键事实散落在三处，下次先读这份。**
+>
+> ⚠️ **2026-10-29 安全处理**：keystore 口令已**轮换为随机值**（本文件不再记录实值），
+> 证书指纹未变（`d46b65a4…e86567`），已发布包的签名不受影响。
 
 ## 1. keystore 与口令（勿再问用户）
 
 | 项 | 值 |
 |---|---|
-| keystore | `<USER_HOME>\upload-keystore.jks`（JKS，别名 `upload`，2026-09-25 建） |
-| storePassword / keyPassword | **两值相同**：`***REMOVED***` |
+| keystore | `<用户目录>\upload-keystore.jks`（JKS，别名 `upload`，2026-09-25 建） |
+| storePassword / keyPassword | **2026-10-29 已轮换为随机口令，向维护者索取**（本机副本在仓库外的 `upload-keystore-password.txt`，请转进密码管理器后删除该文件） |
 | keyAlias | `upload` |
 | 证书 | `CN=yanxin, OU=Unknown, O=Unknown, L=Shenzhen, ST=Guangdong, C=CN` |
 | SHA-256 指纹 | `d46b65a43bcfc6633f5460fb893b6b6e55db66ae16ac650054fb085698e86567` |
 
 - `android/key.properties` 四键按上面写即可（已在 `.gitignore`，**不会入库**）。
-- ⚠️ **别用 `<USER_HOME>\.android\debug.keystore`** —— 那是 `CN=Android Debug`，与 v0.7.16 起
+- ⚠️ **别用 `<用户目录>\.android\debug.keystore`** —— 那是 `CN=Android Debug`，与 v0.7.16 起
   所有发布包**不是同一把钥匙**，换了签名用户必须卸载重装（丢本地账本）。
 - 判断「是不是同一把钥匙」：`apksigner verify --print-certs` 比 SHA-256 指纹即可。
-- 口令**没有**写进任何文档；需要时向用户要，或用 `keytool -list -keystore <ks> -storepass <pw>`
-  自行验证（能打开 + 指纹一致 = 对）。
+- 口令**不入库**：只保存在仓库外的密码管理器与本机 `android/key.properties`（已 gitignore）；
+  需要验证时用 `keytool -list -keystore <ks> -storepass <pw>`（能打开 + 指纹一致 = 对）。
 
 ## 2. 本机构建 release 的前置条件
 

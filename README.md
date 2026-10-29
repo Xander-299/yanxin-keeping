@@ -9,7 +9,7 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.47.2-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Android](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)](#)
 [![Offline](https://img.shields.io/badge/%E6%95%B0%E6%8D%AE-100%25%20%E6%9C%AC%E5%9C%B0-FFB627)](#-数据边界)
-[![Tests](https://img.shields.io/badge/tests-52%20%E6%96%87%E4%BB%B6%20%C2%B7%20CI%20%E5%85%A8%E7%BB%BF-2FC98A)](#-质量门禁)
+[![Tests](https://img.shields.io/badge/tests-740%20passed%20%C2%B7%20CI%20%E5%85%A8%E7%BB%BF-2FC98A)](#-质量门禁)
 
 [**🌐 网页版介绍**](https://xander-299.github.io/yanxin-flutter/) ·
 [**⬇ 下载 APK**](https://github.com/Xander-299/yanxin-flutter/releases/latest) ·
@@ -87,12 +87,12 @@
 | **记一笔** | `/record` | 自绘金额键盘 + 分类宫格 + 备注 + **日期 / 账户选择**；主按钮吸底常驻，随键盘上移 |
 | **记一笔 / 问一句** | `/chat` | 一条聊天流：**打字问账本**（本月多少 / 某分类 / 预算还剩 / 为什么比上月多 / 大额支出，数字由账本算）+ **发账单截图**（端上 OCR → 待确认卡 → 确认才入账） |
 | **搜索** | 浮层（不是路由） | 毛玻璃浮层；命中**分类名 / 账户名 / 备注 / 金额「元.分」文本**；支持「仅支出 / 仅收入 / 转账」类型指令 + 时间区间 + 命中高亮 + 搜索历史 |
-| **日历** | `/calendar` | 月历标注（支出红 / 收入绿）、日汇总；**长按格子记这一天的账**、左右滑翻月 |
+| **日历** | `/calendar` | 月历标注（支出红 / 收入绿）、日汇总；**长按格子记这一天的账**、左右滑翻月；**分段加载**（先网格 → 当日账单 → 月标注）、**不能翻到未来月**、**翻月不改选中日**（下面账单跟日期走） |
 | **统计** | `/stats` | 分类占比圆环 + 近 6 月趋势柱，**自绘 `CustomPainter`，不引图表库** |
 | **报表** | `/reports` | 三档切换：明细 / 分类汇总 / 账户汇总 |
 | **预算** | 首页一行条 | 预算进度与**剩余每日可消费**、超支预警；点条开编辑弹层 |
 | **资产** | `/assets` | 净资产卡 + 账户列表；账户增改删（**有流水的账户禁删**） |
-| **设置** | `/settings` | 外观三选一：**浅色 / 深色 / 跟随系统（默认）**，选择落 `schema_meta` KV，冷启动沿用 |
+| **设置** | `/settings` | 外观三选一：**浅色 / 深色 / 跟随系统（默认）** + **主题色五选一**（森绿 / 琥珀 / 黛蓝 / 藕粉 / 墨紫），选择落 `schema_meta` KV，冷启动沿用 |
 
 </details>
 
@@ -103,7 +103,7 @@
 |---|---|
 | **账单导入** | 微信（旧版 CSV / 2025+ xlsx）、支付宝（旧版 CSV / 新版 GBK 回单）；**解析五层** + 指纹幂等入账 + 试算报告 + 单条勾选 |
 | **数据导出** | 流水 CSV + 完整备份 JSON；走 **SAF 系统文件选择器**（免存储权限） |
-| **账本 / 分类 / 账户** | 多账本切换与管理、分类增删改、账户图标与颜色 |
+| **账本 / 分类 / 账户** | 多账本切换与管理、**两级分类**（预置 11 支出 + 7 收入，其中 10 个支出分类自带 33 条二级）、分类增删改排序归档迁移、账户图标与颜色 |
 
 </details>
 
@@ -170,9 +170,10 @@ android/app/src/main/kotlin/com/teacodeman/yanxin/
 ├── MainActivity.kt              MethodChannel 接线
 └── autobook/                    自动记账原生侧（7 文件，只落盘不解析）
 
-tool/    开发工具链（门禁等效 / APK 核验 / 发布 / 设备调试），见 tool/README.md
-test/    52 个测试文件，目录与 lib/ 结构镜像
-docs/    spec/（签字的 SPEC）· dev/（走查与环境手册）· handoff/（交接档案）· design/（原型图）
+tool/    开发工具链（门禁等效 / APK 核验 / 发布 / 设备调试 / 一键装机），见 tool/README.md
+scripts/performance/   真机性能基准脚本（启动 / 内存 CPU / 包体积），见 docs/perf/
+test/    75 个测试文件，目录与 lib/ 结构镜像
+docs/    spec/（签字的 SPEC）· dev/（走查与环境手册）· handoff/（交接档案）· design/（原型图）· perf/（性能基线报告）
 ```
 
 **分层约定**
@@ -203,6 +204,9 @@ presentation（UI）→ application（Controller / 纯函数）→ data（仓储
 | xlsx 读取 | `archive` + 手写正则 | **不用 `excel` 包**：数值过 double 会丢 31 位单号精度 |
 | CSV / GBK | 自研逐字符状态机 + `gbk_codec` | 无成熟纯 Dart 方案；回环校验判坏件 |
 | 自动记账 | **Kotlin 原生**（`NotificationListenerService` + `MethodChannel`） | **零新增 pub 依赖**；Dart 侧只做纯函数解析 |
+| 主题 | **Material 3**（`ColorScheme.fromSeed`）+ 可切换 seed | 换一个种子色，整套色板（按钮 / 选中态 / 图表）跟着变，页面零改动 |
+| OCR | **ML Kit 中文 bundled**（自建 MethodChannel，离线） | 模型随 APK，**release 包仍不需要网络权限**；首次识别才初始化 |
+| 性能 | **ADB + 自写 PowerShell 脚本**（启动 / PSS / CPU / 体积） | 不引第三方性能库；真机数据可重复、可对比 |
 
 ---
 
@@ -251,10 +255,11 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
 
 | 维度 | 数据 |
 |---|---|
-| 代码量 | Dart **138 个源文件 / 26,660 行**（含 `part`）· Kotlin **9 个文件 / 1,689 行** |
-| 测试 | **63 个测试文件** · 574 处 `test()` / `testWidgets()`（实跑 588 passed / 6 skipped） |
-| 迭代 | **157 次提交** · **18 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`） |
-| 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（MIUI/HyperOS，adb 全包走查） |
+| 代码量 | Dart **151 个源文件 / 30,198 行**（含 `part`）· Kotlin **9 个文件 / 1,689 行** |
+| 测试 | **75 个测试文件** · 668 处 `test()` / `testWidgets()`（实跑 **740 passed / 6 skipped**） |
+| 迭代 | **186 次提交** · **18 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`） |
+| 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（Android 14 / HyperOS，adb 全包走查）|
+| 性能基线 | 冷启动 **613.8 ms** · 热启动 **82.4 ms** · 常驻 **43.3 MB** · release APK **46.44 MB**（[报告](docs/perf/baseline-2026-10-29.md)） |
 
 > 数字取自仓库本身（`git rev-list --count HEAD`、文件行数统计），可复算。
 
@@ -274,7 +279,10 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
 每次 push 自动跑（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）：
 
 ```
-flutter pub get → build_runner → 生成物新鲜度检查 → flutter analyze → flutter test
+三个并行 job：
+  ① analyze · 生成物同步   build_runner → 生成物新鲜度检查 → flutter analyze
+  ② test                   flutter test
+  ③ build apk (debug)      JDK 17 + Gradle 缓存 → flutter build apk --debug
 ```
 
 **生成物新鲜度**是一条硬检查：`database.g.dart` 是入库的生成物，改了 `tables.dart` 却忘了重跑
@@ -296,6 +304,8 @@ flutter pub get → build_runner → 生成物新鲜度检查 → flutter analyz
 | [`docs/acceptance-*.md`](docs/) | 各阶段真机走查验收报告 |
 | [`docs/design/`](docs/design/) | 页面原型参考图（**历史深色版**，见该目录 README） |
 | [`tool/README.md`](tool/README.md) | `tool/` 下每个脚本的用途与适用条件 |
+| [`docs/perf/`](docs/perf/) | **真机性能基线报告**（环境 / 口径 / 数据 / 局限 / 复现命令）|
+| [`scripts/performance/`](scripts/performance/) | 性能测试脚本（启动 / 帧 / 内存 CPU / 包体积 / 灌测试数据）|
 | [`tasks/todo-flutter.md`](tasks/todo-flutter.md) | 迁移任务清单 |
 
 ---

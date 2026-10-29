@@ -290,7 +290,7 @@ ew file\modao\yanxin\` 没有引导屏** → 视觉并排对拍**不适用于引
 # 极简版
 
 - 颜芯记账 uni-app → Flutter。**两台机器共用一个远端**（**SSH** `git@github.com:Xander-299/yanxin-bookkeeping-flutter.git`，`git push` 免凭据）：
-  **A 机（本机）** = 用户 `panda`、`D:` 盘、仓库 `<REPO>`、MuMu 12；**B 机** = `Administrator`、`C:/M:` 盘、MuMu 15。
+  **A 机（本机）** = 用户 `<本机用户名>`、`D:` 盘、仓库 `<REPO>`、MuMu 12；**B 机** = `Administrator`、`C:/M:` 盘、MuMu 15。
   `env.sh` **自动识别机器**，开终端先 `source env.sh`。
 - **F1–F7.6 全部 ✅**（日历 / 统计 / 预算 schema v2 / 搜索 / 搜索浮层 / 资产页 / 全站卡通浅色 `v0.7.6`）。
 - **F7.7 五批（A 报表明细 → B 数据导出 → C 账户图标·颜色 → D 搜索增强 → E 日历增强）全部已签字 + 已实现 + 已走查**：

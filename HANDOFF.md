@@ -110,7 +110,7 @@ fx-qa                        # = flutter analyze && flutter test（去代理）
 | Flutter 3.47.2 / Dart 3.13.2 | `D:\Download\Flutter\flutter`（`bin\flutter.bat`） |
 | JDK 17 | `D:\Download\Java\jdk-17.0.20.1+1`（**系统默认是 JDK 25，不能用**） |
 | Android SDK | `D:\Download\Java\Android`（platform-tools / build-tools 36.0.0 / platforms 35-36） |
-| adb | `D:\Download\Java\Android\platform-tools\adb.exe`（**注意**上表 SDK 与 `<USER_HOME>\AppData\Local\Android\Sdk` 都曾出现过，以能连上设备者为准） |
+| adb | `D:\Download\Java\Android\platform-tools\adb.exe`（**注意**上表 SDK 与 `<用户目录>\AppData\Local\Android\Sdk` 都曾出现过，以能连上设备者为准） |
 
 **门禁实测（2026-10-24）**：`flutter analyze` 直连可跑、`flutter test` 直连可跑（**必须加 `--concurrency=1`**，
 本机内存紧时默认并发会让 Dart VM `Out of memory` 崩）。`tool/dart_*_fallback.py` 那套 231 变通本轮没用到。
@@ -216,7 +216,9 @@ android.overridePathCheck=true
   `--no-pub` 构建。keystore 口令、核验三步、发布命令见
   [`docs/dev/release-v0.7.17.md`](docs/dev/release-v0.7.17.md)。
 - **换签名 = 用户必须卸载重装 = 丢本地账本**：release 签名只用
-  `<USER_HOME>\upload-keystore.jks`（`CN=yanxin`），**不是** `~/.android/debug.keystore`。
+  `<用户目录>\upload-keystore.jks`（`CN=yanxin`），**不是** `~/.android/debug.keystore`。
+  ⚠️ **口令 2026-10-29 已轮换为随机值**（旧口令作废）：值**不入库**，只在本机 `android/key.properties`
+  与仓库外 `upload-keystore-password.txt`；证书指纹未变，已发布包签名不受影响。
   装机前先 `apksigner verify --print-certs` 比对指纹。
 - **本机内存余量不足时 Gradle 守护进程会崩**（F8.1 实测两次）：`hs_err_pid*.log` 里是
   `Chunk::new` / `malloc` 失败，而系统 commit 只剩 ~0.9 GB。临时处理：把
