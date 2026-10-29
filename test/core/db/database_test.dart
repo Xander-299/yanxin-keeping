@@ -97,9 +97,9 @@ void main() {
       await insert('g4', 1); // 已删的可以有任意多条
     });
 
-    test('schemaVersion 落库为 3（PRAGMA user_version）', () async {
+    test('schemaVersion 落库为 4（PRAGMA user_version）', () async {
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 3);
+      expect(row.read<int>('user_version'), 4);
     });
 
     test('建表/建索引 DDL 幂等：重复执行不报错且版本不变', () async {
@@ -107,7 +107,7 @@ void main() {
         await db.customStatement(sql);
       }
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.read<int>('user_version'), 3);
+      expect(row.read<int>('user_version'), 4);
     });
 
     test('指纹部分唯一索引：同样指纹两条 → UNIQUE 冲突', () async {
@@ -206,7 +206,7 @@ void main() {
       expect(await _objects(v2, 'index'), contains('idx_budget_book_period'));
       final int after = (await v2.customSelect('PRAGMA user_version').getSingle())
           .read<int>('user_version');
-      expect(after, 3); // 一次走完 1→2→3 两条迁移
+      expect(after, 4); // 一次走完 1→2→3→4 三条迁移
 
       // 老数据仍在
       final book = await v2
@@ -256,13 +256,13 @@ void main() {
       await v2.customStatement('PRAGMA user_version = 2');
       await v2.close();
 
-      // 用「新版本代码」打开同一个库 → 走 onUpgrade(from 2, to 3)
+      // 用「新版本代码」打开同一个库 → 走 onUpgrade(from 2, to 4)
       final AppDatabase v3 = AppDatabase(NativeDatabase.opened(raw));
       addTearDown(v3.close);
 
       final int after = (await v3.customSelect('PRAGMA user_version').getSingle())
           .read<int>('user_version');
-      expect(after, 3);
+      expect(after, 4);
 
       // 既有行数据不丢，且新列落默认空串（= 跟随类型）
       final row = await v3

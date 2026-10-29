@@ -85,3 +85,8 @@ test/fixtures/*-real.*
 # tool/ 下 Python 脚本的字节码缓存（此前无规则，`git add .` 会误入库）
 __pycache__/
 *.pyc
+
+# 本地任务书（只给本机的 agent 看，不进版本库；docs/spec/ 里的 SPEC 才是入库的那份）
+/Prompt.md
+# ���ܲ���ԭʼ���ݣ�ÿ���ܶ���������ֻ�������� docs/perf/��
+/performance-results/

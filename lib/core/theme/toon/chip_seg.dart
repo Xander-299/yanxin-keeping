@@ -2,7 +2,7 @@ part of '../toon.dart';
 
 // ────────────────────────────── 选择类 ──────────────────────────────
 
-/// 胶囊 chip（**不带对勾**：选中变宽会挤位移，F7.5-a 真机教训）。
+/// 胶囊 chip（Material 3 `FilterChip`，**不带对勾**：选中变宽会挤位移，F7.5-a 真机教训）。
 class ToonChip extends StatelessWidget {
   const ToonChip({
     super.key,
@@ -18,32 +18,25 @@ class ToonChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    return ToonPress(
-      dx: 2,
-      dy: 2,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? p.brand : p.paper,
-          borderRadius: BorderRadius.circular(999),
-          border: p.inkBorder(w: 2, on: selected ? p.brand : p.paper),
-          boxShadow: p.hard(d: 2.5),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w800,
-            color: selected ? p.onBrand : p.ink,
-          ),
-        ),
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      onSelected: onTap == null ? null : (bool _) => onTap!(),
+      selectedColor: p.brandTint,
+      backgroundColor: p.canvas2,
+      labelStyle: TextStyle(
+        fontSize: 12.5,
+        fontWeight: FontWeight.w600,
+        color: selected ? p.brandInk : p.ink2,
       ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
 
-/// 分段控件（原型 `.seg`）：卡片底描边胶囊 + 选中项填品牌色。
+/// 分段控件（Material 3 `SegmentedButton`）：选中项填 `secondaryContainer`。
 class ToonSeg extends StatelessWidget {
   const ToonSeg({
     super.key,
@@ -60,51 +53,26 @@ class ToonSeg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ToonPalette p = context.toon;
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: p.paper,
-        borderRadius: BorderRadius.circular(999),
-        border: p.inkBorder(),
-        boxShadow: p.hard(d: 2.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          for (int i = 0; i < labels.length; i++)
-            Padding(
-              padding: EdgeInsets.only(left: i == 0 ? 0 : 3),
-              child: ToonPress(
-                dx: 1.5,
-                dy: 1.5,
-                onTap: () => onChanged(i),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: small ? 12 : 18,
-                    vertical: small ? 5 : 7,
-                  ),
-                  decoration: BoxDecoration(
-                    color: i == index ? p.brand : Colors.transparent,
-                    borderRadius: BorderRadius.circular(999),
-                    // 选中项铺琥珀 → 描边跟着底色走（深色下白描边会消失）
-                    border: Border.all(
-                      color: i == index ? p.inkOn(p.brand) : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                  child: Text(
-                    labels[i],
-                    style: TextStyle(
-                      fontSize: small ? 12 : 13.5,
-                      fontWeight: FontWeight.w800,
-                      color: i == index ? p.onBrand : p.ink2,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-        ],
+    return SegmentedButton<int>(
+      segments: <ButtonSegment<int>>[
+        for (int i = 0; i < labels.length; i++)
+          ButtonSegment<int>(
+            value: i,
+            label: Text(labels[i]),
+            tooltip: null,
+          ),
+      ],
+      selected: <int>{index},
+      showSelectedIcon: false,
+      onSelectionChanged: (Set<int> s) {
+        if (s.isNotEmpty) onChanged(s.first);
+      },
+      style: SegmentedButton.styleFrom(
+        visualDensity: small ? VisualDensity.compact : VisualDensity.standard,
+        textStyle: TextStyle(
+          fontSize: small ? 12 : 13.5,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

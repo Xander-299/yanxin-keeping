@@ -30,6 +30,326 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
+## [Unreleased] — 主题色（2026-10-29）
+
+### Added
+
+- **设置 → 主题色**：五套品牌配色可切换 —— **森绿**（默认，2026-10-28 换肤后的品牌锚点）、
+  **琥珀**（换肤前的 F7.6 配色）、**黛蓝**、**藕粉**、**墨紫**。
+  只换 seed（`ColorScheme.fromSeed` 的种子色）：hero / 按钮 / 选中态 / 图表配色整族跟着变，
+  **版式与页面代码一行不用改**。
+- 落库键 `theme_seed`（`schema_meta` 一行 KV，**不动 schema**）；未知值 / 读库失败回落森绿，
+  老用户不会被动换色。
+
+### Changed
+
+- `ToonPalette.light/dark` 由 `static final` 改成 `get lightOf(seed)` / `darkOf(seed)`（按 seed 缓存），
+  原 `light` / `dark` 保留为森绿别名（调用点零改动）。
+- `buildToonTheme(p, brightness, {seed})` 支持传入当前 seed，保证 `Theme.of` 的 `colorScheme`
+  与 `context.toon` 同源。
+- 分类占比图首瓣（`pie.first`）改成跟当前品牌色走，其余 8 色固定（要保证互异）。
+
+### 测试
+
+- 对比度护栏（`palette_contrast_test`）从 2 套扩到 **5 seed × 浅/深 = 10 套**（70 条断言全绿）——
+  以后加配色，先过这条才能进。
+- 新增：设置页五色点 + 点选落库、`ThemeSeedController` 默认/落库/脏值 3 例、
+  色板按 seed 缓存与饼图首瓣 3 例。
+- 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **740 passed / 6 skipped**。
+
+## [Unreleased] — 日历页：分段加载 / 不能翻未来月 / 选中日与可见月解耦（2026-10-29）
+
+### Changed
+
+- **打开日历不再「整页加载完才显示」**：`calendarProvider` 改成**同步 state**
+  （`Notifier` 而不是 `AsyncNotifier`），首帧就能画网格与月汇总条；数据分两段到 ——
+  ① 选中日账单（`listByRange` 只查一天）→ ② 整月聚合（日标注 / 月结余 / 日均，`listByMonth`）。
+  两段各有自己的轻量占位（汇总条显示「—」，账单区一行「正在加载这天的账单…」），
+  不给整页转圈。翻月只换上半块（`AnimatedSwitcher` 只包网格 + 汇总），下面账单不跟着动。
+- **不能翻到未来月**（与首页 `canGoNext` 同口径）：网格左滑到头不再前进、`shiftMonth(+1)`
+  在当月直接返回、月份选择子页的未来日期灰掉不可点、「下一年」在当年禁用、
+  `jumpTo` 对未来年月与当月未来日一律忽略。
+- **翻月不再改选中日**：`CalendarState` 拆成「可见年月」+「选中日（完整日期）」两个字段，
+  原选中日可能不在可见月里；此时网格不高亮任何一天（`selectedDayInGrid` 给 0），
+  下面账单继续显示原来那天，直到用户点了别的日子才换。原「自动跳该月最后一个有账日 / 1 号」逻辑删除。
+
+### 测试
+
+- 新增 2 例：`打开日历：首帧就有网格与月汇总条（R1）`、`翻月不动选中日（R3）`；
+  改写 3 例：左右滑动（未来月不可翻）、翻月过渡动画（改往历史月翻）、月份子页年份切换（未来年禁用）。
+- 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **677 passed / 6 skipped**（+2）。
+
+## [Unreleased] — 预置一级分类补二级（2026-10-29）
+
+### Added
+
+- **预置二级分类**：支出侧 10 个一级带二级（共 33 条）—— 餐饮（早餐/午餐/晚餐/饮料/零食）、
+  交通（地铁/公交/打车/共享单车/加油）、购物、居住、娱乐、医疗、教育、人情社交、旅行、通讯；
+  收入与「其他」刻意不带。二级 `is_preset=1`、颜色沿用父级，可改名 / 归档 / 删除（删了不复活）。
+- 图标目录追加 3 个稳定 key：`dinner`、`bus`、`bike`（只追加、不改名）。
+
+### Changed
+
+- `BookRepository.create()` 改为复用 `CategoryRepository.ensurePresets()` —— 预置写入只剩一处逻辑。
+- `ensurePresets()` 重写：一级只在 `parent_id IS NULL` 的行里匹配，二级只在**同一父级**下匹配；
+  父级被软删则整棵树不补。
+
+### Fixed
+
+- **问答漏算子分类**：`问「这个月餐饮花了多少」` 原来只统计直接记在「餐饮」上的钱，
+  记在「早餐 / 午餐」上的不算。现按「自己命中或父级命中」汇总，问二级时不会倒推父级。
+- 测试基建：新增 `test/helpers/pick_category.dart`（点一级 → 自动补点「不细分」），
+  修复 5 处因「一级带二级」而停在子列表、保存出无分类账单的用例。
+
+### 门禁
+
+`flutter analyze` 0 issue · `flutter test --concurrency=1` **675 passed / 6 skipped**（+4）。
+**本轮未做真机走查**（用户指定）。schema 仍 v4，无迁移。
+
+## [Unreleased] — 分类管理页交互升级（Collapse / Wrap / ActionSheet）
+
+### Changed
+
+- **一级分类改为 Collapse 交互**：点按根分类在其下方内联展开/收起二级分类
+  （`AnimatedSize` 220ms 过渡 + 旋转箭头指示），默认全部收起。
+- **二级分类改为 `Wrap` 流式排布**：chip 自适应宽度、自动换行，不再每项独占一行。
+- **三点溢出菜单升级为底部 ActionSheet**（`showModalBottomSheet`）：
+  一级 / 二级分类共用，操作集合与旧 PopupMenu 一致（编辑 / 添加子分类 / 上移 / 下移 / 归档 / 删除）。
+- 业务逻辑零改动：schema v4、归档/迁移/删除/排序流程与 `category_actions.dart` 全部复用。
+- 二级分类从彩色胶囊 Chip 改为**块状分类项**（纸底 + 发丝描边 + 分类色图标方块，宽随内容），
+  仍由 `Wrap` 流式换行；补「子分类块点击开 ActionSheet」回归测试（第二轮任务书）。
+- 「添加」作为网格末尾的**常驻块**（与子分类块同构对齐），点击直接进编辑器预置父分类；
+  「添加子分类」移出 ActionSheet；无子分类的一级分类同样可展开（展开即见「添加」块）。
+- **分类编辑层收成屏幕高度 30%**（`kCategoryEditorHeightFactor`）：三段式布局
+  （抓手 + 标题固定 / 表单可滚 / 保存·取消钉底），键盘弹起整块让位。
+- **图标 / 颜色改为独立弹层（屏幕高度 60%）**：编辑层只留图标预览，点开才铺 43 图标 + 9 颜色；
+  选中即时回写预览，下滑关闭不丢选择（`widgets/category_icon_sheet.dart`）。
+- **新增浮动入口 `ToonFloatMenu`**（Ant Design FloatButton 语义）：圆形 + 加号 + `trigger: click`，
+  固定在**右下角、距屏幕底部 15%** 处（圆心 = 屏高 85%）、不可拖动，点按**向上**展开
+  `F`（一级分类）/ `S`（二级分类）；二级入口先选父分类。列表末尾按钮与展开网格的「添加」块保留。
+- **AppBar 的「新建分类」按钮移除**：与浮动按钮功能完全重复（2026-10-29 用户要求只留悬浮按钮）；
+  新建入口 = 浮动按钮（主）+ 列表末尾 ghost 按钮（滚到底顺手能点）。
+- **所有底部面板内容统一为线性布局 `Column`**：父分类选择 / 迁移目标两处 `ListView` 改 `Column`，
+  `ListTile` 换成自绘行（`_SheetTile` / `_SheetRow`）。
+- 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **671 passed / 6 skipped**（+3）。
+
+## [Unreleased] — 主题换肤（seed 琥珀 → 森绿）
+
+### Changed
+
+- **整体主题配色由琥珀改为森绿（方案 B）**：`ToonPalette.seed` `0xFFFFB627` → `0xFF2E5E4E`，
+  全部 M3 角色（primary / primaryContainer / error / tertiary / surface 系）仍由 seed 一处派生；
+  hero、按钮、支出红 / 收入绿等语义色随 seed 自动更新。
+- 分类占比圆环 9 色微调：品牌森绿打头，原首位的琥珀移到原亮绿位（保持 9 色互异）。
+- 同步更新用户可见文案与新手指引里的颜色指称（「琥珀方块」→「墨绿方块」、月份选择页图例等）。
+- 护栏：`test/core/theme/palette_contrast_test.dart`（M3 前景配对 4.5:1 / 3:0 / 1.4:1）全绿。
+
+## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1 + 批次 3 首页聊天化）
+
+> **门禁**：`flutter analyze` → `No issues found!` ✅ ·
+> `flutter test --concurrency=1` → **638 passed / 6 skipped / 0 failed**（基线 588，本批 **+50**；批次 3 删 20 例旧页测试、加 22 例）✅
+> **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · 写库路径未改（M1 只读）
+> **回滚**：M1 回 `git revert <本段提交>`；基准表（批次 1）回 `1dd4044^`
+
+### 批次 11e · 新增 AGENTS.md 指针文件（2026-10-28，用户拍板）
+
+用户选择折中方案：新增**极薄的 `AGENTS.md`** —— 只做指针不承载规则（接手顺序 HANDOFF →
+docs/spec → docs/handoff + 三条最易踩的本地约定 + 门禁）；HANDOFF 头部加互指行。
+规则仍然单一真相在 HANDOFF.md，AGENTS.md 只是给 Agent/新人的入口。
+### 批次 11d · HANDOFF 对齐实际项目状态（2026-10-28）
+
+用户要求「交接文档基于实际项目情况」，逐项核对后修正 4 处过期 + 补 1 条不变量：
+
+- 现状表：schema v3 → **v4**（补 v4 内容与「零数据改动」证据）；门禁 638 → **665 passed**；
+  「下一步 M2」划掉 → **⏸ 已搁置** + 列出候选下一步（待用户拍板）
+- 目录导航：core/db 补 schema_v4、constants 补 category_icons、features 树补 category/
+- 不变量新增 **#10**：分类两个读取口径（含归档 vs 排除归档）不能混；ensurePresets 软删不复活
+
+另：用户确认全仓无 AGENTS.md / CLAUDE.md 等 Agent 规则文件（见本轮对话），项目规范
+由 HANDOFF.md + docs/spec/ + docs/handoff/ 承担，暂不新增 AGENTS.md。
+### 批次 11c · 本地 AI 路线搁置 + F7.18 格式对齐（2026-10-28，用户裁定）
+
+- **⏸ 本地 AI 路线（M2 端上推理及后续）搁置**：`SPEC-local-ai.md` 头部加搁置声明（基准数据：
+  首 token 3.5–5.1s / 常驻 1.18GB，成本收益不成立）；HANDOFF 阶段二进度块同步标注。
+  已交付的 M1 关键词问答与 F8.1 截图记账**不受影响**。
+- F7.18 SPEC 格式对齐 F7.14 惯例：DoD 改 D1–D9 编号、补「版本 tag」行与「§11 与现有 Spec 的关联」
+  （明确不重复/不修改任何既有 SPEC 的需求，消费侧兼容边界逐条列明）。
+### 批次 11b · F7.18 SPEC 补档（2026-10-28）
+
+- 新增 `docs/spec/SPEC-F7.18-category-tree.md`（事后补档，标注状态与 5 条偏差 D1–D5）
+- 新增 `docs/acceptance-F7.18-category-tree.md`（MuMu 真机验收，含 ensurePresets 复活 bug 的发现与复测）
+- PRD §3.5 FR-CAT 补齐 FR-CAT-03~08；HANDOFF 文档索引加两行
+### 批次 11 · 分类系统 v4：两级分类 + 归档 + 迁移（2026-10-28，Prompt.md 任务）
+
+按 `Prompt.md` 完整实现分类管理（数据库 **schema v3 → v4**）：
+
+**数据层**
+- `categories` 加 `parent_id`（两级树）、`is_archived`；索引 `idx_categories_book_kind_parent`、`idx_categories_book_archived_sort`；迁移**只加列**，老数据零改动；v3 老库升级时按分类名回填稳定 icon key。
+- 预置扩到 **11 支出 + 7 收入**，每个带图标 key + 颜色；老账本由 `ensurePresets()` 幂等补齐（命中别名「理财/红包/人情」不重复插；**软删的预置不复活** —— 真机实测踩到后修的）。
+- `CategoryRepository` 全量重写：两级校验、同级重名、归档（连带子分类）、**迁移后删除**（事务内只改 `category_id`，金额/日期/备注/账户不动）、引用计数。
+
+**UI**
+- 分类管理页：支出/收入 Tab、分组树（二级缩进）、图标+颜色选择器、上移/下移排序、归档分区（默认折叠，可恢复）、删除前先查引用 —— 没账单直接删；有账单给「归档」或「迁移到别的分类后删」两条路。
+- 记账页选择器：两级钻取（带子分类的一级有「›」角标，子级列表含「不细分」项）；只列**同方向、未归档**分类。
+- 统计/报表的分类标签：二级显示「父 · 子」。
+
+**测试**：仓储 21 例 + 页面/选择器 3 例；全量 **665 passed / 6 skipped**，analyze 0 issue。
+**MuMu 实测**：老库升级 user_version=4、154 笔账单分毫未动；新建/二级/编辑/排序/归档/恢复/迁移（7 笔购物→其他）全程走通。
+### 批次 10 · 「我的」页版本角标对齐（2026-10-28，真机装包时发现）
+
+角标还停在 `v0.7.17`（实际包版本 0.8.1+2001），覆盖列表也没提截图记账/问账本。已改为
+`v0.8.1` + 更新覆盖列表；**改版本号时要同步这里**（README 里「版本号三来源」那段也提过）。
+### 批次 9 · 数值淡入补齐两处（2026-10-28）
+
+- **统计页分类图例的百分比**：`ToonFadeValue(value: slice.percentText, …)`，切月份/切收支时跟着数字一起淡入；
+- **聊天页答案卡主数字**：新增 `ToonFadeValue(animateOnFirstBuild: true)` —— 新冒出来的答案卡
+  主数字从 0 淡入（列表类数字保持默认，进页面不会整体闪）。
+
+护栏扩到 4 条：值变淡入 / 值不变不动 / **首次出现（animateOnFirstBuild）淡入** / 放进 baseline Row 不抛异常。
+### 批次 8 · 数值淡入铺开（2026-10-28）
+
+把「值一变就淡入」抽成公共组件 `ToonFadeValue`（`core/theme/toon/fade_value.dart`），用到：
+
+| 位置 | 数值 |
+|---|---|
+| 首页 hero | 支出大金额、收入/结余气泡（原来只做了主金额，现在三处一致） |
+| 统计页 | 汇总卡「支出 / 收入 / 结余」、分类图例金额 |
+| 首页预算条 | 百分比、剩余/每日可花那一行 |
+
+护栏：`test/core/theme/toon_fade_value_test.dart` 两条 —— ① 值变化时 opacity < 1、值不变恒为 1；
+② **放进 `Row(crossAxisAlignment: baseline)` 不抛异常**（谁要是换回 `AnimatedSwitcher`（内部 `Stack`），
+这条会立刻红，因为金额行正是基线对齐）。
+### 批次 7 · hero 金额淡入（2026-10-28）
+
+切月份 / 记完一笔后，hero 的大金额（以及收入、结余两个气泡）做 **150ms 淡入**，不再是硬切。
+
+实现上刻意**不用 `AnimatedSwitcher`**：它内部是 `Stack`，会打断 `¥` 与数字之间的**基线对齐**；
+改用一层 `FadeTransition` 包住文本（`RenderProxyBox` 会透传基线），值变了才 `forward(from: 0)`，
+值没变的重建不闪。测试 `month_hero_test` 两条：变化时 opacity < 1、不变时恒为 1。
+### 批次 6 · 全面排查「切视图闪转圈 + 瞬切」（2026-10-28）
+
+顺着日历那处往下查，**另外三处同样的坑**，全修：
+
+| 位置 | 症状 | 修法 |
+|---|---|---|
+| 首页 `ledger_controller._reload` | 翻月、**记完一笔后的自动刷新**都会先把整屏切成转圈再瞬切 | 不切 loading，保留旧数据；页面 `when(skipLoadingOnReload: true)` 双保险 |
+| 统计 `stats_controller._reload` | 翻月闪转圈 | 同上；并加 **200ms 淡入淡出**（`AnimatedSwitcher`，key = 年月） |
+| 搜索 `search_controller.refresh` | 删/改一笔后整片结果闪转圈 | 不切 loading |
+| 报表 / 资产 / 账本 / 分类 | **无问题**：报表 `_reload` 本来就没切 loading；其余用 `FutureProvider`，切换不重新取数 | 不动 |
+
+回归：`stats_page_test` 新增「翻月不闪转圈」；日历那条（上批）继续守。
+### 批次 5 · 日历翻月过渡（2026-10-28）
+
+**用户报**：「日历页滑动切换没有过渡动画，很生硬」。根因两条，都修了：
+
+1. `CalendarController._reload` 每次翻月都 `state = AsyncLoading()` → 页面 `calendar.when(loading:)`
+   会先闪一整屏转圈，再瞬间换成新月份（**内容瞬切 + 闪白**）；
+   改为「不切 loading，拿到新数据再一次性替换」，首次加载仍有 loading。
+2. 页面没有任何过渡：月历+月结余+日账单整体包进 `AnimatedSwitcher`（240ms，`easeOutCubic`），
+   key = 年月，**按翻月方向**做 `SlideTransition`（0.12 屏宽）+ 淡入；方向由 `ref.listenManual`
+   比对 `year*12+month` 得出，滑动 / 顶部箭头 / 月份选择子页三条入口共用。
+
+回归测试：`calendar_page_test`「翻月有过渡动画」——动画中**新旧两个 MonthGrid 同时在场**、
+存在 `SlideTransition`、且全程不出现 `CircularProgressIndicator`。
+### 批次 4 · 换 Material 3 皮肤（2026-10-28，纯视觉层，业务逻辑零改动）
+
+**用户要求**：「界面风格改成 Material Design 那种」。范围=整个 App；卡通元素（小猪 / 手绘虚线 / 硬描边）全去掉；主色沿用琥珀。
+
+| 层 | 改动 |
+|---|---|
+| 主题 | `buildToonTheme` 改为 Material 3：`ColorScheme.fromSeed(琥珀)` + M3 组件主题（Card / FilledButton / SegmentedButton / FilterChip / NavigationBar / InputDecoration），去掉墨色粗描边与零模糊硬阴影 |
+| 色板 | `ToonPalette` 不再是手写常量：`light` / `dark` 由 `_fromScheme(ColorScheme)` 派生（字段名不变，155 处 `context.toon` 不用改） |
+| 组件 | `ToonCard`→`Card`+elevation、`ToonButton`→Filled/Outlined、`ToonField`→ListTile 式行、`ToonSeg`→`SegmentedButton`、`ToonChip`→`FilterChip`、`ToonPress`→`InkWell`（ripple）、`ToonIconButton`→`IconButton`、虚线→实线 outline；**组件名与调用点全部保留**（432 处不动） |
+| 卡通件清理 | 删除 `mascot.dart`（小猪）/ 原 `avatar_ring.dart`；`ToonAvatar` 重写为 `CircleAvatar`、`ToonRing` 改用 `CircularProgressIndicator`；hero 贴纸、引导页小猪、各空态小猪统一换成 Material 图标 |
+| 测试 | `palette_contrast_test` 重写为 M3 语义配对（on* on *）；`toon_theme_test` 的「深浅差异」断言改为文字/纸色/分割线 |
+
+**门禁**：`flutter analyze` 0 issue；`flutter test --concurrency=1` **638 passed / 6 skipped**（零逻辑改动，测试全绿）。
+**真机**（MuMu 900×1600，浅色）：取样 hero `#FFDEAD`（primaryContainer 浅琥珀）、页面 `#FFFFFF`、卡片 `#FFF8F3`；深色：`#120D07` 底 / 同款浅琥珀 hero。
+### 批次 3 · 首页聊天化：记一笔 / 问一句（2026-10-28，产品代码）
+
+**用户要求**：「截图记账和问账本不要放在『我的』，把首页『本月预算』部件替换掉；两个功能集成成一个聊天框，
+能发文字也能发账单图片。」两个取舍当场拍板：**首页放入口卡（点开发送后进全屏聊天）** + **预算降级成 hero 下方一行**。
+
+| 层 | 内容 |
+|---|---|
+| 首页 | `BudgetStrip`（一行：预算 / 进度 / 剩余 / 每天可花，点击仍开原编辑弹层）+ `ChatEntryCard`（假输入框 + 📷 + 3 示例） |
+| 聊天 | `/chat`：`chat_controller`（文字问答 + 图片记账）+ `chat_page` + `chat_bubbles` + `receipt_card` |
+| 图片 | 选图 → 端上 OCR → `parseReceipt` → **待确认卡**（金额/分类/日期/账户/备注可改）→ 确认才 `importTransaction(source:'screenshot')`；重复指纹不重复入账；支付失败不写库 |
+| 清理 | 「我的」删两行入口；删旧页 `assistant_page`/`assistant_controller`/`receipt_page`/`receipt_bits`/`budget_card` 及其 4 个测试文件；路由 `/assistant`、`/receipt` 合并为 `/chat` |
+| 测试 | 新增 22 例（chat_controller 9 / chat_page 5 / chat_entry_card 3 / budget_strip 4，另加 `answer_question` 复用原编排断言） |
+
+**间距修正（2026-10-28 当天反馈）**：预算条与 hero / 入口卡之间原本只有 ~10dp 视觉缝（hero 硬阴影还吃掉了半格），
+改为 **17.5dp**（`kHomeGapHeroToStrip = 24` 补偿阴影 + `kHomeGapStripToEntry = 20`），
+首页竖向节奏收敛成 `home_page.dart` 顶部的三个常量，不再散落在子组件的 margin 里。
+
+**踩坑（已修）**：`sendImage` 里' `ref.read(categoriesProvider).value ?? []` 首次读是 null → 分类/账户永远为空、
+点确认永远失败；改成 `await ref.read(...future)`，并加了回归测试。
+
+**真机（MuMu 12 / Android 12）走查 5 条全过**：首页顺序（hero → 预算一行 → 入口卡 → 账单列表）✓ ·
+入口进聊天并答出真实数字（近 90 天 2,105.37 / 前 5 笔 925.40）✓ · 发图 → 待确认卡 → 确认 → 「已记账 · 支出 ¥36.00」
+且首页 10 月从 0.00 → 36.00 ✓ · 「我的」无两入口 ✓ · 预算条设 1000 → 显示 3.6% / 还剩 964 / 每天 241 ✓。
+
+### 批次 2 · M1「问账本」（2026-10-27，产品代码）
+
+
+| 层 | 内容 |
+|---|---|
+| 理解 | `finance_intent.dart`：一句话 → 7 类意图（汇总 / 分类 / 预算 / 环比 / 大额 / 储蓄 / 不认识）+ `Period` 区间；中文数字归一（「最近三个月」）、分类别名（「吃饭」→餐饮）、**顺序即优先级**（「为什么比上月多」必须先判对比） |
+| 计算 | `finance_answer.dart`：只调既有口径 `summarize` / `categoryBreakdown` / `buildBudgetView`，**模板层不做新算术**；占比走整数千分比 |
+| 编排 | `assistant_controller.dart`：解析 → `listByRange` / `getForMonth` → 出答案；不缓存数字（避免过期快照） |
+| UI | `/assistant` + 「我的 → 问账本」：示例 chips、问题气泡、答案卡（主数字 + 事实行 + 叙述 + 追问）、输入栏 |
+| 测试 | 48 例：意图 22 / 回答 16 / 控制器 6 / 页面 4（含深色主题） |
+
+**口径**（与 `docs/spec/SPEC-local-assistant.md` §4 一致）：区间半开且**必须写进回答**；
+「最近一个月」= 滚动 30 天；上期没数据就说「没法比较」；空区间说「没有记账记录」而**不返回 ¥0.00**；
+不认识就回示例问题，**绝不编数字**。
+
+**验收（`Prompt.md` 阶段二 §6）**：8 条里 7 条 ✅，第 5 条（模型缺失提示）留 M2 —— 页脚已写明
+「现在是规则 + 账本计算，本地模型是后续可选」。
+
+**真机走查（MuMu 12 / Android 12）**：导入用户提供的真实微信账单（161 行）→ 153 笔入库 →
+「我的 → 问账本」逐条问 5 个示例 + 1 条无关问题，数字与首页 hero / 数据库聚合三方一致。
+走查中发现并修掉一处**误导**：账单只覆盖 8/29 起，8 月仅 3 天有记录，「比上个月多」直接给「+3060.6%」——
+现改为用**数据自身天数跨度**判断两期是否可比，不平衡时补「日均（N 天）」并点明「直接比总额会放大差距」。
+详见 [`docs/spec/SPEC-local-assistant.md`](docs/spec/SPEC-local-assistant.md) §7。
+
+**产物**：`flutter build apk --debug` → 203.3 MB（debug，含 x86_64 便于模拟器走查）；
+已核验包内 `kernel_blob.bin` 含「问账本」文案。
+
+### 批次 1 · 设备 × 模型基准（2026-10-27，只加工具与文档，未动产品代码）
+
+> **门禁**：`flutter analyze` → `No issues found!`（本轮零 Dart 改动）
+> **不动 schema**（仍 v3）· **零 pub 依赖** · **未加任何 Android 权限** · release 包行为完全不变
+
+### 做了什么
+
+| 层 | 内容 |
+|---|---|
+| 探针 | `tool/llm_bench/bench_android.cpp`：调 llama.cpp C API，逐轮输出 `冷加载 / 首 token / pp·tg tok/s / VmRSS·VmHWM / CPU 频率`（`KEY=value`，供脚本解析） |
+| 构建 | `tool/llm_bench/build_android.ps1`：NDK 28.2 交叉编 llama.cpp `b7050` + 探针；支持基线 / `armv8.2-a+dotprod` 两个变体，产物落库外 `D:\yanxin-llm-bench` |
+| 跑测 | `tool/llm_bench/run_bench.ps1`：推模型（按字节数跳过）→ 跑 → 主机侧每 15 s 采电池温度/大小核频率 → 直接吐一行 markdown |
+| 语料 | `tool/llm_bench/prompts_finance.txt`：8 段中文财报问答（173–177 token），逐轮轮换 |
+
+### 实测结果（Redmi K50 / MT6895 / Android 14 / HyperOS V816）
+
+| 模型（Q4_K_M） | 冷加载 | 首 token | pp tok/s | tg tok/s | 峰值 RSS | 10 轮后 RSS |
+|---|---|---|---|---|---|---|
+| **Qwen2.5-1.5B-Instruct** | 1.70 s | 5.07 s | 36.4 | **7.4** | 1185 MB | 1184 MB |
+| Qwen3-1.7B | 1.63 s | 5.66 s | 32.2 | 6.6 | 1350 MB | 1348 MB |
+| Gemma-3-1B-it | 1.19 s | 3.51 s | 50.4 | 8.8 | 885 MB | 883 MB |
+
+- **20 分钟长跑（68 轮）不掉速**：tg 7.4 → 7.0，大核 2.85 → 2.15 GHz（−24%），电池 +1.4 ℃ —— 瓶颈是内存带宽，不是算力。
+- **两个开关比模型更关键**：`dotprod` 让预填 +47%（24.8 → 36.4）；线程绑大核让生成 +27%，开 8 线程反而 −50%。
+- **质量抽查推翻「让模型算数」**：Qwen2.5 算对超支额但编了每日额度；Qwen3 的 `<think>` 吃光 token；Gemma 数字全错。
+
+详细报告 [`docs/dev/llm-benchmark.md`](docs/dev/llm-benchmark.md)，逐轮原始数据
+[`docs/dev/llm-benchmark-raw.md`](docs/dev/llm-benchmark-raw.md)。
+
+### 未做（下一批）
+
+`LlmProvider` 抽象、JNI 引擎、财务查询编排、问答页 —— 阶段二真正的产品代码一行未写；
+模型分发（D4）仍待拍板；只测了 1 台设备（SPEC 要求 2 台）。
+
 ## [v0.8.1] — 2026-10-24 · 端上截图记账（F8.1 阶段一）
 
 > **门禁**：`flutter analyze` **No issues found!** ✅ ·

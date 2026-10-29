@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:yanxin/core/theme/palette.dart';
 import 'package:yanxin/core/theme/theme_mode.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/features/assets/presentation/assets_page.dart';
 import 'package:yanxin/features/autobook/presentation/auto_book_page.dart';
@@ -24,12 +25,12 @@ import 'package:yanxin/features/book/presentation/book_manage_page.dart';
 import 'package:yanxin/features/calendar/presentation/calendar_page.dart';
 import 'package:yanxin/features/calendar/presentation/month_picker_page.dart';
 import 'package:yanxin/features/category/presentation/category_manage_page.dart';
+import 'package:yanxin/features/chat/presentation/chat_page.dart';
 import 'package:yanxin/features/import/presentation/import_page.dart';
 import 'package:yanxin/features/ledger/presentation/home_page.dart';
 import 'package:yanxin/features/nav/presentation/app_shell.dart';
 import 'package:yanxin/features/onboarding/presentation/onboarding_page.dart';
 import 'package:yanxin/features/profile/presentation/profile_page.dart';
-import 'package:yanxin/features/receipt/presentation/receipt_page.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/reports/presentation/reports_page.dart';
@@ -117,8 +118,13 @@ class _YanxinAppState extends ConsumerState<YanxinApp> {
       GoRoute(path: '/autobook', builder: (_, _) => const AutoBookPage()),
       // 设置（F7.17）：外观 = 浅色 / 深色 / 跟随系统（默认跟随系统）
       GoRoute(path: '/settings', builder: (_, _) => const SettingsPage()),
-      // 截图记账（F8.1）：端上 OCR + 规则解析 → 确认页 → 复用现有入账链路
-      GoRoute(path: '/receipt', builder: (_, _) => const ReceiptPage()),
+      // 记一笔 / 问一句（2026-10-28 改版）：文字问账本 + 发账单截图，合并成一条聊天流。
+      // 旧的 `/assistant`（问账本）与 `/receipt`（截图记账）已并入这里，入口从首页进来。
+      GoRoute(
+        path: '/chat',
+        builder: (_, GoRouterState state) =>
+            ChatPage(launch: state.extra as ChatLaunch?),
+      ),
     ],
   );
 
@@ -127,10 +133,20 @@ class _YanxinAppState extends ConsumerState<YanxinApp> {
     // 还没读出来时按默认「跟随系统」渲染（首帧前 main() 已预热，正常不会走到这里）
     final ToonThemeMode mode =
         ref.watch(themeModeProvider).value ?? ToonThemeMode.system;
+    // 主题色（2026-10-29）：换 seed → 整套 M3 色板跟着换，页面代码一行不用动
+    final ToonSeed seed = ref.watch(themeSeedProvider).value ?? ToonSeed.forest;
     return MaterialApp.router(
       title: '颜芯记账',
-      theme: buildToonTheme(ToonPalette.light, Brightness.light),
-      darkTheme: buildToonTheme(ToonPalette.dark, Brightness.dark),
+      theme: buildToonTheme(
+        ToonPalette.lightOf(seed),
+        Brightness.light,
+        seed: seed.seed,
+      ),
+      darkTheme: buildToonTheme(
+        ToonPalette.darkOf(seed),
+        Brightness.dark,
+        seed: seed.seed,
+      ),
       themeMode: mode.materialMode,
       routerConfig: _router,
     );

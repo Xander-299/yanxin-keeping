@@ -2,7 +2,10 @@ part of '../toon.dart';
 
 // ────────────────────────────── 卡片 ──────────────────────────────
 
-/// 卡片底 + 墨色描边 + 硬阴影的卡片。
+/// 卡片：Material 3 `Card`（surface 底 + elevation + 圆角，**无描边**）。
+///
+/// 参数名沿用旧版（`shadow` = 阴影强度、`radius`、`color`、`clip`），语义按 M3 映射：
+/// `shadow` 0 → elevation 0，1–3 → 1，≥4 → 2。
 class ToonCard extends StatelessWidget {
   const ToonCard({
     super.key,
@@ -11,7 +14,7 @@ class ToonCard extends StatelessWidget {
     this.margin,
     this.radius = Tok.rLg,
     this.color,
-    this.shadow = 4,
+    this.shadow = 1,
     this.onTap,
     this.clip = false,
   });
@@ -21,32 +24,38 @@ class ToonCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
   final double radius;
 
-  /// 卡片底色；`null` = 主题的卡片色（`p.paper`）。
+  /// 卡片底色；`null` = 主题 surface。
   final Color? color;
 
+  /// 阴影强度（映射到 M3 elevation）。
   final double shadow;
+
   final VoidCallback? onTap;
 
-  /// 内部列表要「贴边」时打开（描边内裁切，避免子项盖住圆角）。
+  /// 内部列表要「贴边」时打开（裁切到圆角内）。
   final bool clip;
 
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    Widget box = Container(
-      margin: margin,
-      padding: padding,
-      clipBehavior: clip ? Clip.antiAlias : Clip.none,
-      decoration: p.cardDeco(
-        color: color ?? p.paper,
-        radius: radius,
-        depth: shadow,
-      ),
+    final double elevation = shadow <= 0
+        ? 0
+        : shadow >= 4
+        ? 2
+        : 1;
+    final Widget body = Padding(
+      padding: padding ?? EdgeInsets.zero,
       child: child,
     );
-    if (onTap != null) {
-      box = ToonPress(onTap: onTap, child: box);
-    }
-    return box;
+    return Card(
+      margin: margin ?? EdgeInsets.zero,
+      color: color ?? p.paper,
+      elevation: elevation,
+      clipBehavior: clip ? Clip.antiAlias : Clip.none,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(radius),
+      ),
+      child: onTap == null ? body : InkWell(onTap: onTap, child: body),
+    );
   }
 }

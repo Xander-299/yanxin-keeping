@@ -144,7 +144,7 @@ class _NoResult extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const PigMascot(size: 52),
+              Icon(Icons.search_off_rounded, size: 40, color: p.ink3),
               const SizedBox(height: 10),
               Text(
                 '没有匹配「$keyword」的账单',

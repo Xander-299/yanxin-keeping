@@ -16,15 +16,23 @@ import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/category_providers.dart';
 import 'package:yanxin/features/autobook/presentation/widgets/auto_book_banner.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
+import 'package:yanxin/features/chat/presentation/widgets/chat_entry_card.dart';
 import 'package:yanxin/features/reports/application/reports_controller.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
 
 import '../application/ledger_controller.dart';
-import 'widgets/budget_card.dart';
+import 'widgets/budget_strip.dart';
 import 'widgets/month_hero.dart';
 import 'widgets/tx_delete_dialog.dart';
 import 'widgets/tx_group_list.dart';
+
+/// 首页竖向节奏（dp）—— 改首屏呼吸感只动这三个数，别在子组件里各写一份 margin。
+///
+/// hero 卡片带 4px 硬阴影，会在视觉上吃掉半格缝，所以「hero ↔ 预算条」给到 24（实测视觉缝 ≈17dp）。
+const double kHomeGapHeroToStrip = 24;
+const double kHomeGapStripToEntry = 20;
+const double kHomeGapEntryToSection = 20;
 
 /// 首页。
 class HomePage extends ConsumerWidget {
@@ -45,6 +53,9 @@ class HomePage extends ConsumerWidget {
           _Header(bookName: bookAsync.value?.name ?? '…'),
           Expanded(
             child: ledger.when(
+              // 翻月 / 写后刷新不再切 loading（controller 侧已改），这里再加一道保险：
+              // 即使状态短暂回到 loading，也继续画旧数据，不闪转圈。
+              skipLoadingOnReload: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (Object e, StackTrace _) =>
                   Center(child: Text('加载失败：$e')),
@@ -64,8 +75,13 @@ class HomePage extends ConsumerWidget {
                           ref.read(ledgerProvider.notifier).shiftMonth(1),
                     ),
                   ),
-                  const SliverToBoxAdapter(child: BudgetCard()),
-                  const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                  // 预算降级成一行（腾出首屏给「记一笔 / 问一句」入口；2026-10-28 改版）
+                  // 竖向节奏：hero →(24) 预算条 →(20) 入口卡 →(20) 本月账单
+                  const SliverToBoxAdapter(child: SizedBox(height: kHomeGapHeroToStrip)),
+                  const SliverToBoxAdapter(child: BudgetStrip()),
+                  const SliverToBoxAdapter(child: SizedBox(height: kHomeGapStripToEntry)),
+                  const SliverToBoxAdapter(child: ChatEntryCard()),
+                  const SliverToBoxAdapter(child: SizedBox(height: kHomeGapEntryToSection)),
                   const SliverToBoxAdapter(child: _SectionHeader()),
                   if (state.items.isEmpty)
                     SliverToBoxAdapter(

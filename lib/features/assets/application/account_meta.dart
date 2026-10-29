@@ -89,6 +89,6 @@ String colorToHex(Color c) {
 /// 账户头像底色：[colorHex] 能解析 → 用它；否则回退 [p] 的 `brandTint`
 /// （与老数据空串行为完全一致，SPEC §C.1 兼容条款）。
 ///
-/// 回退色从主题取（F7.17）：深色主题的 `brandTint` 是暗琥珀，硬编码浅色会白一块。
+/// 回退色从主题取（F7.17）：深色主题的 `brandTint` 是暗底，硬编码浅色会白一块。
 Color accountAvatarColor(String? colorHex, ToonPalette p) =>
     parseHexColor(colorHex) ?? p.brandTint;

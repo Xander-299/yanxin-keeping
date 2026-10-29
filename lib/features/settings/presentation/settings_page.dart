@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/theme/theme_mode.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/features/settings/application/theme_controller.dart';
@@ -22,6 +23,8 @@ class SettingsPage extends ConsumerWidget {
     // 还没读出来时按默认「跟随系统」显示选中态（与 MaterialApp 的回落一致）
     final ToonThemeMode mode =
         ref.watch(themeModeProvider).value ?? ToonThemeMode.system;
+    final ToonSeed seed =
+        ref.watch(themeSeedProvider).value ?? ToonSeed.forest;
 
     return Scaffold(
       // 设置页用纯卡片底色（与「我的」一致），不是全局暖白画布
@@ -49,10 +52,31 @@ class SettingsPage extends ConsumerWidget {
               ),
             ),
           ),
+          const ToonSectionTitle(title: '主题色'),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+            child: ToonCard(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                runSpacing: 10,
+                children: <Widget>[
+                  for (final ToonSeed s in ToonSeed.values)
+                    _SeedSwatch(
+                      seed: s,
+                      selected: s == seed,
+                      onTap: () =>
+                          ref.read(themeSeedProvider.notifier).select(s),
+                    ),
+                ],
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
             child: Text(
               '· 默认「跟随系统」：手机切到深色，App 立刻跟着变\n'
+              '· 主题色只换品牌色系（按钮 / 选中态 / 图表），版式不变\n'
               '· 选择会记住，下次打开还是这一项\n'
               '· 只影响本机外观，不影响账本数据',
               style: TextStyle(
@@ -145,6 +169,74 @@ class _ModeRow extends StatelessWidget {
                     : Icons.radio_button_unchecked_rounded,
                 size: 22,
                 color: selected ? p.brandDeep : p.ink3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 一个主题色圆点：色块 + 名称，选中加墨圈与对勾。
+///
+/// 只换 seed（不预览整页），所以这里直接铺 `seed.seed` 那个原始色 ——
+/// 它和 `ColorScheme.fromSeed` 派生出的 primary 有色差，但作为「选哪个种子」的示意更直观。
+class _SeedSwatch extends StatelessWidget {
+  const _SeedSwatch({
+    required this.seed,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final ToonSeed seed;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: seed.label,
+      child: InkWell(
+        // 测试按 key 定位（中文名在别处也可能出现）
+        key: ValueKey<String>('themeSeed_${seed.name}'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Tok.rMd),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: seed.seed,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected ? p.ink : p.line,
+                    width: selected ? 2.5 : 1,
+                  ),
+                ),
+                child: selected
+                    ? Icon(
+                        Icons.check_rounded,
+                        size: 19,
+                        color: p.inkOn(seed.seed),
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                seed.label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected ? p.ink : p.ink2,
+                ),
               ),
             ],
           ),

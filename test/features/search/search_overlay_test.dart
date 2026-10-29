@@ -20,6 +20,7 @@ import 'package:yanxin/features/ledger/presentation/home_page.dart';
 import 'package:yanxin/features/search/application/search_history.dart';
 import 'package:yanxin/features/search/presentation/search_overlay.dart';
 
+import '../../helpers/category_seed.dart';
 import '../../helpers/pump_app.dart';
 
 const Key _inputKey = ValueKey<String>('search-input');
@@ -43,21 +44,9 @@ Finder _inOverlay(Finder matching) =>
 Future<void> _seed(AppDatabase db) async {
   final book = await BookRepository(db).ensureDefaultBook();
   final catRepo = CategoryRepository(db);
-  final food = await catRepo.create(
-    bookId: book.id,
-    name: '餐饮',
-    kind: 'expense',
-  );
-  final traffic = await catRepo.create(
-    bookId: book.id,
-    name: '交通',
-    kind: 'expense',
-  );
-  final salary = await catRepo.create(
-    bookId: book.id,
-    name: '餐饮补贴',
-    kind: 'income',
-  );
+  final food = await ensureCategory(catRepo, book.id, '餐饮');
+  final traffic = await ensureCategory(catRepo, book.id, '交通');
+  final salary = await ensureCategory(catRepo, book.id, '餐饮补贴', kind: 'income');
   final accountId = (await AccountRepository(db).listByBook(book.id)).first.id;
   final repo = TransactionRepository(db);
   final now = DateTime.now();

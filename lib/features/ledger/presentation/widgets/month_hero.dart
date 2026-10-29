@@ -1,6 +1,6 @@
 /// 首页结余主卡：品牌色 hero + 本月支出大数字 + 收入/结余 + 月份切换 ‹ ›。
 ///
-/// 视觉对齐页面原型 `.hero`：实心琥珀底 + 3px 墨色描边 + 6px 硬阴影 +
+/// 视觉对齐页面原型 `.hero`：实心品牌底 + 3px 墨色描边 + 6px 硬阴影 +
 /// 右上角装饰圆 + 小猪存钱罐 + 四角星贴纸。
 ///
 /// 原型的 hero 上还有「小猪摇摆」循环动画，这里**故意不做**：
@@ -45,11 +45,11 @@ class MonthHero extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       decoration: BoxDecoration(
-        color: p.brand,
+        color: p.brandTint,
         borderRadius: BorderRadius.circular(Tok.rXl),
-        // hero 恒为琥珀底：**描边必须走 decorInk（恒深）** —— 深色主题下 p.ink 是暖白，
-        // 压在琥珀上只有 ~1.3:1，描边会整条消失。
-        border: p.inkBorder(w: 3, on: p.brand),
+        // hero 恒为实心底：**描边必须走 decorInk（恒深）** —— 深色主题下 p.ink 是暖白，
+        // 压在实心底上只有 ~1.3:1，描边会整条消失。
+        border: Border.all(color: p.line),
         boxShadow: p.hard(d: 6),
       ),
       clipBehavior: Clip.hardEdge,
@@ -71,19 +71,7 @@ class MonthHero extends StatelessWidget {
               ),
             ),
           ),
-          // 星贴纸 + 小猪（歪 6°）。**画在内容之前** —— 原型里也是内容压住小猪，
-          // 否则 64px 的小猪会盖掉右上角的翻月按钮。
-          const Positioned(right: 86, top: 12, child: Sparkle(size: 21)),
-          const Positioned(
-            right: 24,
-            bottom: 14,
-            child: Sparkle(size: 15, opacity: 0.9),
-          ),
-          const Positioned(
-            right: 2,
-            top: 22,
-            child: PigMascot(size: 64, rotate: true),
-          ),
+          // 卡通贴纸（星 + 小猪）已在 2026-10-28 换 Material 3 时移除
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 18, 16),
             child: Column(
@@ -124,23 +112,26 @@ class MonthHero extends StatelessWidget {
                     ),
                     const SizedBox(width: 5),
                     Flexible(
-                      child: Text(
-                        summary.expenseYuan,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: p.heroInk,
-                          fontSize: 40,
-                          height: 1.1,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1,
-                          shadows: <Shadow>[
-                            // 非 const：`p` 来自 Theme，色值不是编译期常量
-                            Shadow(
-                              color: p.veil.withValues(alpha: 0.85),
-                              offset: const Offset(2.5, 2.5),
-                            ),
-                          ],
+                      child: ToonFadeValue(
+                        value: summary.expenseYuan,
+                        child: Text(
+                          summary.expenseYuan,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: p.heroInk,
+                            fontSize: 40,
+                            height: 1.1,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1,
+                            shadows: <Shadow>[
+                              // 非 const：`p` 来自 Theme，色值不是编译期常量
+                              Shadow(
+                                color: p.veil.withValues(alpha: 0.85),
+                                offset: const Offset(2.5, 2.5),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -191,8 +182,8 @@ class _RoundButton extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(
             color: enabled
-                ? p.inkOn(p.brand)
-                : p.inkOn(p.brand).withValues(alpha: 0.4),
+                ? p.inkOn(p.brandTint)
+                : p.inkOn(p.brandTint).withValues(alpha: 0.4),
             width: 2.5,
           ),
           boxShadow: p.hard(
@@ -203,7 +194,7 @@ class _RoundButton extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            // 禁用态：钮底是浅琥珀（veil 叠出来的），字必须走 decorInk 才够 3:1
+            // 禁用态：钮底是浅色（veil 叠出来的），字必须走 decorInk 才够 3:1
             color: enabled ? p.ink : p.decorInk.withValues(alpha: 0.75),
             fontSize: 17,
             height: 1,
@@ -228,13 +219,13 @@ class _HeroCell extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 3),
       decoration: BoxDecoration(
-        // 气泡底 = veil 叠在琥珀上（两套主题下都是「浅琥珀」），配 heroInk 深棕字 ≈6:1。
+        // 气泡底 = veil 叠在实心底上（两套主题下都是「浅底」），配 heroInk 深字 ≈6:1。
         // 原来是 paper@0.55：深色主题下 paper 近黑 → 气泡被压成 #88662B，
         // 而 heroInk 恒为深棕 → **2.12:1**（浅色 6.00），这就是「深色下看不清」的主因。
         color: p.veil.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: p.inkOn(p.brand).withValues(alpha: 0.55),
+          color: p.inkOn(p.brandTint).withValues(alpha: 0.55),
           width: 2,
         ),
       ),
@@ -253,14 +244,17 @@ class _HeroCell extends StatelessWidget {
           ),
           const SizedBox(width: 7),
           Flexible(
-            child: Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: p.heroInk,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
+            child: ToonFadeValue(
+              value: value,
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: p.heroInk,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ),
@@ -269,3 +263,4 @@ class _HeroCell extends StatelessWidget {
     );
   }
 }
+

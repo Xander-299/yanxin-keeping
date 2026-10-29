@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:yanxin/core/theme/palette.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/core/theme/tokens.dart';
 
 /// 起一棵只有 [themeMode] 不同的树，返回根 context 解析到的调色板。
@@ -47,15 +48,19 @@ void main() {
     expect((await pumpAndRead(tester, ThemeMode.dark)).canvas, ToonPalette.dark.canvas);
   });
 
-  testWidgets('深浅不是「换个底色」就算：描边 / 阴影 / 纸色都不同', (WidgetTester tester) async {
+  testWidgets('深浅不是「换个底色」就算：文字 / 纸色 / 分割线都不同', (
+    WidgetTester tester,
+  ) async {
     final ToonPalette light = await pumpAndRead(tester, ThemeMode.light);
     final ToonPalette dark = await pumpAndRead(tester, ThemeMode.dark);
 
-    expect(dark.ink, isNot(light.ink)); // 描边与文字反色
+    expect(dark.ink, isNot(light.ink)); // 文字反色
     expect(dark.paper, isNot(light.paper));
-    expect(dark.shadow, const Color(0xFF000000)); // 深色用纯黑，浅色阴影会像发光
-    expect(light.shadow, light.ink);
-    expect(dark.brand, light.brand); // 品牌琥珀是锚点，两套共用
+    expect(dark.canvas, isNot(light.canvas));
+    // M3 的 outlineVariant 在深浅两套里也不同（分割线要跟着表面走）
+    expect(dark.line, isNot(light.line));
+    // M3 的 shadow 两套都是纯黑（阴影只由 elevation 决定），不再断言它区分深浅
+    expect(dark.shadow, const Color(0xFF000000));
   });
 
   testWidgets('跟随系统：系统切深色，App 解析到的就是深色', (WidgetTester tester) async {
@@ -84,5 +89,38 @@ void main() {
       ),
     );
     expect(read!.canvas, ToonPalette.light.canvas);
+  });
+
+  // 2026-10-29：主题色可切换（设置页五选一）—— 换 seed 必须真的换色板
+  group('主题色（seed）', () {
+    test('不同 seed 给出不同品牌色；饼图首瓣跟品牌色走', () {
+      final ToonPalette forest = ToonPalette.lightOf(ToonSeed.forest);
+      final ToonPalette amber = ToonPalette.lightOf(ToonSeed.amber);
+      expect(forest.brand, isNot(amber.brand));
+      expect(forest.pie.first, forest.brand);
+      expect(amber.pie.first, amber.brand);
+    });
+
+    test('按 seed 缓存：取两次是同一个实例（fromSeed 不便宜，别在 build 里重算）', () {
+      expect(
+        identical(
+          ToonPalette.lightOf(ToonSeed.rose),
+          ToonPalette.lightOf(ToonSeed.rose),
+        ),
+        isTrue,
+      );
+      expect(
+        identical(
+          ToonPalette.darkOf(ToonSeed.rose),
+          ToonPalette.lightOf(ToonSeed.rose),
+        ),
+        isFalse,
+      );
+    });
+
+    test('默认 light/dark 仍是森绿（不改老行为）', () {
+      expect(ToonPalette.light.brand, ToonPalette.lightOf(ToonSeed.forest).brand);
+      expect(ToonPalette.dark.brand, ToonPalette.darkOf(ToonSeed.forest).brand);
+    });
   });
 }

@@ -11,6 +11,7 @@ import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/category_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
 
+import 'helpers/pick_category.dart';
 import 'helpers/pump_app.dart';
 
 /// 等 DB 写库 + invalidate 触发的重建到位（写库是真实异步，pumpAndSettle 可能抢先返回）。
@@ -48,8 +49,7 @@ void main() {
     // 选分类
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
+    await pickCategory(tester, cat.name);
     // 保存：F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton；
     // F7.9 起按钮**吸底常驻**、位于 Scrollable 的兄弟节点 →
     // **不能**再 ensureVisible（`Scrollable.of` 返回 null 会直接报错）。
@@ -77,8 +77,7 @@ void main() {
     await tester.tap(find.text('1'));
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
+    await pickCategory(tester, cat.name);
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
     await tester.pumpAndSettle();
     expect(find.text('-1.00'), findsNWidgets(2)); // hero 结余 + 列表金额
@@ -136,17 +135,30 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('分类管理'));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('新建分类'));
+    // 入口是右下角的浮动按钮（AppBar 的「＋」已移除，2026-10-29）
+    await tester.tap(find.byTooltip('添加分类'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), '打车');
-    await tester.tap(find.text('确定'));
-    // 先等对话框关掉：对话框淡出动画期间 EditableText 也匹配 '打车'，
-    // 直接断言会「找到 2 个」（与下面新建账本用例同一处理）。
+    await tester.tap(find.text('添加一级分类'));
+    await tester.pumpAndSettle();
+    // schema v4 起是「分类编辑弹层」（名称 + 父分类 + 图标 + 颜色），不再是单行对话框
+    await tester.enterText(find.byType(TextField).first, '打车');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('保存'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    // 先等弹层关掉：淡出动画期间 EditableText 也匹配 '打车'，直接断言会「找到 2 个」
     for (var i = 0; i < 20 && find.byType(TextField).evaluate().isNotEmpty; i++) {
       await tester.pump(const Duration(milliseconds: 50));
     }
-    await pumpUntil(tester, find.text('打车'));
+    await tester.pumpAndSettle();
 
+    // 新建在列表末尾（11 个预置之后），800×600 视口里 ListView 不会建到它 →
+    // 用滚动代替直接 find（这是 v4 预置变多带来的测试口径变化）。
+    await tester.scrollUntilVisible(
+      find.text('打车'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('打车'), findsOneWidget);
   });
 

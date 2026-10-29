@@ -108,14 +108,18 @@ class StatsController extends AsyncNotifier<StatsState> {
       items: items,
       trendRows: trendRows,
       categoryNames: <String, String>{
-        for (final c in categories) c.id: c.name,
+        ...categoryNameMap(categories),
       },
     );
   }
 
   Future<void> _reload(String bookId, int year, int month) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _load(bookId, year, month));
+    // 同首页/日历：翻月不切 loading，避免整页闪转圈（2026-10-28 统一）
+    try {
+      state = AsyncData<StatsState>(await _load(bookId, year, month));
+    } catch (e, st) {
+      state = AsyncError<StatsState>(e, st);
+    }
   }
 
   /// 翻月：delta = -1 上一月，+1 下一月（调用方先判 `canGoNext`）。

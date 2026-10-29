@@ -1,89 +1,47 @@
 part of '../toon.dart';
 
-/// 虚线分割线（原型 `repeating-linear-gradient` 的等价物）。
+/// 分割线（Material 3）：1dp `outlineVariant`，不再画虚线。
+///
+/// 参数保留为兼容（`dash` / `gap` 已无作用）。
 class ToonDashedLine extends StatelessWidget {
   const ToonDashedLine({
     super.key,
-    this.height = 2,
+    this.height = 1,
     this.dash = 6,
     this.gap = 5,
     this.color,
   });
 
   final double height;
+
+  /// 已废弃：虚线不再是 M3 的写法。
   final double dash;
+
+  /// 已废弃：同上。
   final double gap;
 
-  /// 线条颜色；`null` = 主题的分隔线色（`p.dash`）。
+  /// 线条颜色；`null` = 主题的 `outlineVariant`。
   final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _DashPainter(
-          color: color ?? p.dash,
-          dash: dash,
-          gap: gap,
-          thickness: height,
-        ),
-      ),
-    );
+    return Divider(height: height, thickness: height, color: color ?? p.dash);
   }
 }
 
-class _DashPainter extends CustomPainter {
-  const _DashPainter({
-    required this.color,
-    required this.dash,
-    required this.gap,
-    required this.thickness,
-  });
-
-  final Color color;
-  final double dash;
-  final double gap;
-  final double thickness;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint p = Paint()
-      ..color = color
-      ..strokeWidth = thickness
-      ..strokeCap = StrokeCap.square;
-    final double y = size.height / 2;
-    double x = 0;
-    while (x < size.width) {
-      final double end = math.min(x + dash, size.width);
-      canvas.drawLine(Offset(x, y), Offset(end, y), p);
-      x += dash + gap;
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashPainter old) =>
-      old.color != color ||
-      old.dash != dash ||
-      old.gap != gap ||
-      old.thickness != thickness;
-}
-
-/// 虚线描边的圆角框 / 正圆（原型 `.hdr .iconbtn.muted` 的虚线方框、
-/// `.eb-ic` 的虚线圆）。
+/// 圆角框 / 正圆（Material 3）：**实线** outline 描边，可选底色。
 ///
-/// 走 `Path.computeMetrics()` 分段画：手写循环只能画直线，圆弧段画不了。
-/// [background] 非空时先铺底，绘制顺序由 `CustomPaint` 保证在 child 之下。
+/// 旧版是手绘虚线（`Path.computeMetrics()` 分段画）；M3 里「空状态 / 占位」
+/// 用实线 outline 表达即可，虚线与手绘感一并去掉。
 class ToonDashedBorder extends StatelessWidget {
   const ToonDashedBorder({
     super.key,
     required this.child,
-    this.radius = 13,
+    this.radius = 12,
     this.circle = false,
     this.color,
-    this.thickness = 2,
+    this.thickness = 1,
     this.dash = 5,
     this.gap = 4,
     this.background,
@@ -92,102 +50,39 @@ class ToonDashedBorder extends StatelessWidget {
   final Widget child;
   final double radius;
   final bool circle;
-
-  /// 虚线颜色；`null` = 三级灰（`p.ink3`）。
   final Color? color;
-
   final double thickness;
+
+  /// 已废弃：虚线不再是 M3 的写法。
   final double dash;
+
+  /// 已废弃：同上。
   final double gap;
+
   final Color? background;
 
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    return CustomPaint(
-      painter: _DashedBorderPainter(
-        radius: radius,
-        circle: circle,
-        color: color ?? p.ink3,
-        thickness: thickness,
-        dash: dash,
-        gap: gap,
-        background: background,
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: background,
+        shape: circle ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: circle ? null : BorderRadius.circular(radius),
+        border: Border.all(
+          color: color ?? p.line,
+          width: thickness,
+        ),
       ),
       child: child,
     );
   }
 }
 
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter({
-    required this.radius,
-    required this.circle,
-    required this.color,
-    required this.thickness,
-    required this.dash,
-    required this.gap,
-    required this.background,
-  });
+// ────────────────────────────── 提示 ──────────────────────────────
 
-  final double radius;
-  final bool circle;
-  final Color color;
-  final double thickness;
-  final double dash;
-  final double gap;
-  final Color? background;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // 描边居中在路径上，故路径内缩半个线宽，边缘才不会被裁掉
-    final double inset = thickness / 2;
-    final Rect rect = Rect.fromLTWH(
-      inset,
-      inset,
-      size.width - thickness,
-      size.height - thickness,
-    );
-    final Path path = Path();
-    if (circle) {
-      path.addOval(rect);
-    } else {
-      path.addRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
-    }
-
-    if (background != null) {
-      canvas.drawPath(path, Paint()..color = background!);
-    }
-
-    final Paint p = Paint()
-      ..color = color
-      ..strokeWidth = thickness
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    for (final PathMetric m in path.computeMetrics()) {
-      double d = 0;
-      while (d < m.length) {
-        final double end = math.min(d + dash, m.length);
-        canvas.drawPath(m.extractPath(d, end), p);
-        d = end + gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedBorderPainter old) =>
-      old.radius != radius ||
-      old.circle != circle ||
-      old.color != color ||
-      old.thickness != thickness ||
-      old.dash != dash ||
-      old.gap != gap ||
-      old.background != background;
-}
-
-// ────────────────────────────── 按钮 ──────────────────────────────
-
-/// 「建设中」占位提示（原型 `data-act="toast"` 的等价物）。
+/// 「建设中」占位提示。
 ///
 /// 统一走这里，避免各页各写一份时长/文案不一致的 SnackBar。
 void showWipToast(BuildContext context, String message) {

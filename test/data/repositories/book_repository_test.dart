@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:yanxin/core/constants/preset.dart';
 import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
@@ -24,10 +25,16 @@ void main() {
     expect(accounts.first.name, '现金');
 
     final cats = await CategoryRepository(db).listByBook(book.id);
-    expect(cats.length, greaterThanOrEqualTo(15)); // 9 支出 + 6 收入
-    final expenses = cats.where((c) => c.kind == 'expense').toList();
-    expect(expenses, hasLength(9));
-    expect(expenses.every((c) => c.isPreset == 1), isTrue);
+    expect(
+      cats.length,
+      greaterThanOrEqualTo(18 + presetChildCount),
+      reason: '11 支出一级 + 7 收入一级 + 预置二级',
+    );
+    final roots = cats.where((c) => c.parentId == null).toList();
+    final expenses = roots.where((c) => c.kind == 'expense').toList();
+    expect(expenses, hasLength(11));
+    expect(cats.where((c) => c.parentId != null), hasLength(presetChildCount));
+    expect(cats.every((c) => c.isPreset == 1), isTrue);
   });
 
   test('切换账本数据隔离', () async {

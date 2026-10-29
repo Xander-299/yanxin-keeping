@@ -7,13 +7,49 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/theme/theme_mode.dart';
+import 'package:yanxin/core/theme/theme_seed.dart';
 import 'package:yanxin/data/providers/database.dart';
+
+/// `schema_meta` 里存主题色的键。**不存在 = 森绿**（老用户不会被动换色）。
+const String kThemeSeedKey = 'theme_seed';
 
 /// 当前外观模式。**默认 `system`**：键不存在 / 读库失败 / 脏数据都回落跟随系统。
 final themeModeProvider =
     AsyncNotifierProvider<ThemeModeController, ToonThemeMode>(
       ThemeModeController.new,
     );
+
+/// 当前主题色。**默认 [ToonSeed.forest]**（= 换肤后的品牌色）。
+final themeSeedProvider =
+    AsyncNotifierProvider<ThemeSeedController, ToonSeed>(
+      ThemeSeedController.new,
+    );
+
+class ThemeSeedController extends AsyncNotifier<ToonSeed> {
+  @override
+  Future<ToonSeed> build() async {
+    try {
+      final String? raw = await ref
+          .watch(appMetaRepositoryProvider)
+          .get(kThemeSeedKey);
+      return ToonSeed.parse(raw);
+    } catch (_) {
+      return ToonSeed.forest;
+    }
+  }
+
+  /// 切换主题色并落库（先切 UI 再写库，写失败本次会话仍生效）。
+  Future<void> select(ToonSeed seed) async {
+    state = AsyncData<ToonSeed>(seed);
+    try {
+      await ref
+          .read(appMetaRepositoryProvider)
+          .set(kThemeSeedKey, seed.storageValue);
+    } catch (_) {
+      // 静默：外观是低风险偏好，别打断用户
+    }
+  }
+}
 
 class ThemeModeController extends AsyncNotifier<ToonThemeMode> {
   @override

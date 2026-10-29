@@ -1,6 +1,11 @@
 /// 日历页：月份 header + 月历（每天标支出/收入）+ 月结余/日均支出 + 选中日账单。
 ///
-/// 视觉参考 docs/design/calendar.jpg（布局对齐，配色沿用 App 深色 + 琥珀）。
+/// 加载顺序（2026-10-29 用户要求，见 `calendar_controller.dart` 的类注释）：
+/// **网格先出 → 选中日账单 → 整月标注**。所以页面里「网格 + 月汇总」和「当日账单」
+/// 是两块独立区域：翻月只换上面那块（`AnimatedSwitcher` 只包它），
+/// 下面账单继续跟着**选中的日期**走，不会跟着月份跳。
+///
+/// 视觉参考 docs/design/calendar.jpg（布局对齐，配色沿用 App 品牌色）。
 /// 页面无 Scaffold（壳路由 AppShell 提供抽屉与底栏）。
 library;
 
@@ -27,14 +32,41 @@ import '../application/calendar_controller.dart';
 import 'widgets/month_grid.dart';
 
 /// 日历页。
-class CalendarPage extends ConsumerWidget {
+class CalendarPage extends ConsumerStatefulWidget {
   const CalendarPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<CalendarState> calendar = ref.watch(calendarProvider);
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final nameOf = _categoryNameResolver(categoriesAsync.value);
+  ConsumerState<CalendarPage> createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends ConsumerState<CalendarPage> {
+  /// 翻月方向：1 = 往后翻（新月份从右侧进），-1 = 往前翻。
+  int _dir = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<CalendarState>(calendarProvider, (
+      CalendarState? prev,
+      CalendarState next,
+    ) {
+      if (prev == null) return;
+      final int ia = prev.year * 12 + prev.month;
+      final int ib = next.year * 12 + next.month;
+      if (ia != ib && mounted) setState(() => _dir = ib > ia ? 1 : -1);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ⚠️ 同步 state（不是 AsyncValue）：首帧就能画网格，不用等任何查询。
+    final CalendarState state = ref.watch(calendarProvider);
+    final AsyncValue<List<Category>> categoriesAsync = ref.watch(
+      categoriesProvider,
+    );
+    final String Function(String?) nameOf = _categoryNameResolver(
+      categoriesAsync.value,
+    );
 
     return SafeArea(
       bottom: false,
@@ -42,65 +74,57 @@ class CalendarPage extends ConsumerWidget {
         children: <Widget>[
           const _HeaderBody(),
           Expanded(
-            child: calendar.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (Object e, StackTrace _) => Center(child: Text('加载失败：$e')),
-              data: (CalendarState state) => SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Padding(
-                      // 原型 `.cal { padding: 6px 8px 0 }`
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: MonthGrid(
-                        year: state.year,
-                        month: state.month,
-                        byDay: state.byDay,
-                        selectedDay: state.selectedDay,
-                        onSelectDay: (int day) =>
-                            ref.read(calendarProvider.notifier).selectDay(day),
-                        // F7.7 E 批：长按某天 → 直接记这一天的账（顺带把那天选中，
-                        // 回来就能看到刚记的那笔）；左右滑动 → 翻月
-                        onLongPressDay: (DateTime day) {
-                          ref.read(calendarProvider.notifier).selectDay(day.day);
-                          context.push(
-                            '/record?date=${day.millisecondsSinceEpoch}',
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // 上半块：网格 + 月汇总。**只有这块跟着月份做过渡** ——
+                  // 下半块的账单属于「选中日」，翻月不该动它。
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 240),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    layoutBuilder: (Widget? current, List<Widget> previous) =>
+                        ClipRect(
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: <Widget>[...previous, ?current],
+                          ),
+                        ),
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position:
+                                  Tween<Offset>(
+                                    begin: Offset(0.12 * _dir, 0),
+                                    end: Offset.zero,
+                                  ).animate(animation),
+                              child: child,
+                            ),
                           );
                         },
-                        onShiftMonth: (int delta) =>
-                            ref.read(calendarProvider.notifier).shiftMonth(delta),
-                      ),
-                    ),
-                    // 网格与月结余卡之间不再另加间距：原型是 `.day` 的 2px 外边距
-                    // + `.summary-bar` 的 10px margin（= 12px），由卡的 margin 承担。
-                    _SummaryBar(state: state),
-                    const SizedBox(height: 8),
-                    _SelectedDaySection(
+                    child: _MonthBlock(
+                      key: ValueKey<String>('${state.year}-${state.month}'),
                       state: state,
-                      categoryNameOf: nameOf,
-                      onEdit: (TxRow tx) =>
-                          context.push('/record', extra: tx.id),
-                      onDelete: (TxRow tx) => _confirmDelete(context, ref, tx),
+                      nameOf: nameOf,
                     ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+                  _SelectedDaySection(
+                    state: state,
+                    categoryNameOf: nameOf,
+                    onEdit: (TxRow tx) => context.push('/record', extra: tx.id),
+                    onDelete: (TxRow tx) => _confirmDelete(context, ref, tx),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  String Function(String?) _categoryNameResolver(List<Category>? categories) {
-    if (categories == null) {
-      return (String? _) => '未分类';
-    }
-    final map = <String, String>{
-      for (final Category c in categories) c.id: c.name,
-    };
-    return (String? id) => (id == null ? null : map[id]) ?? '未分类';
   }
 
   Future<void> _confirmDelete(
@@ -118,6 +142,61 @@ class CalendarPage extends ConsumerWidget {
     // 资产页 watch 数据版本号，bump 即重算
     ref.read(dataEpochProvider.notifier).bump();
   }
+
+  String Function(String?) _categoryNameResolver(List<Category>? categories) {
+    if (categories == null) {
+      return (String? _) => '未分类';
+    }
+    final map = <String, String>{
+      for (final c in categories) c.id: c.name,
+    };
+    return (String? id) => (id == null ? null : map[id]) ?? '未分类';
+  }
+}
+
+/// 上半块：月历网格 + 月结余/日均。
+///
+/// 单独抽出来是为了让 [AnimatedSwitcher] 能用「年月」当 key：key 一变才播翻月动画，
+/// 而下面「选中日账单」不受影响。
+class _MonthBlock extends ConsumerWidget {
+  const _MonthBlock({super.key, required this.state, required this.nameOf});
+
+  final CalendarState state;
+  final String Function(String?) nameOf;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          // 原型 `.cal { padding: 6px 8px 0 }`
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: MonthGrid(
+            year: state.year,
+            month: state.month,
+            byDay: state.byDay,
+            // 选中日不在本月时传 0：网格里不高亮任何一天，但下面账单照旧
+            selectedDay: state.selectedDayInGrid,
+            onSelectDay: (int day) =>
+                ref.read(calendarProvider.notifier).selectDay(day),
+            // F7.7 E 批：长按某天 → 直接记这一天的账（顺带把那天选中，
+            // 回来就能看到刚记的那笔）；左右滑动 → 翻月
+            onLongPressDay: (DateTime day) {
+              ref.read(calendarProvider.notifier).selectDay(day.day);
+              context.push('/record?date=${day.millisecondsSinceEpoch}');
+            },
+            onShiftMonth: (int delta) =>
+                ref.read(calendarProvider.notifier).shiftMonth(delta),
+          ),
+        ),
+        // 网格与月结余卡之间不再另加间距：原型是 `.day` 的 2px 外边距
+        // + `.summary-bar` 的 10px margin（= 12px），由卡的 margin 承担。
+        _SummaryBar(state: state),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
 }
 
 /// 顶部栏：左侧侧面栏（抽屉）+ 中间年月（点开月份选择子页）+ 报表(建设中) + 统计。
@@ -128,20 +207,12 @@ class _HeaderBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final int year =
-        ref.watch(
-          calendarProvider.select(
-            (AsyncValue<CalendarState> v) => v.value?.year,
-          ),
-        ) ??
-        DateTime.now().year;
-    final int month =
-        ref.watch(
-          calendarProvider.select(
-            (AsyncValue<CalendarState> v) => v.value?.month,
-          ),
-        ) ??
-        DateTime.now().month;
+    final int year = ref.watch(
+      calendarProvider.select((CalendarState s) => s.year),
+    );
+    final int month = ref.watch(
+      calendarProvider.select((CalendarState s) => s.month),
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
@@ -209,6 +280,8 @@ class _HeaderBody extends ConsumerWidget {
 }
 
 /// 月结余 + 日均支出。
+///
+/// 整月聚合是**第二段数据**：还没回来时显示「—」，不挡住网格。
 class _SummaryBar extends StatelessWidget {
   const _SummaryBar({required this.state});
 
@@ -217,6 +290,7 @@ class _SummaryBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
+    final bool ready = state.monthAgg.hasValue;
     final int balance = state.summary.balanceCents;
     final Color balanceColor = balance < 0
         ? p.red
@@ -233,12 +307,12 @@ class _SummaryBar extends StatelessWidget {
         children: <Widget>[
           _SummaryItem(
             label: '月结余',
-            value: centsToYuan(balance),
+            value: ready ? centsToYuan(balance) : '—',
             valueColor: balanceColor,
           ),
           _SummaryItem(
             label: '日均支出',
-            value: centsToYuan(state.dailyAvgExpenseCents),
+            value: ready ? centsToYuan(state.dailyAvgExpenseCents) : '—',
             valueColor: p.red,
           ),
         ],
@@ -285,10 +359,10 @@ class _SummaryItem extends StatelessWidget {
   }
 }
 
-/// 选中日期的账单区：日期头 + 账单列表 / 空态。
+/// 选中日期的账单区：日期头 + 账单列表 / 空态 / 加载占位。
 ///
-/// F7.8：删除入口改为**左滑露出按钮**，单开协调器由本 State 持有
-/// （与首页 `TxGroupList` 同一套 [SwipeActionRow] 口径）。
+/// 日期头跟的是**选中日**（`state.selectedDate`），翻月不会变 —— 这是任务书第 3 条。
+/// F7.8：删除入口改为**左滑露出按钮**，单开协调器由本 State 持有。
 class _SelectedDaySection extends StatefulWidget {
   const _SelectedDaySection({
     required this.state,
@@ -322,16 +396,22 @@ class _SelectedDaySectionState extends State<_SelectedDaySection> {
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
     final CalendarState state = widget.state;
-    final DateTime day = DateTime(state.year, state.month, state.selectedDay);
+    // ⚠️ 用选中日的完整日期，不是「可见年月 + 选中日号」
+    //    （翻到 9 月时这里仍然是 10月12日）
+    final DateTime day = DateTime(
+      state.selectedDate.year,
+      state.selectedDate.month,
+      state.selectedDate.day,
+    );
     final List<TxRow> items = state.selectedItems;
     final int dayExpenseCents = items
         .where((TxRow t) => t.type == 'expense')
         .fold(0, (int a, TxRow t) => a + t.amountCents);
+    final bool loading = state.day.isLoading;
 
     return Column(
       // stretch（不是 start）：空态块自己只有「最宽子项」那么宽，
       // 用 start 会被顶到左边 —— 它内部的居中就成了「块内居中、整块偏左」。
-      // 原型 `.empty-block` 是块级 div（占满宽 + text-align:center），这里靠拉伸对齐。
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Padding(
@@ -357,18 +437,29 @@ class _SelectedDaySectionState extends State<_SelectedDaySection> {
                 ),
               ),
               const Spacer(),
-              Text(
-                '${items.length} 笔 · 支出 ¥${centsToYuan(dayExpenseCents)}',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: p.ink2,
+              if (!loading)
+                Text(
+                  '${items.length} 笔 · 支出 ¥${centsToYuan(dayExpenseCents)}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: p.ink2,
+                  ),
                 ),
-              ),
             ],
           ),
         ),
-        if (items.isEmpty)
+        if (loading)
+          _DayLoadingPlaceholder()
+        else if (state.day.hasError)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            child: Text(
+              '账单加载失败：${state.day.error}',
+              style: TextStyle(fontSize: 12.5, color: p.redInk),
+            ),
+          )
+        else if (items.isEmpty)
           _EmptyDay(dayMs: state.selectedDayMs)
         else
           Card(
@@ -419,6 +510,36 @@ class _SelectedDaySectionState extends State<_SelectedDaySection> {
   }
 }
 
+/// 账单段加载中的轻量占位（**不是整页转圈**：网格已经在那儿了）。
+class _DayLoadingPlaceholder extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final ToonPalette p = context.toon;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 26),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: p.ink3),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '正在加载这天的账单…',
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: p.ink3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// 当天没有账单时的空态 + 「记一笔」（默认日期 = 选中日）。
 ///
 /// 原型 `.empty-block`：虚线圆底里放小猪 + 两行文案 + tonal 按钮。
@@ -441,10 +562,16 @@ class _EmptyDay extends StatelessWidget {
             dash: 7,
             gap: 5,
             background: p.brandTint,
-            child: const SizedBox(
+            child: SizedBox(
               width: 76,
               height: 76,
-              child: Center(child: PigMascot(size: 52)),
+              child: Center(
+                child: Icon(
+                  Icons.calendar_today_rounded,
+                  size: 32,
+                  color: p.brandInk,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 14),

@@ -1,7 +1,7 @@
 /// 月份选择子页：按年展示 12 个月的缩略日历，点某天即跳到该月该日。
 ///
 /// 视觉参考 docs/design/calendar_select.jpg（布局对齐）。
-/// 有账的日期用琥珀色标出；点任意日期 → 日历页切到该月并选中该日，随后返回。
+/// 有账的日期用品牌色标出；点任意日期 → 日历页切到该月并选中该日，随后返回。
 library;
 
 import 'package:flutter/material.dart';
@@ -28,7 +28,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
   @override
   void initState() {
     super.initState();
-    _year = ref.read(calendarProvider).value?.year ?? DateTime.now().year;
+    _year = ref.read(calendarProvider).year;
   }
 
   Future<void> _pick(int month, int day) async {
@@ -39,7 +39,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    final CalendarState? current = ref.watch(calendarProvider).value;
+    final CalendarState current = ref.watch(calendarProvider);
     final AsyncValue<Map<int, Set<int>>> index = ref.watch(
       yearDayIndexProvider(_year),
     );
@@ -58,7 +58,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
               extra: ReportsArgs(
                 tab: kReportTabDetail,
                 year: _year,
-                month: current?.month ?? DateTime.now().month,
+                month: current.month,
               ),
             ),
           ),
@@ -87,7 +87,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
                                   month: row * 3 + col + 1,
                                   daysWithTx:
                                       days[row * 3 + col + 1] ?? const <int>{},
-                                  selectedMonth: current?.month,
+                                  selectedMonth: current.month,
                                   onPick: _pick,
                                 ),
                               ),
@@ -112,7 +112,10 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
                     const SizedBox(width: 24),
                     _PillButton(
                       label: '下一年 ›',
-                      onTap: () => setState(() => _year++),
+                      // 与首页 / 日历网格同口径：不能去未来年
+                      onTap: _year < DateTime.now().year
+                          ? () => setState(() => _year++)
+                          : null,
                     ),
                   ],
                 ),
@@ -121,7 +124,7 @@ class _MonthPickerPageState extends ConsumerState<MonthPickerPage> {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
               child: Text(
-                '琥珀色 = 这一天有记账；点某一天即跳到该月该日',
+                '绿色 = 这一天有记账；点某一天即跳到该月该日',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
@@ -246,6 +249,10 @@ class _MiniMonth extends StatelessWidget {
     final bool hasTx = daysWithTx.contains(day);
     final bool isToday =
         now.year == year && now.month == month && now.day == day;
+    // 与日历网格同口径：未来日期不可点（否则跳到未来月，违反「不能翻到未来」）
+    final bool future = DateTime(year, month, day).isAfter(
+      DateTime(now.year, now.month, now.day),
+    );
 
     // 原型：`.mark`（这天有记账）= 品牌底 + 深棕字；`.today` 覆盖为墨底白字
     final Color? bg = isToday
@@ -259,22 +266,25 @@ class _MiniMonth extends StatelessWidget {
         ? p.onBrand
         : p.ink2;
 
-    return InkWell(
-      onTap: () => onPick(month, day),
-      borderRadius: BorderRadius.circular(5),
-      child: Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          color: bg,
-        ),
-        child: Text(
-          '$day',
-          style: TextStyle(
-            fontSize: 8,
-            height: 1,
-            color: fg,
-            fontWeight: isToday || hasTx ? FontWeight.w900 : FontWeight.w700,
+    return Opacity(
+      opacity: future ? 0.25 : 1,
+      child: InkWell(
+        onTap: future ? null : () => onPick(month, day),
+        borderRadius: BorderRadius.circular(5),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5),
+            color: bg,
+          ),
+          child: Text(
+            '$day',
+            style: TextStyle(
+              fontSize: 8,
+              height: 1,
+              color: fg,
+              fontWeight: isToday || hasTx ? FontWeight.w900 : FontWeight.w700,
+            ),
           ),
         ),
       ),
@@ -285,25 +295,29 @@ class _MiniMonth extends StatelessWidget {
 /// 迷你月历的星期表头（原型 `.m-wk`）。
 const List<String> _weekHeads = <String>['日', '一', '二', '三', '四', '五', '六'];
 
-/// 底部胶囊按钮（上一年 / 下一年）。
+/// 底部胶囊按钮（上一年 / 下一年）。`onTap` 为空 = 禁用（未来年不可去）。
 class _PillButton extends StatelessWidget {
   const _PillButton({required this.label, required this.onTap});
 
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final ToonPalette p = context.toon;
-    return Material(
-      color: p.paper,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        onTap: onTap,
+    final bool enabled = onTap != null;
+    return Opacity(
+      opacity: enabled ? 1 : 0.35,
+      child: Material(
+        color: p.paper,
         borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Text(label, style: const TextStyle(fontSize: 13)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(label, style: const TextStyle(fontSize: 13)),
+          ),
         ),
       ),
     );

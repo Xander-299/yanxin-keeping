@@ -101,7 +101,7 @@ class AssetsPage extends ConsumerWidget {
   }
 }
 
-/// 净资产卡：品牌浅琥珀底（原型 `.networth`）+ 大号金额 + 账户数。
+/// 净资产卡：品牌浅底（原型 `.networth`）+ 大号金额 + 账户数。
 class _NetWorthCard extends StatelessWidget {
   const _NetWorthCard({required this.summary});
 
@@ -272,10 +272,12 @@ class _EmptyState extends StatelessWidget {
               dash: 7,
               gap: 5,
               background: p.brandTint,
-              child: const SizedBox(
+              child: SizedBox(
                 width: 76,
                 height: 76,
-                child: Center(child: PigMascot(size: 52)),
+                child: Center(
+                  child: Icon(Icons.account_balance_wallet_outlined, size: 34, color: p.brandInk),
+                ),
               ),
             ),
             const SizedBox(height: 14),

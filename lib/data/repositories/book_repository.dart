@@ -61,22 +61,9 @@ class BookRepository {
         name: defaultAccountName,
         type: 'cash',
       );
-      for (final preset in presetExpense) {
-        await categories.create(
-          bookId: bookId,
-          name: preset,
-          kind: 'expense',
-          isPreset: true,
-        );
-      }
-      for (final preset in presetIncome) {
-        await categories.create(
-          bookId: bookId,
-          name: preset,
-          kind: 'income',
-          isPreset: true,
-        );
-      }
+      // 预置分类（含二级）只有一处写入逻辑 —— 复用幂等补齐，避免「新建账本」和
+      // 「老账本补装」两套代码各写一遍、慢慢长歪（2026-10-29 加二级时踩到的重复点）。
+      await categories.ensurePresets(bookId);
       return book;
     });
   }

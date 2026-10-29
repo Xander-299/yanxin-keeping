@@ -180,6 +180,7 @@ void main() async {
         color: '',
         sortOrder: 0,
         isPreset: 1,
+        isArchived: 0,
         createdAt: _nowMs,
         updatedAt: _nowMs,
         dirty: 1,

@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:yanxin/core/theme/tokens.dart';
 import 'package:yanxin/core/theme/toon.dart';
 import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/features/export/presentation/export_sheet.dart';
@@ -52,15 +53,6 @@ class ProfilePage extends ConsumerWidget {
                       iconFg: p.green,
                       dashedTop: true,
                       onTap: () => context.push('/autobook'),
-                    ),
-                    _Entry(
-                      icon: Icons.document_scanner_outlined,
-                      title: '截图记账',
-                      sub: '支付 / 订单截图 → 本地识别 → 确认后入账',
-                      iconBg: p.brandTint,
-                      iconFg: p.brandDeep,
-                      dashedTop: true,
-                      onTap: () => context.push('/receipt'),
                     ),
                     _Entry(
                       icon: Icons.description_outlined,
@@ -121,12 +113,12 @@ class _Head extends StatelessWidget {
             width: 62,
             height: 62,
             decoration: BoxDecoration(
-              color: p.brand,
-              borderRadius: BorderRadius.circular(22),
-              border: p.inkBorder(on: p.brand),
-              boxShadow: p.hard(),
+              color: p.brandTint,
+              borderRadius: BorderRadius.circular(Tok.rLg),
             ),
-            child: const Center(child: PigMascot(size: 46)),
+            child: Center(
+              child: Icon(Icons.person_rounded, size: 32, color: p.brandInk),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -276,7 +268,8 @@ class _BrandTip extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                'v0.7.17',
+                // 与 pubspec.yaml 的 version 对齐（0.8.1+2001）；改版本号时记得同步这里
+                'v0.8.1',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -287,7 +280,8 @@ class _BrandTip extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            '已覆盖：记一笔 → 按月看账 → 导入账单 → 自动记账 → 统计 / 预算 / 资产 → 数据导出 → 浅色 / 深色 / 跟随系统',
+            '已覆盖：记一笔 → 按月看账 → 导入账单 → 自动记账 → 截图记账 / 问账本（首页入口）'
+            ' → 统计 / 预算 / 资产 → 数据导出 → 浅色 / 深色 / 跟随系统',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,

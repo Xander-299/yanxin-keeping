@@ -72,7 +72,7 @@ const List<OnboardingSlide> kOnboardingSlides = <OnboardingSlide>[
   ),
   OnboardingSlide(
     title: '中间歪着的方块 = 记一笔',
-    body: '底栏正中那个**歪 4° 的琥珀方块**是全局记账入口，四个页面都在。'
+    body: '底栏正中那个**歪 4° 的墨绿方块**是全局记账入口，四个页面都在。'
         '它故意做得跟旁边图标不一样，就是让你一眼看到。',
     art: MiniTabBarArt(),
   ),
@@ -85,7 +85,7 @@ const List<OnboardingSlide> kOnboardingSlides = <OnboardingSlide>[
   ),
   OnboardingSlide(
     title: '月份可以往回翻',
-    body: '琥珀卡右上的 ‹ › 换月份（**不能翻到未来**）；'
+    body: '首页墨绿大卡右上的 ‹ › 换月份（**不能翻到未来**）；'
         '预算卡标题行的**铅笔**点了改本月预算，没设预算时点卡片本身也能设。',
     art: MonthBudgetArt(),
   ),

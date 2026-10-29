@@ -12,6 +12,7 @@ import 'package:yanxin/data/repositories/account_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
 import 'package:yanxin/data/repositories/transaction_repository.dart';
 
+import '../../helpers/pick_category.dart';
 import '../../helpers/pump_app.dart';
 
 /// 金额键盘上的某个键。
@@ -89,8 +90,7 @@ void main() {
     await tester.ensureVisible(find.text('请选择分类'));
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('餐饮'));
-    await tester.pumpAndSettle();
+    await pickCategory(tester, '餐饮');
 
     // 5) 保存（F7.9：底部吸底按钮，全页唯一入口）
     await _tapSave(tester);
@@ -127,8 +127,7 @@ void main() {
     await tester.ensureVisible(find.text('请选择分类'));
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('餐饮'));
-    await tester.pumpAndSettle();
+    await pickCategory(tester, '餐饮');
 
     await _tapSave(tester);
 

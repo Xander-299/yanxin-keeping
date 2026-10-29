@@ -13,6 +13,7 @@ import 'package:yanxin/data/repositories/transaction_repository.dart';
 import 'package:yanxin/features/calendar/presentation/widgets/month_grid.dart';
 import 'package:yanxin/features/record/presentation/record_page.dart';
 
+import '../../helpers/pick_category.dart';
 import '../../helpers/pump_app.dart';
 
 /// 等异步写库 + provider 重建到位。
@@ -174,7 +175,9 @@ void main() {
     expect(find.textContaining('3月7日'), findsOneWidget);
   });
 
-  testWidgets('子页「上一年/下一年」切换年份', (WidgetTester tester) async {
+  testWidgets('子页「上一年/下一年」切换年份；未来年不可去（R2）', (
+    WidgetTester tester,
+  ) async {
     final db = openTestDatabase();
     addTearDown(db.close);
     await BookRepository(db).ensureDefaultBook();
@@ -187,11 +190,17 @@ void main() {
     await tester.tap(find.text('$year年${DateTime.now().month}月'));
     await tester.pumpAndSettle();
 
+    // 当前年：下一年是禁用的（与首页 / 网格同口径）
     await tester.tap(find.text('下一年 ›'));
     await tester.pumpAndSettle();
-    expect(find.text('${year + 1}年'), findsOneWidget);
+    expect(find.text('$year年'), findsOneWidget, reason: '不能翻到未来年');
 
     await tester.tap(find.text('‹ 上一年'));
+    await tester.pumpAndSettle();
+    expect(find.text('${year - 1}年'), findsOneWidget);
+
+    // 回到当前年（历史年之间可以来回切）
+    await tester.tap(find.text('下一年 ›'));
     await tester.pumpAndSettle();
     expect(find.text('$year年'), findsOneWidget);
   });
@@ -222,8 +231,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('请选择分类'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text(cat.name).last);
-    await tester.pumpAndSettle();
+    await pickCategory(tester, cat.name);
     // F7.6 起主按钮是 ToonButton（胶囊），不再是 FilledButton；
     // F7.9 起吸底常驻（不在 Scrollable 内）→ 不能再 ensureVisible
     await tester.tap(find.widgetWithText(ToonButton, '记一笔'));
@@ -263,7 +271,7 @@ void main() {
     expect(find.textContaining('${now.year}年${now.month}月$day日'), findsOneWidget);
   });
 
-  testWidgets('月历左滑 → 下一个月；右滑 → 上一个月（E 批）', (
+  testWidgets('月历左右滑动：能回看历史月，但翻不到未来月（R2）', (
     WidgetTester tester,
   ) async {
     final db = openTestDatabase();
@@ -275,23 +283,23 @@ void main() {
     await tester.pumpAndSettle();
 
     final DateTime now = DateTime.now();
-    final DateTime next = DateTime(now.year, now.month + 1);
     final DateTime prev = DateTime(now.year, now.month - 1);
+    final String header = '${now.year}年${now.month}月';
 
-    // 左滑（阈值 = 1/3 格宽 ≈ 40dp，这里给 260）
+    // 左滑 = 下一个月 → 已经是当前月，**不该动**（与首页 canGoNext 同口径）
     await tester.drag(find.byType(MonthGrid), const Offset(-260, 0));
     await tester.pumpAndSettle();
-    expect(find.text('${next.year}年${next.month}月'), findsOneWidget);
+    expect(find.text(header), findsOneWidget, reason: '不能翻到未来月');
 
-    // 右滑回本月
-    await tester.drag(find.byType(MonthGrid), const Offset(260, 0));
-    await tester.pumpAndSettle();
-    expect(find.text('${now.year}年${now.month}月'), findsOneWidget);
-
-    // 再右滑 = 上一个月
+    // 右滑 = 上一个月 → 正常
     await tester.drag(find.byType(MonthGrid), const Offset(260, 0));
     await tester.pumpAndSettle();
     expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
+
+    // 从历史月左滑回来
+    await tester.drag(find.byType(MonthGrid), const Offset(-260, 0));
+    await tester.pumpAndSettle();
+    expect(find.text(header), findsOneWidget);
   });
 
   testWidgets('滑不够阈值不翻月；竖向滑动仍然滚动页面（不吃竖向手势）', (
@@ -320,5 +328,106 @@ void main() {
     final double after = tester.getTopLeft(find.byType(MonthGrid)).dy;
     expect(after, lessThan(before), reason: '竖向滑动必须仍能滚动页面');
     expect(find.text(header), findsOneWidget);
+  });
+
+  // 用户报：「滑动切换页面没有过渡动画，很生硬」。
+  // 两件事一起兜住：① 翻月时**不能闪转圈**（controller 不再切 loading）；
+  // ② 要有过渡 —— 动画期间新旧两页同时在场（AnimatedSwitcher 的 outgoing 还在），
+  //    落定后只剩新的。
+  testWidgets('翻月有过渡动画：动画中新旧两页同时在场，且全程不闪转圈', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    await BookRepository(db).ensureDefaultBook();
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    final DateTime now = DateTime.now();
+    // 只能往历史月翻（未来月被 R2 挡住）
+    final DateTime prev = DateTime(now.year, now.month - 1);
+
+    await tester.drag(find.byType(MonthGrid), const Offset(260, 0));
+    await tester.pump(); // 触发状态更新
+    await tester.pump(const Duration(milliseconds: 80)); // 动画进行中
+
+    // 过渡中：新旧两页共存（瞬切的话只会有 1 个），并且有 SlideTransition
+    expect(find.byType(MonthGrid), findsNWidgets(2), reason: '翻月要有过渡，不能瞬切');
+    expect(find.byType(SlideTransition), findsWidgets);
+    // 翻月不闪整页转圈
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(MonthGrid), findsOneWidget);
+    expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
+  });
+
+  // 2026-10-29 用户要求：打开页面不能「整页加载完才显示」——网格先出，账单随后。
+  testWidgets('打开日历：首帧就有网格与月汇总条，不等账单查询（R1）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    final int day = otherDay();
+    await seedMonthTx(db, day: day);
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pump(); // 只推一帧：此时数据查询还没落地
+
+    expect(
+      find.byType(MonthGrid),
+      findsOneWidget,
+      reason: '网格不依赖任何数据，必须首帧就渲染',
+    );
+    expect(find.text('月结余'), findsOneWidget);
+    expect(find.text('日均支出'), findsOneWidget);
+    // 整月聚合还没回来 → 汇总用占位符，而不是空白/转圈
+    expect(find.text('—'), findsNWidgets(2));
+
+    await tester.pumpAndSettle();
+    expect(find.text('—'), findsNothing, reason: '数据到了要换成真实金额');
+  });
+
+  // 2026-10-29 用户要求：翻月不改变「选中日」，下面账单跟着日期走，不跟着月份跳。
+  testWidgets('翻月不动选中日：网格换月，下面仍是原来那天的账单（R3）', (
+    WidgetTester tester,
+  ) async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    final int day = otherDay();
+    await seedMonthTx(db, day: day);
+
+    await pumpApp(tester, database: db);
+    await tester.tap(find.text('日历'));
+    await tester.pumpAndSettle();
+
+    final DateTime now = DateTime.now();
+    final DateTime prev = DateTime(now.year, now.month - 1);
+
+    // 先选中这一天（这笔账单挂在这一天）
+    await tester.tap(find.text('$day'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('${now.month}月$day日'), findsOneWidget);
+    expect(find.text('午餐'), findsOneWidget);
+
+    // 翻到上一个月：网格变了，但日期头与账单都不动
+    await tester.drag(find.byType(MonthGrid), const Offset(260, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('${prev.year}年${prev.month}月'), findsOneWidget);
+    expect(
+      find.textContaining('${now.month}月$day日'),
+      findsOneWidget,
+      reason: '翻月不能把选中日改成新月份的 1 号',
+    );
+    expect(find.text('午餐'), findsOneWidget, reason: '账单区域不跟着月份换');
+
+    // 真正点了上一个月的某天 → 这时账单才跟着换
+    await tester.tap(find.text('$day'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('${prev.month}月$day日'), findsOneWidget);
+    expect(find.text('午餐'), findsNothing);
   });
 }

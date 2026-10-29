@@ -68,8 +68,13 @@ class LedgerController extends AsyncNotifier<LedgerState> {
   }
 
   Future<void> _reload(String bookId, int year, int month) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _load(bookId, year, month));
+    // **不切 loading**（2026-10-28 排查日历页「翻月生硬」时统一）：翻月 / 记完一笔后的
+    // 刷新都走这里，切 loading 会让首页整屏闪转圈再瞬切。保留旧数据，新数据到了再替换。
+    try {
+      state = AsyncData<LedgerState>(await _load(bookId, year, month));
+    } catch (e, st) {
+      state = AsyncError<LedgerState>(e, st);
+    }
   }
 
   /// 翻月：delta = -1 上一月，+1 下一月（调用方先判 [canGoNext]）。

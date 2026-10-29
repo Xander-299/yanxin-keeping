@@ -17,7 +17,7 @@ import 'package:yanxin/features/onboarding/application/onboarding_keys.dart';
 /// 覆盖安装上来的）必然有值** → 老用户不弹（用户裁定），只能从「我的 → 新手引导」主动看。
 ///
 /// ⚠️ 不要另找判据（如「表里有没有流水」「账本创建时间」）：全新安装首启也会立刻建
-/// 账本 + 现金账户 + 15 预置分类，读完就分不清新老；也不能用「本次是否走了
+/// 账本 + 现金账户 + 预置分类（一级 + 二级共 50+ 条），读完就分不清新老；也不能用「本次是否走了
 /// `ensureDefaultBook` 分支」——「当前账本被软删」也会命中该分支，会误判成新装。
 final onboardingPromptProvider = FutureProvider<bool>((ref) async {
   final meta = ref.watch(appMetaRepositoryProvider);

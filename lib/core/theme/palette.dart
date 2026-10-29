@@ -18,6 +18,7 @@ library;
 
 import 'package:flutter/material.dart';
 
+import 'theme_seed.dart';
 import 'tokens.dart';
 
 /// 一整套卡通视觉色板。
@@ -70,18 +71,18 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   final Color canvas;
   final Color canvas2;
 
-  // ── 品牌琥珀 ──
+  // ── 品牌色 ──
 
-  /// 品牌主色（**两套主题共用**：琥珀是品牌锚点）。
+  /// 品牌主色（**两套主题共用**：森绿是品牌锚点）。
   final Color brand;
 
   /// 品牌深色：浅底上的品牌字 / 光标（深色主题下提亮）。
   final Color brandDeep;
 
-  /// **亮琥珀底上的字**（主按钮 / 选中 chip / 中央 +）：两套主题都是深棕。
+  /// **品牌实心底上的字**（主按钮 / 选中 chip / 中央 +）。
   final Color onBrand;
 
-  /// **品牌浅底（[brandTint]）上的字**：浅色深棕、深色浅琥珀。
+  /// **品牌浅底（[brandTint]）上的字**（深浅主题各取 M3 对应角色）。
   final Color brandInk;
 
   final Color brandTint;
@@ -120,7 +121,7 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   /// 环形进度 / 柱状 / 饼图的底槽。
   final Color track;
 
-  /// hero 卡上的深棕字色（hero 恒为琥珀底，故两套主题一致）。
+  /// hero 卡上的字色（hero 恒为品牌浅底，语义角色随主题切换）。
   final Color heroInk;
 
   /// 小猪鼻子的奶白。
@@ -144,22 +145,25 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   /// 分类占比调色板（按占比顺序取用）。
   final List<Color> pie;
 
-  // ─────────────────────────── 形体助手 ───────────────────────────
+  // ─────────────────────────── 形体助手（Material 3 观感） ───────────────────────────
 
-  /// 硬阴影。`blurRadius: 0` 才是「硬」边（有模糊就不像卡通了）。
+  /// 卡片阴影（M3 elevation 观感）：柔和、向下、无描边。
+  ///
+  /// 名字保留 `hard` 只为不改 42 处调用点；现在 `d` 表示**强度**（1≈elevation1，4≈elevation3），
+  /// `blurRadius: 0` 的「硬边」已废弃 —— 那是卡通风，不是 Material。
   List<BoxShadow> hard({double d = 4, Color? color}) => <BoxShadow>[
-    BoxShadow(color: color ?? shadow, offset: Offset(d, d), blurRadius: 0),
+    BoxShadow(
+      color: (color ?? shadow).withValues(alpha: 0.14),
+      offset: Offset(0, d * 0.6),
+      blurRadius: d * 1.6,
+    ),
   ];
 
-  /// 墨色描边（默认用于纸底 / 画布底）。
+  /// 发丝描边（M3 `outlineVariant`）：1dp，不再是 2.5dp 墨线。
   ///
-  /// **[on] 传「描边所在的那块底色」**：亮底（琥珀 / 品牌浅底 / 用户自选色）自动改用
-  /// 恒深的 [decorInk]，暗底用随主题反色的 [ink]。不传 = 纸底（等同于旧行为）。
-  ///
-  /// 为什么必须有这个参数：深色主题下 [ink] 是暖白，白描边压在琥珀上只有 ~1.3:1
-  /// —— 主按钮 / 选中 tab / 选中的分类格 / hero 的描边会**整条消失**（F7.17 对比度修复）。
+  /// [on] 参数保留仅为兼容旧调用点（曾经用于「亮底换深色描边」）；M3 下统一走 outline。
   Border inkBorder({double w = Tok.bw, Color? on}) =>
-      Border.all(color: on == null ? ink : inkOn(on), width: w);
+      Border.all(color: on == null ? line : on.withValues(alpha: 0.24), width: w);
 
   /// 任意底色上的前景色：**亮底用深墨、暗底用白**。
   ///
@@ -168,109 +172,100 @@ class ToonPalette extends ThemeExtension<ToonPalette> {
   Color inkOn(Color background) =>
       background.computeLuminance() > 0.45 ? decorInk : veil;
 
-  /// 卡通卡片装饰：卡片底 + 墨色描边 + 硬阴影。
+  /// 卡片装饰：M3 表面 + 柔和阴影（默认无描边）。
   BoxDecoration cardDeco({
     Color? color,
     double radius = Tok.rLg,
     double depth = 4,
-    bool bordered = true,
+    bool bordered = false,
   }) => BoxDecoration(
     color: color ?? paper,
     borderRadius: BorderRadius.circular(radius),
-    border: bordered ? inkBorder() : null,
-    boxShadow: depth > 0 ? hard(d: depth) : null,
+    border: bordered ? Border.all(color: line) : null,
+    boxShadow: depth > 0 ? hard(d: depth * 0.5) : null,
   );
 
   // ─────────────────────────── 调色板本体 ───────────────────────────
 
-  /// 浅色（F7.6 原型 `:root`，1:1 保留）。
-  static const ToonPalette light = ToonPalette(
-    ink: Color(0xFF2A2A35),
-    ink2: Color(0xFF6C6C7C),
-    ink3: Color(0xFF9C9CAD),
-    paper: Color(0xFFFFFFFF),
-    canvas: Color(0xFFFFF7EA),
-    canvas2: Color(0xFFFFFCF6),
-    brand: Color(0xFFFFB627),
-    brandDeep: Color(0xFFE1810A),
-    onBrand: Color(0xFF4A3103),
-    brandInk: Color(0xFF4A3103),
-    brandTint: Color(0xFFFFF1D4),
-    brandTint2: Color(0xFFFFE1AC),
-    red: Color(0xFFFF5D5D),
-    redTint: Color(0xFFFFE5E5),
-    redInk: Color(0xFFA8321F),
-    onRed: Color(0xFF4A0F0A),
-    green: Color(0xFF2FC98A),
-    greenTint: Color(0xFFD9F7E9),
-    blue: Color(0xFF4DA8FF),
-    blueTint: Color(0xFFE2F0FF),
-    purple: Color(0xFFA98BFF),
-    purpleTint: Color(0xFFEEE7FF),
-    pink: Color(0xFFFF7FAB),
-    lemon: Color(0xFFFFE066),
-    line: Color(0xFFF0E7D8),
-    dash: Color(0x332A2A35),
-    track: Color(0xFFF5EFE4),
-    heroInk: Color(0xFF3F2B06),
-    snout: Color(0xFFFFE7C2),
-    blush: Color(0xFFFF8FA8),
-    decorInk: Color(0xFF2A2A35),
-    shadow: Color(0xFF2A2A35),
-    veil: Color(0xFFFFFFFF),
-    pie: pieColors,
+  /// 品牌主色（Material 3 的 seed）：2026-10-28 由琥珀改为森绿（方案 B）。
+  ///
+  /// 这只是**默认**种子；用户可在「设置 → 主题色」里换（[ToonSeed]），
+  /// 换完由 [lightOf] / [darkOf] 现算调色板。
+  static const Color seed = Color(0xFF2E5E4E);
+
+  static final Map<ToonSeed, ToonPalette> _lightCache = <ToonSeed, ToonPalette>{};
+  static final Map<ToonSeed, ToonPalette> _darkCache = <ToonSeed, ToonPalette>{};
+
+  /// 指定主题色的浅色板（按 seed 缓存：`fromSeed` 调一次约 1ms，别在 build 里重算）。
+  static ToonPalette lightOf(ToonSeed s) => _lightCache.putIfAbsent(
+    s,
+    () => _fromScheme(
+      ColorScheme.fromSeed(seedColor: s.seed, brightness: Brightness.light),
+    ),
   );
 
-  /// 深色（F7.17「卡通夜灯」）：暖黑画布 + 暖白描边 + 纯黑硬阴影，品牌琥珀不动。
-  static const ToonPalette dark = ToonPalette(
-    ink: Color(0xFFF6F0E4),
-    ink2: Color(0xFFBDB6C7),
-    // 三级灰：#857F91 在深色纸底上只有 3.96:1，而它承担了底栏标签(10~11px)、
-    // 输入框 hint、8px 月历辅助字 —— 提亮到 #A098AE 后 paper 5.52 / canvas2 6.09 /
-    // track 4.73，全部过 AA；仍明显暗于 ink2(#BDB6C7, 7.76)，层级不丢。
-    ink3: Color(0xFFA098AE),
-    paper: Color(0xFF26242F),
-    canvas: Color(0xFF17151D),
-    canvas2: Color(0xFF1E1C25),
-    brand: Color(0xFFFFB627),
-    brandDeep: Color(0xFFFFC85C),
-    onBrand: Color(0xFF33230A),
-    brandInk: Color(0xFFFFD98C),
-    brandTint: Color(0xFF3A2C10),
-    brandTint2: Color(0xFF5B4316),
-    red: Color(0xFFFF6B6B),
-    redTint: Color(0xFF3B2024),
-    redInk: Color(0xFFFF9F9F),
-    onRed: Color(0xFF2A1210),
-    green: Color(0xFF3FD79A),
-    greenTint: Color(0xFF143227),
-    blue: Color(0xFF6BB6FF),
-    blueTint: Color(0xFF142838),
-    purple: Color(0xFFB79CFF),
-    purpleTint: Color(0xFF262038),
-    pink: Color(0xFFFF8FB4),
-    lemon: Color(0xFFFFE066),
-    line: Color(0xFF35323F),
-    dash: Color(0x38F6F0E4),
-    track: Color(0xFF322F3C),
-    heroInk: Color(0xFF3F2B06),
-    snout: Color(0xFFFFE7C2),
-    blush: Color(0xFFFF8FA8),
-    decorInk: Color(0xFF2A2A35),
-    // 纯黑：深色主题的描边是浅的，阴影若也用墨色会像「外发光」
-    shadow: Color(0xFF000000),
-    veil: Color(0xFFFFFFFF),
-    pie: pieColors,
+  /// 指定主题色的深色板。
+  static ToonPalette darkOf(ToonSeed s) => _darkCache.putIfAbsent(
+    s,
+    () => _fromScheme(
+      ColorScheme.fromSeed(seedColor: s.seed, brightness: Brightness.dark),
+    ),
+  );
+
+  /// 浅色 / 深色两套（默认森绿）：**全部从 `ColorScheme.fromSeed` 派生**（M3 语义角色 → 旧字段名）。
+  ///
+  /// 为什么保留旧字段名：全仓 155 处 `context.toon`、432 处 `Toon*` 调用都按旧名取色；
+  /// 换风格时改「色板怎么来」比改「谁在用」便宜得多。
+  static ToonPalette get light => lightOf(ToonSeed.forest);
+  static ToonPalette get dark => darkOf(ToonSeed.forest);
+
+  static ToonPalette _fromScheme(ColorScheme s) => ToonPalette(
+    ink: s.onSurface,
+    ink2: s.onSurfaceVariant,
+    ink3: s.outline,
+    paper: s.surface,
+    canvas: s.surfaceContainerLowest,
+    canvas2: s.surfaceContainerHigh,
+    brand: s.primary,
+    brandDeep: s.primary,
+    onBrand: s.onPrimary,
+    brandInk: s.onPrimaryContainer,
+    brandTint: s.primaryContainer,
+    brandTint2: s.primaryFixedDim,
+    red: s.error,
+    redTint: s.errorContainer,
+    redInk: s.onErrorContainer,
+    onRed: s.onError,
+    green: s.tertiary,
+    greenTint: s.tertiaryContainer,
+    blue: s.secondary,
+    blueTint: s.secondaryContainer,
+    purple: s.tertiary,
+    purpleTint: s.tertiaryContainer,
+    pink: s.tertiary,
+    lemon: s.primaryFixed,
+    line: s.outlineVariant,
+    dash: s.outlineVariant,
+    track: s.surfaceContainerHighest,
+    heroInk: s.onPrimaryContainer,
+    snout: s.surfaceContainerHighest,
+    blush: s.tertiaryContainer,
+    decorInk: s.onSurface,
+    shadow: s.shadow,
+    veil: s.surface,
+    // 第一瓣跟品牌色走，换主题时图表也跟着协调；其余 8 色固定（要保证互异）
+    pie: <Color>[s.primary, ...pieColors.skip(1)],
   );
 
   /// 分类占比调色板的**源常量**（两套主题共用；测试与画笔也直接引用它）。
+  /// 2026-10-28 随换肤调整：品牌森绿打头，原首位的琥珀移到原亮绿位（保 9 色互异）。
   static const List<Color> pieColors = <Color>[
-    Color(0xFFFFB627),
+    Color(0xFF1F8F63),
     Color(0xFFFF6B8A),
     Color(0xFF4DC9C0),
     Color(0xFF5A8DFF),
     Color(0xFFB18CFF),
-    Color(0xFF5FD068),
+    Color(0xFFFFB627),
     Color(0xFFFF8A3D),
     Color(0xFFF06FC0),
     Color(0xFF9AA5B1),

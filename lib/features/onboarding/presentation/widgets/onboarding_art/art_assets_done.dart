@@ -133,11 +133,9 @@ class DoneArt extends StatelessWidget {
             decoration: BoxDecoration(
               color: p.brandTint,
               shape: BoxShape.circle,
-              border: p.inkBorder(),
             ),
           ),
-          const PigMascot(size: 92, rotate: true),
-          const Positioned(top: 14, right: 84, child: Sparkle(size: 24)),
+          Icon(Icons.check_circle_rounded, size: 64, color: p.brandInk),
           Positioned(
             bottom: 6,
             child: Container(

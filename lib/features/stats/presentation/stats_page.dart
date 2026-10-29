@@ -23,34 +23,55 @@ class StatsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(statsProvider);
+    final StatsState? state = async.value;
 
     return Scaffold(
       appBar: AppBar(title: const Text('统计')),
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, StackTrace _) => Center(child: Text('加载失败：$e')),
-        data: (StatsState state) => ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: <Widget>[
-            _MonthBar(
-              year: state.year,
-              month: state.month,
-              onPrev: () => ref.read(statsProvider.notifier).shiftMonth(-1),
-              onNext: () => ref.read(statsProvider.notifier).shiftMonth(1),
+      // 翻月时不再闪转圈（controller 不切 loading），这里加一层淡入淡出，
+      // 让「月份 × 图表」整体换得柔和一点；key 只看年月，切「支出/收入」不触发换页动画。
+      body: state == null
+          ? (async.hasError
+                ? Center(child: Text('加载失败：${async.error}'))
+                : const Center(child: CircularProgressIndicator()))
+          : AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: _StatsBody(
+                key: ValueKey<String>('${state.year}-${state.month}'),
+                state: state,
+              ),
             ),
-            const SizedBox(height: 12),
-            _SummaryCard(summary: state.summary),
-            const SizedBox(height: 12),
-            _BreakdownCard(
-              state: state,
-              onKindChanged: (String kind) =>
-                  ref.read(statsProvider.notifier).setKind(kind),
-            ),
-            const SizedBox(height: 12),
-            _TrendCard(state: state),
-          ],
+    );
+  }
+}
+
+/// 统计页内容（按月重绘）。
+class _StatsBody extends ConsumerWidget {
+  const _StatsBody({super.key, required this.state});
+
+  final StatsState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+      children: <Widget>[
+        _MonthBar(
+          year: state.year,
+          month: state.month,
+          onPrev: () => ref.read(statsProvider.notifier).shiftMonth(-1),
+          onNext: () => ref.read(statsProvider.notifier).shiftMonth(1),
         ),
-      ),
+        const SizedBox(height: 12),
+        _SummaryCard(summary: state.summary),
+        const SizedBox(height: 12),
+        _BreakdownCard(
+          state: state,
+          onKindChanged: (String kind) =>
+              ref.read(statsProvider.notifier).setKind(kind),
+        ),
+        const SizedBox(height: 12),
+        _TrendCard(state: state),
+      ],
     );
   }
 }
@@ -164,12 +185,15 @@ class _StatCell extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 17.5,
-            fontWeight: FontWeight.w900,
-            color: color,
+        ToonFadeValue(
+          value: value,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 17.5,
+              fontWeight: FontWeight.w900,
+              color: color,
+            ),
           ),
         ),
       ],
@@ -283,20 +307,26 @@ class _LegendRow extends StatelessWidget {
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
-          Text(
-            slice.percentText,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: muted,
+          ToonFadeValue(
+            value: slice.percentText,
+            child: Text(
+              slice.percentText,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                color: muted,
+              ),
             ),
           ),
           SizedBox(
             width: 78,
-            child: Text(
-              centsToYuan(slice.cents, group: true),
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+            child: ToonFadeValue(
+              value: centsToYuan(slice.cents, group: true),
+              child: Text(
+                centsToYuan(slice.cents, group: true),
+                textAlign: TextAlign.right,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
             ),
           ),
         ],
