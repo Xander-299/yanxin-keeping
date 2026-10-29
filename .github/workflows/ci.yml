@@ -124,11 +124,11 @@ jobs:
           channel: stable
           cache: true
 
-      # Gradle 缓存（依赖 + wrapper），第一次冷跑 6–8 分钟，之后 2–3 分钟
+      # Gradle 缓存（依赖 + wrapper）。⚠️ **不要**设 cache-read-only：
+      # 本仓库 master 被保护成「只能走 PR」，PR 就是唯一会跑 CI 的地方 ——
+      # 设成 read-only 就永远没人写缓存，每次都是冷启动（2026-10-29 实测踩到）。
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Resolve dependencies
         run: flutter pub get
