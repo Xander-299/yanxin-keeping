@@ -135,12 +135,15 @@ jobs:
 
       # runner 的 Android SDK 不一定带 compileSdk=36（项目 android.builder.sdkDownload=false，
       # 缺了就直截失败）。这里补装一次；已经装了就是秒过。
-      - name: Ensure Android SDK 36
+      # ⚠️ cmake 必须装：`jni_flutter` 那条链会拉起 `:jni` 模块走 CMake 构建，
+      #    缺 CMake 3.22.1 时首个真实失败发生在 `:jni:configureCMakeDebug[arm64-v8a]`，
+      #    报 `[CXX1300] CMake '3.22.1' was not found in SDK`（2026-10-29 首次 CI 实测）。
+      - name: Ensure Android SDK 36 + CMake
         run: |
           SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           if [ -x "$SDKMANAGER" ]; then
             yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
-            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0" "cmake;3.22.1" > /dev/null
           else
             echo "::warning::找不到 sdkmanager，跳过补装（依赖 runner 预装）"
           fi
