@@ -61,15 +61,15 @@
 
 | 版本 | 适用设备 | 大小 | 下载 |
 |---|---|---|---|
-| **通用包**（arm64 + armv7） | 主流安卓手机（**不含 x86 模拟器**） | 46 MB | [下载][apk-universal] |
+| **通用包**（arm64 + armv7） | 主流安卓手机（**不含 x86 模拟器**） | 66 MB | [下载][apk-universal] |
 
-- 版本 **0.8.1**（分类树 · 日历 · 主题色 · 性能基线）
+- 版本 **0.8.2**（改名「小耄记账」+ 新图标 · 分类树 · 日历 · 主题色）
   · 最低 **Android 7.0** · 正式签名（`CN=yanxin`）· release 页见 [Releases][releases]
 - 装好后首次会弹 7 页新手引导；卸载即彻底删除数据（无云端），想留档请先「我的 → 数据导出」
 
 > ⚠️ 未上架任何应用商店。系统提示「未知来源」时，允许**当前这个文件管理器**安装即可。
 
-[apk-universal]: https://github.com/Xander-299/yanxin-keeping/releases/download/v0.8.1/yanxin-v0.8.1-universal-release.apk
+[apk-universal]: https://github.com/Xander-299/yanxin-keeping/releases/download/v0.8.2/yanxin-v0.8.2-universal-release.apk
 [releases]: https://github.com/Xander-299/yanxin-keeping/releases
 
 ---
@@ -254,8 +254,8 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
 | 维度 | 数据 |
 |---|---|
 | 代码量 | Dart **151 个源文件 / 30,198 行**（含 `part`）· Kotlin **9 个文件 / 1,689 行** |
-| 测试 | **75 个测试文件** · 668 处 `test()` / `testWidgets()`（实跑 **740 passed / 6 skipped**） |
-| 迭代 | **186 次提交** · **18 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`） |
+| 测试 | **73 个测试文件** · 668 处 `test()` / `testWidgets()`（实跑 **740 passed / 6 skipped**） |
+| 迭代 | **202 次提交** · **19 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`、`v0.8.2`） |
 | 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（Android 14 / HyperOS，adb 全包走查）|
 | 性能基线 | 冷启动 **613.8 ms** · 热启动 **82.4 ms** · 常驻 **43.3 MB** · release APK **46.44 MB**（[报告](docs/perf/baseline-2026-10-29.md)） |
 

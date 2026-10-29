@@ -29,8 +29,9 @@
 | `v0.7.16` | F7.16 自动记账三段修复：A 补抓 · B `[N条]` 折叠前缀误杀 · C 撤回通道 + 补抓守护层 | 本段所在提交 |
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
+| `v0.8.2` | **改名「小耄记账」+ 新图标首次进正式包**（v0.8.1 包里还是旧名旧图标）+ 收进 v0.8.1 之后一直未发版的全部交付（F7.18 分类树四轮交互 / 预置二级 / 主题色五选一 / 日历分段加载 / 问账本与聊天化 / 性能基线）；versionCode 2001 → **2002** | 本段所在提交 |
 
-## [Unreleased] — 仓库迁移 + 改名「小耄记账」+ 新图标（2026-10-30）
+## [v0.8.2] — 2026-10-30 · 改名「小耄记账」+ 新图标（对外首个新名包）
 
 ### Changed
 
@@ -51,10 +52,15 @@
 
 ### 发布
 
-- 新库已发 **v0.8.1**（`yanxin-v0.8.1-universal-release.apk`，46.44 MB，upload key 签名）。
-- ⚠️ **该包内仍是旧图标 + 旧名** —— 新图标/新名只进了 `master` 与真机 QA 包，需 **v0.8.2** 才对外生效。
+- 版本号 `0.8.2+2002`（versionCode **2001 → 2002**，只增不减）；`flutter build apk --release --no-pub`（ASCII 副本）。
+- 已发 **v0.8.2**：`yanxin-v0.8.2-universal-release.apk` —— **首个包内就是「小耄记账」+ 橙底小猫图标**的正式包。
+- 背景：v0.8.1（2026-10-30 迁库后重发的那次）包内仍是旧名旧图标，新名/新图标只进过源码与真机 QA 包；
+  v0.8.2 才真正对外生效。
+- 本版同时收进 v0.8.1 之后一直挂在 `[Unreleased]` 的全部交付：F7.18 分类树四轮交互 + 预置二级分类、
+  主题色五选一、日历分段加载（不翻未来月 / 翻月不改选中日）、问账本与首页聊天化、真机性能基线。
+  它们各自的细节见下方各段（heading 已标 `并入 v0.8.2`）。
 
-## [Unreleased] — 主题色（2026-10-29）
+## [v0.8.2] 并入 —— 主题色（2026-10-29）
 
 ### Added
 
@@ -81,7 +87,7 @@
   色板按 seed 缓存与饼图首瓣 3 例。
 - 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **740 passed / 6 skipped**。
 
-## [Unreleased] — 日历页：分段加载 / 不能翻未来月 / 选中日与可见月解耦（2026-10-29）
+## [v0.8.2] 并入 —— 日历页：分段加载 / 不能翻未来月 / 选中日与可见月解耦（2026-10-29）
 
 ### Changed
 
@@ -103,7 +109,7 @@
   改写 3 例：左右滑动（未来月不可翻）、翻月过渡动画（改往历史月翻）、月份子页年份切换（未来年禁用）。
 - 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **677 passed / 6 skipped**（+2）。
 
-## [Unreleased] — 预置一级分类补二级（2026-10-29）
+## [v0.8.2] 并入 —— 预置一级分类补二级（2026-10-29）
 
 ### Added
 
@@ -130,7 +136,7 @@
 `flutter analyze` 0 issue · `flutter test --concurrency=1` **675 passed / 6 skipped**（+4）。
 **本轮未做真机走查**（用户指定）。schema 仍 v4，无迁移。
 
-## [Unreleased] — 分类管理页交互升级（Collapse / Wrap / ActionSheet）
+## [v0.8.2] 并入 —— 分类管理页交互升级（Collapse / Wrap / ActionSheet）
 
 ### Changed
 
@@ -157,7 +163,7 @@
   `ListTile` 换成自绘行（`_SheetTile` / `_SheetRow`）。
 - 门禁：`flutter analyze` 0 issue · `flutter test --concurrency=1` **671 passed / 6 skipped**（+3）。
 
-## [Unreleased] — 主题换肤（seed 琥珀 → 森绿）
+## [v0.8.2] 并入 —— 主题换肤（seed 琥珀 → 森绿）
 
 ### Changed
 
@@ -168,7 +174,7 @@
 - 同步更新用户可见文案与新手指引里的颜色指称（「琥珀方块」→「墨绿方块」、月份选择页图例等）。
 - 护栏：`test/core/theme/palette_contrast_test.dart`（M3 前景配对 4.5:1 / 3:0 / 1.4:1）全绿。
 
-## [Unreleased] — 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1 + 批次 3 首页聊天化）
+## [v0.8.2] 并入 —— 阶段二 · 本地财务问答（批次 1 基准表 + 批次 2 M1 + 批次 3 首页聊天化）
 
 > **门禁**：`flutter analyze` → `No issues found!` ✅ ·
 > `flutter test --concurrency=1` → **638 passed / 6 skipped / 0 failed**（基线 588，本批 **+50**；批次 3 删 20 例旧页测试、加 22 例）✅
