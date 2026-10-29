@@ -27,7 +27,7 @@ const String kUtf8Bom = '\uFEFF';
 const int kBackupSchemaVersion = 2;
 
 /// 导出文件的统一前缀。
-const String kExportFilePrefix = '颜芯记账';
+const String kExportFilePrefix = '小耄记账';
 
 /// 类型内部值 → 中文。未知值原样输出（便于发现脏数据，不静默吞掉）。
 String billTypeLabel(String type) => switch (type) {
@@ -71,7 +71,7 @@ String csvField(String raw) {
   return '"${raw.replaceAll('"', '""')}"';
 }
 
-/// 导出文件名：`颜芯记账_{账本名}_{YYYYMMDD}.{ext}`。
+/// 导出文件名：`小耄记账_{账本名}_{YYYYMMDD}.{ext}`。
 ///
 /// 账本名允许任意字符，而文件名不许 —— 把 Windows / SAF 都敏感的
 /// `/ \ : * ? " < > |` 与控制字符统一换成 `_`；空名或全被替换时退回「账本」。

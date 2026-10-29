@@ -204,24 +204,24 @@ void main() {
   });
 
   group('exportFileName', () {
-    test('正常：颜芯记账_{账本名}_{YYYYMMDD}.csv', () {
+    test('正常：小耄记账_{账本名}_{YYYYMMDD}.csv', () {
       expect(
         exportFileName(bookName: '默认账本', ext: 'csv', nowMs: _nowMs),
-        '颜芯记账_默认账本_20260923.csv',
+        '小耄记账_默认账本_20260923.csv',
       );
     });
 
     test('非法字符全部换下划线', () {
       expect(
         exportFileName(bookName: 'a/b:c*d?e"f<g>h|i', ext: 'json', nowMs: _nowMs),
-        '颜芯记账_a_b_c_d_e_f_g_h_i_20260923.json',
+        '小耄记账_a_b_c_d_e_f_g_h_i_20260923.json',
       );
     });
 
     test('空名退回「账本」', () {
       expect(
         exportFileName(bookName: '   ', ext: 'csv', nowMs: _nowMs),
-        '颜芯记账_账本_20260923.csv',
+        '小耄记账_账本_20260923.csv',
       );
     });
 
@@ -232,7 +232,7 @@ void main() {
           ext: 'csv',
           nowMs: DateTime(2026, 1, 5).millisecondsSinceEpoch,
         ),
-        '颜芯记账_x_20260105.csv',
+        '小耄记账_x_20260105.csv',
       );
     });
   });

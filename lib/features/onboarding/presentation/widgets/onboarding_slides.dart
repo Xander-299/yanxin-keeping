@@ -65,7 +65,7 @@ List<TextSpan> emphasisSpans(String text, ToonPalette p) => <TextSpan>[
 /// 7 页引导内容（SPEC-F7.14 §3.2）。
 const List<OnboardingSlide> kOnboardingSlides = <OnboardingSlide>[
   OnboardingSlide(
-    title: '认识一下颜芯记账',
+    title: '认识一下小耄记账',
     body: 'App 里有几个**没有文字的按钮**和**藏起来的手势**，30 秒看完，以后就不会找不到。'
         '随时可以点右上角「跳过」。',
     art: WelcomeArt(),

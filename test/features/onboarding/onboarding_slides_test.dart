@@ -18,7 +18,7 @@ void main() {
     expect(
       kOnboardingSlides.map((OnboardingSlide s) => s.title).toList(),
       <String>[
-        '认识一下颜芯记账',
+        '认识一下小耄记账',
         '中间歪着的方块 = 记一笔',
         '右上角这三个图标',
         '月份可以往回翻',
