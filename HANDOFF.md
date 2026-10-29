@@ -10,12 +10,33 @@
 
 | 项 | 值 |
 |---|---|
-| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.1`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；首页入口卡 + 一行预算，`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行）。**F7.18 分类系统**后追加四轮交互迭代 + **预置二级分类**（2026-10-29，未发版、未真机走查，见 [SPEC §12–13](docs/spec/SPEC-F7.18-category-tree.md)） |
-| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定）**。**最近的下一步：发 v0.8.2**（现 v0.8.1 包内还是旧图标 + 旧名；版号 2002，重打 release + 换 README 链接）。其它候选（待拍板）：分类相关的 4 项遗留、导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、帧率采集（adb 两条路都测不到 Flutter SurfaceView，需 DevTools 或 integration_test） |
+| 交付状态 | F1–F7.17 + **F8.1 阶段一「端上截图记账」全部交付**，最新 tag **`v0.8.2`**（真机走查 7 项全过，[验收报告](docs/acceptance-F8.1-receipt.md)）。**v0.8.2 = 改名「小耄记账」+ 橙底小猫图标首次进正式包**（同时收进 v0.8.1 之后一直未发版的 F7.18 分类树 / 预置二级 / 主题色 / 日历分段 / 问答聊天化）。阶段二：**任务 1 基准表已实测**（[报告](docs/dev/llm-benchmark.md)）+ **M1「问账本」+ 首页聊天化已交付并真机走查通过**（`/chat` 统一「记一笔 / 问一句」；`/assistant` 与 `/receipt` 已并入；MuMu + 真实微信账单 161 行） |
+| 下一步 | ~~M2 本地模型~~ **⏸ 已搁置（2026-10-28 用户裁定）**。**v0.8.2 已发布（2026-10-30）** —— 新名/新图标已在正式包里。其它候选（待拍板）：分类相关的 4 项遗留、导入分类规则扩容（39 → 80+ 条）、FR-BUDGET-10 分类级预算、帧率采集（adb 两条路都测不到 Flutter SurfaceView，需 DevTools 或 integration_test） |
 | 技术栈 | Flutter 3.47.2 / Dart 3.13.2 · drift 2.31.0 · Riverpod 3 · go_router 18 · **Material 3 主题（2026-10-28 换肤，seed = 森绿 `0xFF2E5E4E`，同日由琥珀改定）** · **ML Kit 文字识别（中文 bundled，离线）** · 本地 LLM 探针 = **llama.cpp `b7050`**（仅 `tool/llm_bench/`，**未进 App**） |
 | 数据库 | schema **v4**（v2 加 `budgets`；v3 加 `accounts.icon/color`；**v4 加 `categories.parent_id / is_archived`**，F7.18 分类树）—— v4 迁移**只加列 + 加索引**，老库升级零数据改动（真机验证：154 笔账单分毫未动）。**预置二级分类不需要迁移**（是数据不是结构） |
 | 门禁 | 本地 = `flutter analyze` + `flutter test --concurrency=1`（**740 passed / 6 skipped**）；CI = `.github/workflows/ci.yml`，**三个并行 job**：① `analyze · 生成物同步`（跑 build_runner 后 `git diff lib/**/*.g.dart` 必须为空）② `test` ③ `build apk (debug)`（`--target-platform android-arm64`）。**分支保护需在 GitHub 设置里手动勾这三个 check**，说明写在 workflow 头部注释；本机跑测试**必须** `--concurrency=1`（内存不足会 OOM），CI 上用默认并发 |
 | 仓库 | **GitHub `Xander-299/yanxin-keeping`（public）** · Pages <https://xander-299.github.io/yanxin-keeping/> · 规则集 `check-ci`：required checks = `analyze · 生成物同步` / `test` / `build apk (debug)`，approvals 0，禁 force-push / 禁删默认分支（**直推 master 会被挡，必须走 PR**；管理员可 bypass） |
+
+### 本轮交付（2026-10-30 · 发布 v0.8.2：新名 + 新图标真正进包）
+
+| 事项 | 结果 |
+|---|---|
+| 版本号 | `pubspec.yaml` **0.8.1+2001 → 0.8.2+2002**（versionCode 只增不减）；「我的」页角标 `v0.8.2` 同步 |
+| 构建 | **ASCII 副本法**：`robocopy` 到 `D:\yanxin-build`（排除 `build` / `.gradle-home` / `.git` / `__pycache__` / `*.log`）→ 副本内 `gradle.properties` 降 `-Xmx3G -XX:MaxMetaspaceSize=1G`（内存只剩 2.4 G）→ `JAVA_HOME=JDK17` + `GRADLE_USER_HOME=<repo>\.gradle-home` + 代理 → `flutter build apk --release --no-pub`。**187 s**，产物 **68,884,918 B（65.7 MB）** |
+| 核验（4 条） | ① `aapt2 dump badging`：`versionCode='2002' versionName='0.8.2'`、`application-label:'小耄记账'`、ABI = arm64-v8a + armeabi-v7a；② 权限只剩 `POST_NOTIFICATIONS` / `RECEIVE_BOOT_COMPLETED`（+ 系统自加的 `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`），**无 `INTERNET`**；③ `apksigner` SHA-256 = `d46b65a4…e86567`（与 v0.7.16 起同一把钥匙）；④ 包内 `libapp.so` 含 `小耄记账` / `v0.8.2` / `截图记账`，`color/ic_launcher_background` = `#ffeb7118`、192 px 图标角落像素 = `(235,113,24)` |
+| 文档 | CHANGELOG 新增 `[v0.8.2]` 段并把 6 段 `[Unreleased]` 收成 `[v0.8.2] 并入`；新增 [`docs/release-notes-v0.8.2.md`](docs/release-notes-v0.8.2.md)；README 下载区 / `docs/index.html` 链接与 tag 数（18 → 19）同步 |
+| 发布 | tag `v0.8.2` + GitHub Release 资产 `yanxin-v0.8.2-universal-release.apk`（详见 release 页） |
+
+> ⚠️ **包体 46 MB → 66 MB 不是回归，是 v0.8.1 那个「通用包」其实不通用**：把 v0.8.1 的资产下回来比过 ——
+> 它有 `lib/armeabi-v7a/libmlkit_google_ocr_pipeline.so`，却**没有** `lib/armeabi-v7a/libflutter.so`
+> 与 `lib/armeabi-v7a/libapp.so`（= 构建时带了 `--target-platform android-arm64`，只打进了 arm64 的
+> Dart/引擎）。也就是说 v0.8.1 在 32 位 arm 机上是**装得上、起不来**。本次 `--release` 不带
+> `--target-platform`、`abiFilters` 同时含 arm64-v8a + armeabi-v7a，两个 ABI 的引擎与 `libapp.so` 齐活，
+> 所以是 66 MB 的**真通用包**。想回小包就用 `--split-per-abi`（或 `--target-platform android-arm64`，
+> 体积更小，但 32 位 arm 机就装不了了）。
+>
+> ⚠️ **`tool/verify_apk_kernel.py` 只对 debug 包有效**（它读 `assets/flutter_assets/kernel_blob.bin`）；
+> release 包是 AOT，核验要读 `lib/arm64-v8a/libapp.so`，且中文是 **UTF-16LE** 存的（按 UTF-8 搜会假阴性）。
 
 ### 本轮交付（2026-10-30 · 仓库迁移 + 改名换图标 + 安全收口）
 
