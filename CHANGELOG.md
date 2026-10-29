@@ -30,6 +30,30 @@
 | `v0.7.17` | F7.17 深色模式（「设置 → 外观」三选一 · 浅色 / 深色 / **跟随系统（默认）**）+ 令牌体系改造（613 处 `Tok.*` → 调色板实例） | 本段所在提交 |
 | `v0.8.1` | **F8.1 端上截图记账**：ML Kit 中文 bundled OCR（离线）+ 纯函数规则解析 + 三步确认页 + 复用现有入账链路；release 无 `INTERNET`、ABI 只打 ARM；修掉 3 个环境级阻塞（`jni_flutter` 启动崩 / `file_picker` 选图失效 / **R8 裁坏 ML Kit**） | 本段所在提交 |
 
+## [Unreleased] — 仓库迁移 + 改名「小耄记账」+ 新图标（2026-10-30）
+
+### Changed
+
+- **仓库迁到 `Xander-299/yanxin-keeping`（public）**；旧 `yanxin-flutter` 已删除。
+  迁移前用 `git filter-repo` 重写历史（旧 keystore 口令 → `***REMOVED***`、本机路径 → `<USER_HOME>`），
+  新库全历史 0 命中；旧库连同其 `refs/pull/*` 一并消失。
+- **App 改名**：「颜芯记账」→ **「小耄记账」** —— manifest label（应用 + 自动记账服务）、
+  `MaterialApp.title`、新手引导、我的页、自动记账通知文案、导出文件名前缀（`小耄记账_账本_日期.csv`）、
+  `pubspec` 描述、README、网页版。**Dart 包名 `yanxin` 不变**（改了 import 全炸）。
+- **启动图标换成橙底小猫**（`#EB7118`）：legacy 5 档 + adaptive 前景 5 档 + 网页 favicon；
+  未走 `gen_launcher_icons.py` 的抠底（主体距背景色仅 84 < 阈值 100，会被抠成半透明），
+  改用「整图缩进 66/108 安全区 + 背景色同源」。
+
+### Security
+
+- **release keystore 口令轮换**（2026-10-29，24 位随机值）：旧口令已作废（`keytool` 验证打不开），
+  新值**不入库**、只在本机 `android/key.properties`；证书指纹未变，已发布包签名不受影响。
+
+### 发布
+
+- 新库已发 **v0.8.1**（`yanxin-v0.8.1-universal-release.apk`，46.44 MB，upload key 签名）。
+- ⚠️ **该包内仍是旧图标 + 旧名** —— 新图标/新名只进了 `master` 与真机 QA 包，需 **v0.8.2** 才对外生效。
+
 ## [Unreleased] — 主题色（2026-10-29）
 
 ### Added
