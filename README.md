@@ -255,7 +255,7 @@ flutter build apk --release --target-platform android-arm,android-arm64,android-
 |---|---|
 | 代码量 | Dart **151 个源文件 / 30,198 行**（含 `part`）· Kotlin **9 个文件 / 1,689 行** |
 | 测试 | **73 个测试文件** · 668 处 `test()` / `testWidgets()`（实跑 **740 passed / 6 skipped**） |
-| 迭代 | **202 次提交** · **19 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`、`v0.8.2`） |
+| 迭代 | **204 次提交** · **19 个版本 tag**（`v0.7.1` – `v0.7.17`、`v0.8.1`、`v0.8.2`） |
 | 验证环境 | MuMu 模拟器 + **Redmi K50 真机**（Android 14 / HyperOS，adb 全包走查）|
 | 性能基线 | 冷启动 **613.8 ms** · 热启动 **82.4 ms** · 常驻 **43.3 MB** · release APK **46.44 MB**（[报告](docs/perf/baseline-2026-10-29.md)） |
 
