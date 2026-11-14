@@ -484,6 +484,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     );
     if (ok != true || !mounted) return;
 
+    final String? from = ref.read(authControllerProvider).value?.email;
     final ValueNotifier<AccountSwitchStage> stage =
         ValueNotifier<AccountSwitchStage>(AccountSwitchStage.backingUp);
     unawaited(showDialog<void>(
@@ -496,7 +497,7 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
           content: ValueListenableBuilder<AccountSwitchStage>(
             valueListenable: stage,
             builder: (BuildContext context, AccountSwitchStage value, Widget? _) =>
-                Text(_stageText(value)),
+                Text(_stageText(value, from: from, to: account.email)),
           ),
         ),
       ),
@@ -518,11 +519,15 @@ class _CloudSyncPageState extends ConsumerState<CloudSyncPage> {
     if (failure != null) _toast('切换失败：$failure');
   }
 
-  String _stageText(AccountSwitchStage stage) => switch (stage) {
-    AccountSwitchStage.backingUp => '正在备份当前账号…',
-    AccountSwitchStage.switching => '正在切换账号…',
-    AccountSwitchStage.restoring => '正在下载该账号的云端备份…',
-    AccountSwitchStage.pulling => '正在补齐云端改动…',
+  String _stageText(
+    AccountSwitchStage stage, {
+    required String? from,
+    required String to,
+  }) => switch (stage) {
+    AccountSwitchStage.backingUp => '正在备份 ${from ?? '当前账号'}…',
+    AccountSwitchStage.switching => '正在切换到 $to…',
+    AccountSwitchStage.restoring => '正在下载 $to 的云端备份…',
+    AccountSwitchStage.pulling => '正在补齐 $to 的云端改动…',
   };
 
   Future<void> _removeAccount(SavedAccount account) async {

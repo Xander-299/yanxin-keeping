@@ -117,4 +117,15 @@ void main() {
     expect(visible?.ownerId, 'a@example.com');
     expect((await repo.listVisible()).length, 1);
   });
+
+  test('空态下 ensureDefaultBook 抛错，不建无归属账本', () async {
+    final db = openTestDatabase();
+    addTearDown(db.close);
+    final repo = BookRepository(db);
+    await _signInAs(db, 'a@example.com');
+    await _signOutKeepAccount(db);
+
+    await expectLater(repo.ensureDefaultBook(), throwsStateError);
+    expect(await db.select(db.books).get(), isEmpty);
+  });
 }

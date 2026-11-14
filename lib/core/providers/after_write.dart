@@ -16,6 +16,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/providers/data_epoch.dart';
+import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/features/calendar/application/calendar_controller.dart';
 import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/stats/application/stats_controller.dart';
@@ -44,4 +45,26 @@ void refreshAfterWriteFromWidget(WidgetRef ref) {
     ref.read(ledgerProvider.notifier).refresh().catchError((Object _) {}),
   );
   ref.read(dataEpochProvider.notifier).bump();
+}
+
+/// 账号 / 账本范围变化后的刷新（P6.5）：在「写后刷新」之上再加账本范围三个 provider。
+///
+/// 为什么必须单独一次：切账号、退出、移除账号都会换掉「当前可见账本」，
+/// 而 `bookListProvider` / `currentBookProvider` 是常驻 `FutureProvider`，不 watch
+/// `dataEpochProvider` —— 只 bump 数据版本不会让它们重建（HANDOFF 不变量 #2 的同类坑）。
+///
+/// 与 [refreshAfterWrite] 一样，刷新口径只在这里写一次，调用方别再逐个 invalidate。
+void refreshAfterAccountChange(Ref ref) {
+  ref.invalidate(activeBookIdProvider);
+  ref.invalidate(bookListProvider);
+  ref.invalidate(currentBookProvider);
+  refreshAfterWrite(ref);
+}
+
+/// Widget 内部调用（`WidgetRef`）—— 口径与 [refreshAfterAccountChange] 一致。
+void refreshAfterAccountChangeFromWidget(WidgetRef ref) {
+  ref.invalidate(activeBookIdProvider);
+  ref.invalidate(bookListProvider);
+  ref.invalidate(currentBookProvider);
+  refreshAfterWriteFromWidget(ref);
 }

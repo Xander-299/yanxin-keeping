@@ -165,7 +165,9 @@ class BookRepository {
   Future<Book> ensureDefaultBook() async {
     final Book? visible = await ensureVisibleBook();
     if (visible != null) return visible;
-    return create(name: defaultBookName, icon: '📒', color: '#3b82f6');
+    // 空态（保存过账号但当前未登录）：**不能**建无归属账本 —— 否则它会凭空出现，
+    // 还会被下一个登录的账号 bindUnownedBooksTo 认领走（SPEC-P6.5 §6 风险 2）。
+    throw StateError('当前没有可用的账本：请先在「云同步」里选择一个账号');
   }
 
   // ── 多账号（P6.5）：账本可见性全部按 ownerId 收窄 ───────────────────
@@ -188,7 +190,7 @@ class BookRepository {
   /// 当前账号邮箱（未登录 = null）。
   Future<String?> activeAccountEmail() async {
     final String? raw = await _meta(kActiveAccountKey);
-    final String? email = raw?.trim();
+    final String? email = raw?.trim().toLowerCase();
     return (email == null || email.isEmpty) ? null : email;
   }
 
@@ -202,24 +204,20 @@ class BookRepository {
   /// - 曾经登录但已退出 → **空**（要求选账号，见 SPEC-P6.5 D3）。
   Future<List<Book>> listVisible() async {
     final String? email = await activeAccountEmail();
-    if (email != null) {
-      return (_db.select(_db.books)
-            ..where((t) => t.ownerId.equals(email) & t.deletedAt.isNull())
-            ..orderBy(<OrderClauseGenerator<$BooksTable>>[
-              (t) => OrderingTerm.asc(t.sortOrder),
-              (t) => OrderingTerm.asc(t.createdAt),
-            ]))
-          .get();
-    }
-    if (await hasSavedAccounts()) return const <Book>[];
-    return (_db.select(_db.books)
-          ..where((t) => t.ownerId.isNull() & t.deletedAt.isNull())
-          ..orderBy(<OrderClauseGenerator<$BooksTable>>[
-            (t) => OrderingTerm.asc(t.sortOrder),
-            (t) => OrderingTerm.asc(t.createdAt),
-          ]))
-        .get();
+    if (email == null && await hasSavedAccounts()) return const <Book>[];
+    return _selectVisible(email).get();
   }
+
+  /// 「可见账本」的唯一查询定义（排序与过滤只写一次）。
+  SimpleSelectStatement<$BooksTable, Book> _selectVisible(String? email) =>
+      _db.select(_db.books)
+        ..where((t) => email == null
+            ? t.ownerId.isNull() & t.deletedAt.isNull()
+            : t.ownerId.equals(email) & t.deletedAt.isNull())
+        ..orderBy(<OrderClauseGenerator<$BooksTable>>[
+          (t) => OrderingTerm.asc(t.sortOrder),
+          (t) => OrderingTerm.asc(t.createdAt),
+        ]);
 
   /// 可见范围里的第一个账本；没有就按当前范围建一个。
   ///
@@ -267,7 +265,7 @@ class BookRepository {
   /// 第一个账号的账本抢走（SPEC-P6.5 §6 风险 2）。
   /// 返回绑定的条数。
   Future<int> bindUnownedBooksTo(String email) async {
-    final String normalized = email.trim();
+    final String normalized = email.trim().toLowerCase();
     final int owned = await (_db.select(_db.books)
           ..where((t) => t.ownerId.equals(normalized) & t.deletedAt.isNull()))
         .get()

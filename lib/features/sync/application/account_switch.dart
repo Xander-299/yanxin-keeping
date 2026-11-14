@@ -12,14 +12,11 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:yanxin/core/network/sync_api.dart';
-import 'package:yanxin/core/providers/data_epoch.dart';
+import 'package:yanxin/core/providers/after_write.dart';
 import 'package:yanxin/core/providers/settings_dirty.dart';
-import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/features/import/application/backup_restore.dart';
-import 'package:yanxin/features/ledger/application/ledger_controller.dart';
 import 'package:yanxin/features/settings/application/theme_controller.dart';
-import 'package:yanxin/features/stats/application/stats_controller.dart';
 import 'package:yanxin/features/sync/application/auth_controller.dart';
 import 'package:yanxin/features/sync/application/sync_engine.dart';
 
@@ -119,12 +116,8 @@ class AccountSwitcher {
   }
 
   void _refreshAfterSwitch() {
-    _ref.invalidate(activeBookIdProvider);
-    _ref.invalidate(bookListProvider);
-    _ref.invalidate(currentBookProvider);
-    _ref.invalidate(ledgerProvider);
-    _ref.invalidate(statsProvider);
+    // 账本范围 + 数据刷新都走唯一实现（HANDOFF #9），切号这里只多刷一个同步状态。
+    refreshAfterAccountChange(_ref);
     _ref.invalidate(syncStatusProvider);
-    _ref.read(dataEpochProvider.notifier).bump();
   }
 }
