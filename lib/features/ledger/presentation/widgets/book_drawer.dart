@@ -43,7 +43,9 @@ class BookDrawer extends ConsumerWidget {
               child: booksAsync.when(
                 loading: () => const AppPageLoading(),
                 error: (Object e, StackTrace _) => AppPageError(error: e),
-                data: (List<Book> books) => ListView(
+                data: (List<Book> books) => books.isEmpty
+                    ? _EmptyScope(p: p)
+                    : ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 10),
                   children: <Widget>[
                     for (final Book b in books)
@@ -149,4 +151,41 @@ class _BookRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 空态（P6.5）：保存过账号但当前未登录 —— 没有账本可显示，必须给一条回到选账号的路。
+class _EmptyScope extends StatelessWidget {
+  const _EmptyScope({required this.p});
+
+  final ToonPalette p;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          '这台手机用云同步记过账。\n选择一个账号，账本就会回来。',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: p.ink2,
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ToonButton(
+          key: const ValueKey<String>('drawerPickAccount'),
+          label: '选择账号',
+          small: true,
+          block: true,
+          onPressed: () {
+            Navigator.pop(context);
+            context.push('/cloud-sync');
+          },
+        ),
+      ],
+    ),
+  );
 }

@@ -11,6 +11,7 @@ import 'package:yanxin/core/db/database.dart';
 import 'package:yanxin/core/network/sync_api.dart';
 import 'package:yanxin/core/providers/account_scope.dart';
 import 'package:yanxin/core/security/token_store.dart';
+import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
 import 'package:yanxin/data/repositories/book_repository.dart';
@@ -21,15 +22,19 @@ import 'package:yanxin/features/sync/application/sync_engine.dart';
 import '../../helpers/test_database.dart';
 
 class _Transport implements SyncTransport {
-  _Transport({this.fail = false});
+  _Transport({this.fail = false, this.failPull = false});
 
   final bool fail;
+  final bool failPull;
   final List<SyncRequest> requests = <SyncRequest>[];
 
   @override
   Future<SyncResponse> send(SyncRequest request) async {
     requests.add(request);
     if (fail) throw const SocketException('offline');
+    if (failPull && request.uri.path == '/v1/sync/pull') {
+      throw const SocketException('offline');
+    }
     if (request.uri.path == '/v1/backups/latest') {
       return const SyncResponse(statusCode: 404, body: '{"error":"not_found"}');
     }
@@ -53,10 +58,13 @@ AuthSession _session(String tag) => AuthSession(
 Future<
   ({ProviderContainer container, AppDatabase db, MemoryTokenStore store, _Transport transport})
 >
-_harness({bool failNetwork = false}) async {
+_harness({bool failNetwork = false, bool failPull = false}) async {
   final AppDatabase db = openTestDatabase();
   final MemoryTokenStore store = MemoryTokenStore();
-  final _Transport transport = _Transport(fail: failNetwork);
+  final _Transport transport = _Transport(
+    fail: failNetwork,
+    failPull: failPull,
+  );
   final ProviderContainer container = ProviderContainer(
     overrides: [
       appDatabaseProvider.overrideWithValue(db),
@@ -80,6 +88,8 @@ Future<Book> _seedAccountA(
   final AppMetaRepository meta = AppMetaRepository(db);
   await meta.set(kSyncEmailKey, email);
   await meta.set(kActiveAccountKey, email);
+  // 闸门要求「用户开关开」才放行业务请求
+  await meta.set(kCloudSyncEnabledKey, '1');
   await meta.set(
     kSyncAccountsKey,
     encodeSavedAccounts(<SavedAccount>[
@@ -229,4 +239,258 @@ void main() {
       <String>[local.id],
     );
   });
+
+  test('邮箱归一：大写登录也能看见同一账号的账本', () async {
+    final h = await _harness();
+    await h.store.write(
+      sessionKeyFor('a@example.com'),
+      _session('a').toStorageJson(),
+    );
+    await h.store.write(sessionKeyFor('a@example.com'), _session('a').toStorageJson());
+    await AppMetaRepository(h.db).set(
+      kSyncAccountsKey,
+      encodeSavedAccounts(const <SavedAccount>[
+        SavedAccount(email: 'a@example.com', lastUsedAt: 1),
+      ]),
+    );
+    final Book book = await BookRepository(h.db).create(name: 'A 账本', ownerId: 'a@example.com');
+    await h.container.read(authControllerProvider.future);
+
+    await h.container.read(authControllerProvider.notifier).switchTo('A@Example.COM');
+
+    final state = h.container.read(authControllerProvider).value!;
+    expect(state.email, 'a@example.com', reason: '归一化后应是小写');
+    expect(
+      (await BookRepository(h.db).listVisible()).map((Book b) => b.id),
+      <String>[book.id],
+    );
+  });
+
+  test('退出登录会刷新账本范围（空态生效）', () async {
+    final h = await _harness();
+    await _seedAccountA(h.db, h.store);
+    await h.container.read(authControllerProvider.future);
+    expect(await BookRepository(h.db).listVisible(), isNotEmpty);
+
+    await h.container.read(authControllerProvider.notifier).signOut();
+
+    expect(await BookRepository(h.db).listVisible(), isEmpty);
+    expect(h.container.read(activeBookIdProvider).value, isNull,
+        reason: '退出后账本 provider 必须重建为空，不能还挂着上个账号');
+  });
+
+  test('迁移重复启动幂等：账号列表不会重复追加', () async {
+    // 冷启动两次 = 两个容器共用同一个库与安全存储（第一次容器 dispose 不影响库）
+    final AppDatabase db = openTestDatabase();
+    addTearDown(db.close);
+    final MemoryTokenStore store = MemoryTokenStore();
+    await store.write(kSyncSessionKey, _session('old').toStorageJson());
+    await store.write(kSyncEmailKey, 'old@example.com');
+
+    ProviderContainer boot() => ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        tokenStoreProvider.overrideWithValue(store),
+        syncTransportProvider.overrideWithValue(_Transport()),
+        syncEndpointConfiguredProvider.overrideWithValue(true),
+      ],
+    );
+
+    final ProviderContainer first = boot();
+    await first.read(authControllerProvider.future);
+    first.dispose();
+
+    final ProviderContainer second = boot();
+    addTearDown(second.dispose);
+    final AuthState again = await second.read(authControllerProvider.future);
+
+    expect(again.accounts.map((SavedAccount a) => a.email), <String>['old@example.com']);
+  });
+
+  test('bootstrapPull 拉完 11 页（不吃 10 页上限）', () async {
+    final AppDatabase db = openTestDatabase();
+    addTearDown(db.close);
+    final MemoryTokenStore store = MemoryTokenStore();
+    await _seedAccountA(db, store);
+    final SyncTransport transport = _PagedTransport(totalPages: 11);
+    final ProviderContainer container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        tokenStoreProvider.overrideWithValue(store),
+        syncTransportProvider.overrideWithValue(transport),
+        syncEndpointConfiguredProvider.overrideWithValue(true),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(authControllerProvider.future);
+    await container.read(cloudSyncEnabledProvider.future);
+
+    final SyncResult result = await container
+        .read(syncEngineProvider)
+        .bootstrapPull();
+
+    expect(result.pulled, 11, reason: '11 页全部拉到');
+    expect(
+      await AppMetaRepository(db).get('sync_cursor:a@example.com'),
+      '11',
+    );
+  });
+
+  test('下行 book 行 ownerId 为空 → 落地时补成当前账号', () async {
+    final AppDatabase db = openTestDatabase();
+    addTearDown(db.close);
+    final MemoryTokenStore store = MemoryTokenStore();
+    await _seedAccountA(db, store);
+    final SyncTransport transport = _RemoteBookTransport();
+    final ProviderContainer container = ProviderContainer(
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        tokenStoreProvider.overrideWithValue(store),
+        syncTransportProvider.overrideWithValue(transport),
+        syncEndpointConfiguredProvider.overrideWithValue(true),
+      ],
+    );
+    addTearDown(container.dispose);
+    await container.read(authControllerProvider.future);
+    await container.read(cloudSyncEnabledProvider.future);
+
+    await container.read(syncEngineProvider).bootstrapPull();
+
+    final Book? remote = await (db.select(db.books)
+          ..where((t) => t.id.equals('b-remote')))
+        .getSingleOrNull();
+    expect(remote?.ownerId, 'a@example.com');
+  });
+
+  test('切号在「拉取补齐」阶段失败 → 回滚到原账号', () async {
+    final h = await _harness(failPull: true);
+    await _seedAccountA(h.db, h.store);
+    await h.store.write(
+      sessionKeyFor('b@example.com'),
+      _session('b').toStorageJson(),
+    );
+    await AppMetaRepository(h.db).set(
+      kSyncAccountsKey,
+      encodeSavedAccounts(const <SavedAccount>[
+        SavedAccount(email: 'a@example.com', lastUsedAt: 1000),
+        SavedAccount(email: 'b@example.com', lastUsedAt: 2000),
+      ]),
+    );
+    await h.container.read(authControllerProvider.future);
+
+    await expectLater(
+      h.container.read(accountSwitcherProvider).switchTo('b@example.com'),
+      throwsA(anything),
+    );
+
+    final AuthState state = h.container.read(authControllerProvider).value!;
+    expect(state.email, 'a@example.com', reason: '拉取失败要退回原账号');
+    expect(state.signedIn, isTrue);
+  });
+}
+
+/// 11 页、每页一条 account 变更（第 11 页 hasMore=false）。
+class _PagedTransport implements SyncTransport {
+  _PagedTransport({required this.totalPages});
+
+  final int totalPages;
+  int _served = 0;
+
+  @override
+  Future<SyncResponse> send(SyncRequest request) async {
+    if (request.uri.path != '/v1/sync/pull') {
+      return SyncResponse(
+        statusCode: 200,
+        body: jsonEncode(<String, Object?>{
+          'applied': 0,
+          'conflicts': <Object?>[],
+          'cursor': 0,
+        }),
+      );
+    }
+    _served++;
+    return SyncResponse(
+      statusCode: 200,
+      body: jsonEncode(<String, Object?>{
+        'changes': <Object?>[
+          <String, Object?>{
+            'bookId': 'b1',
+            'entity': 'account',
+            'id': 'acc-p$_served',
+            'updatedAt': 1000 + _served,
+            'deleted': false,
+            'payload': <String, Object?>{
+              'id': 'acc-p$_served',
+              'bookId': 'b1',
+              'name': '账户$_served',
+              'type': 'cash',
+              'initialBalanceCents': 0,
+              'sortOrder': 0,
+              'ownerId': null,
+              'icon': '',
+              'color': '',
+              'createdAt': 1000,
+              'updatedAt': 1000 + _served,
+              'deletedAt': null,
+              'dirty': 0,
+            },
+          },
+        ],
+        'cursor': _served,
+        'hasMore': _served < totalPages,
+      }),
+    );
+  }
+}
+
+/// 只回一条 ownerId 为空的 book（用于验「落地归一」）。
+class _RemoteBookTransport implements SyncTransport {
+  int _served = 0;
+
+  @override
+  Future<SyncResponse> send(SyncRequest request) async {
+    if (request.uri.path != '/v1/sync/pull') {
+      return SyncResponse(
+        statusCode: 200,
+        body: jsonEncode(<String, Object?>{
+          'applied': 0,
+          'conflicts': <Object?>[],
+          'cursor': 0,
+        }),
+      );
+    }
+    _served++;
+    return SyncResponse(
+      statusCode: 200,
+      body: jsonEncode(<String, Object?>{
+        'changes': _served == 1
+            ? <Object?>[
+                <String, Object?>{
+                  'bookId': 'b-remote',
+                  'entity': 'book',
+                  'id': 'b-remote',
+                  'updatedAt': 5000,
+                  'deleted': false,
+                  'payload': <String, Object?>{
+                    'id': 'b-remote',
+                    'name': '云端账本',
+                    'type': 'personal',
+                    'currency': 'CNY',
+                    'icon': '',
+                    'color': '',
+                    'sortOrder': 0,
+                    'ownerId': null,
+                    'createdAt': 1000,
+                    'updatedAt': 5000,
+                    'deletedAt': null,
+                    'dirty': 0,
+                  },
+                },
+              ]
+            : <Object?>[],
+        'cursor': _served,
+        'hasMore': false,
+      }),
+    );
+  }
 }

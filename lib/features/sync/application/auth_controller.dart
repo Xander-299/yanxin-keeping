@@ -17,8 +17,8 @@ import 'package:yanxin/core/network/cloud_sync_gate.dart';
 import 'package:yanxin/core/network/sync_api.dart';
 import 'package:yanxin/core/network/sync_endpoints.dart';
 import 'package:yanxin/core/providers/account_scope.dart';
+import 'package:yanxin/core/providers/after_write.dart';
 import 'package:yanxin/core/security/token_store.dart';
-import 'package:yanxin/data/providers/book_providers.dart';
 import 'package:yanxin/data/providers/database.dart';
 import 'package:yanxin/data/repositories/app_meta_repository.dart';
 import 'package:yanxin/features/sync/application/backup_bytes.dart';
@@ -86,9 +86,10 @@ class AuthState {
     String? email,
     List<SavedAccount>? accounts,
     bool clearSession = false,
+    bool clearEmail = false,
   }) => AuthState(
     session: clearSession ? null : (session ?? this.session),
-    email: email ?? this.email,
+    email: clearEmail ? null : (email ?? this.email),
     accounts: accounts ?? this.accounts,
   );
 }
@@ -121,6 +122,12 @@ final cloudSyncGateProvider = Provider<CloudSyncGate>((Ref ref) {
 });
 
 class AuthController extends AsyncNotifier<AuthState> {
+  /// 账号邮箱的**唯一归一化口径**：去空格 + 小写。
+  ///
+  /// 服务端 `normalizeEmail` 也转小写；客户端不跟就会「同一个账号两种写法」——
+  /// `ownerId` 是精确比较的，大小写不同即**整本账不可见**（SPEC-P6.5 D2）。
+  static String normalizeEmail(String value) => value.trim().toLowerCase();
+
   /// 邮箱形状校验（纯函数，服务端仍会再校验一次）。
   static bool isValidEmail(String value) {
     final String v = value.trim();
@@ -159,7 +166,9 @@ class AuthController extends AsyncNotifier<AuthState> {
       final String? raw = await store.read(sessionKeyFor(current));
       // 迁移 / 冷启动也要把「账本范围」补齐：老库里的账本 ownerId 为空，
       // 不绑的话迁移用户一升级就看不到自己的账本（真机 v0.8.9 → P6.5 踩到）。
-      await _applyAccountScope(current);
+      // 冷启动没有缓存要刷（provider 都是刚建的），只做绑定，不触发写后刷新 ——
+      // 在 build 里刷新会让 ledger/calendar 立刻查库，测试里容器已 dispose 时会炸。
+      await _applyAccountScope(current, refresh: false);
       return AuthState(
         session: AuthSession.tryParse(raw),
         email: current,
@@ -205,7 +214,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   /// 校验验证码并登录。
   Future<void> signIn({required String email, required String code}) async {
-    final String normalized = email.trim();
+    final String normalized = normalizeEmail(email);
     if (!isValidEmail(normalized)) {
       throw const SyncApiException('invalidInput', message: '邮箱格式不对');
     }
@@ -227,7 +236,9 @@ class AuthController extends AsyncNotifier<AuthState> {
     } catch (_) {
       // 写失败也要把内存态切走：用户点了退出就得退
     }
-    state = AsyncData(current.copyWith(clearSession: true));
+    state = AsyncData(current.copyWith(clearSession: true, clearEmail: true));
+    // 退出后账本范围变了（空态）：账本列表/当前账本必须重建，否则界面还挂着上个账号的账本。
+    refreshAfterAccountChange(ref);
   }
 
   /// 注销账号：云端硬删成功后才清本机（失败要把异常交给 UI）。
@@ -346,7 +357,7 @@ class AuthController extends AsyncNotifier<AuthState> {
   /// 让账本范围与 [email] 对齐：绑定本机账本（若该账号还没有账本）、确保有账本、落 active id。
   ///
   /// 失败不抛：账本层异常不能把登录判失败，下一次进 App 再兜。
-  Future<void> _applyAccountScope(String email) async {
+  Future<void> _applyAccountScope(String email, {bool refresh = true}) async {
     final books = ref.read(bookRepositoryProvider);
     try {
       await books.bindUnownedBooksTo(email);
@@ -358,13 +369,12 @@ class AuthController extends AsyncNotifier<AuthState> {
     } catch (_) {
       // 见上
     }
-    ref.invalidate(activeBookIdProvider);
-    ref.invalidate(bookListProvider);
+    if (refresh) refreshAfterAccountChange(ref);
   }
 
   /// 切到另一个已保存账号（不校验 token 是否仍有效 —— 用的时候 401 会续期）。
   Future<void> switchTo(String email) async {
-    final String normalized = email.trim();
+    final String normalized = normalizeEmail(email);
     final TokenStore store = ref.read(tokenStoreProvider);
     final String? raw = await store.read(sessionKeyFor(normalized));
     final AuthSession? session = AuthSession.tryParse(raw);
@@ -386,7 +396,7 @@ class AuthController extends AsyncNotifier<AuthState> {
 
   /// 移除账号：删本地 token + 从列表移除；**账本保留但隐藏**（同邮箱再登录自动恢复）。
   Future<void> removeAccount(String email) async {
-    final String normalized = email.trim();
+    final String normalized = normalizeEmail(email);
     final TokenStore store = ref.read(tokenStoreProvider);
     try {
       await store.delete(sessionKeyFor(normalized));
@@ -410,12 +420,12 @@ class AuthController extends AsyncNotifier<AuthState> {
     }
     state = AsyncData(
       (state.value ?? const AuthState()).copyWith(
-        email: isCurrent ? null : state.value?.email,
         accounts: accounts,
         clearSession: isCurrent,
+        clearEmail: isCurrent,
       ),
     );
-    ref.invalidate(activeBookIdProvider);
+    refreshAfterAccountChange(ref);
   }
 
   Future<void> _clearSession() async {
